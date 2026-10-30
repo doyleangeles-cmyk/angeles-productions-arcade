@@ -126,7 +126,7 @@
 
   /* ---------- layout ---------- */
   main{max-width:1240px; margin:0 auto; padding:.6rem 1rem 0}
-  .row-label{
+  .copy-link{width:100%;min-height:60px;display:flex;align-items:center;justify-content:center;gap:.6rem;cursor:pointer;font-family:"Press Start 2P",monospace;font-size:.82rem;letter-spacing:.03em;color:#171200;background:linear-gradient(180deg,#ffe27a,#f5c542 55%,#e0aa1e);border-radius:12px;border:1px solid #ffe98f;box-shadow:0 6px 0 #9a7414,0 12px 24px rgba(0,0,0,.5),0 0 22px rgba(245,197,66,.35);padding:.9rem .8rem;margin:1.6rem .25rem .9rem}.row-label{
     display:flex; align-items:center; gap:.9rem;
     margin:1.6rem .25rem .9rem;
   }
@@ -427,7 +427,7 @@
 </header>
 
 <main>
-  <div class="row-label">
+  <button class="copy-link" type="button" onclick="navigator.clipboard&&navigator.clipboard.writeText('https://is.gd/angelesarcade');this.textContent='✓ COPIED · is.gd/angelesarcade'">📋 COPY LINK · is.gd/angelesarcade</button><div class="row-label">
     <h2>CABINET ROW</h2>
     <div class="rule" aria-hidden="true"></div>
     <span class="count">7 games</span>
