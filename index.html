@@ -195,12 +195,12 @@
     <p class="presents">Angeles Productions Presents</p>
     <h1 class="studio-name">ANGELES <span>PRODUCTIONS</span></h1>
     <div class="rule" aria-hidden="true"><b>★</b></div>
-    <p class="arcade-line"><strong>The Arcade.</strong> Pick a game, hit <strong>PLAY</strong>, and it opens ready to go. KM Security, both chess wars, Scorched Earth and Kaboom! — all in one place.</p>
+    <p class="arcade-line"><strong>The Arcade.</strong> Pick a game, hit <strong>PLAY</strong>, and it opens ready to go. KM Security, both chess wars, Scorched Earth, Kaboom! and BurgerTime — all in one place.</p>
     <div class="stats" aria-label="Library summary">
-      <span class="pill"><b>5</b> games live</span>
+      <span class="pill"><b>6</b> games live</span>
       <span class="pill"><b>1</b> flagship — KM Security</span>
       <span class="pill"><b>2</b> chess battles</span>
-      <span class="pill"><b>1</b> arcade classic — Kaboom!</span>
+      <span class="pill"><b>2</b> arcade classics</span>
     </div>
   </header>
 
@@ -296,10 +296,39 @@
       meta: ["Groups 1–8", "3 Buckets", "1–2 Players", "Mouse • Touch • Arrows"],
       url: "kaboom.html",
       art: "kaboom"
+    },
+    {
+      id: "burgertime",
+      category: "action",
+      tag: "Arcade • Build-a-Burger",
+      badge: "Live",
+      kicker: "Peter Pepper Arcade",
+      kickerClass: "c-gold",
+      title: "BurgerTime",
+      subtitle: "Walk The Burgers Down",
+      desc: "Chef Peter Pepper crosses the platforms and walks the giant ingredients down into burgers — while Mr. Hot Dog, Mr. Egg and Mr. Pickle hunt him. Squash them, drop them, pepper them: 50 points a layer, up to 16,000 a ride.",
+      meta: ["6 Boards", "Pepper x5", "Extra Chef 20,000", "Keys • WASD • Touch"],
+      url: "burgertime.html",
+      art: "burger"
     }
   ];
 
   function artSVG(kind){
+    if(kind === "burger"){
+      return '<svg viewBox="0 0 400 168" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
+        + '<rect width="400" height="168" fill="#12060a"/>'
+        + '<rect x="0" y="34" width="400" height="6" fill="#8a4b2a"/><rect x="0" y="84" width="400" height="6" fill="#8a4b2a"/><rect x="0" y="134" width="400" height="6" fill="#8a4b2a"/>'
+        + '<path d="M150 118 a50 26 0 0 1 100 0 z" fill="#e8a33d"/>'
+        + '<circle cx="180" cy="102" r="3" fill="#fff3d6"/><circle cx="205" cy="96" r="3" fill="#fff3d6"/><circle cx="222" cy="104" r="3" fill="#fff3d6"/>'
+        + '<rect x="148" y="118" width="104" height="9" fill="#57b93c"/>'
+        + '<rect x="150" y="129" width="100" height="11" fill="#6b3418"/>'
+        + '<rect x="152" y="142" width="96" height="8" fill="#e8a33d"/>'
+        + '<rect x="138" y="152" width="124" height="6" fill="#d9d9d9"/>'
+        + '<rect x="66" y="52" width="26" height="18" rx="8" fill="#f4f4f4"/><rect x="60" y="66" width="38" height="26" fill="#ffffff"/>'
+        + '<rect x="308" y="56" width="34" height="20" rx="10" fill="#c33"/><rect x="316" y="44" width="18" height="14" rx="6" fill="#c33"/>'
+        + '<circle cx="96" cy="112" r="11" fill="#fff"/><circle cx="96" cy="112" r="5" fill="#f2b21b"/>'
+        + '</svg>';
+    }
     if(kind === "km"){
       return '<svg viewBox="0 0 400 168" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
         + '<rect width="400" height="168" fill="#0d1b26"/>'
