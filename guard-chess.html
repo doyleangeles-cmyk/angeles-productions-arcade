@@ -379,6 +379,12 @@
       .seg { display:flex; background:var(--accent-soft); border-radius:9px; padding:3px; gap:3px; }
       .seg button { flex:1; border:0; background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:13.5px; font-weight:700; padding:7px 4px; border-radius:7px; }
       .seg button.on { background:var(--seg-on); color:var(--seg-on-ink); }
+      .seg.diff-seg { flex-wrap:wrap; }
+      .seg.diff-seg button { flex:1 1 30%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; padding:7px 2px 6px; line-height:1.15; }
+      .seg.diff-seg .d-name { font-size:13px; font-weight:800; }
+      .seg.diff-seg .d-insig { font-size:10px; font-weight:800; letter-spacing:.16em; color:var(--accent-2); min-height:12px; }
+      .seg.diff-seg button.on .d-insig { color:#ffd23f; }
+      .diff-desc { font-size:12.5px; color:var(--ink-soft); line-height:1.45; margin:8px 0 0; min-height:36px; }
       .btnrow { display:flex; flex-wrap:wrap; gap:8px; }
       .btn { font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; border:1.5px solid var(--btn-border); background:var(--btn); color:var(--ink); padding:9px 13px; border-radius:9px; }
       .btn:hover { border-color: var(--accent); } .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
@@ -466,8 +472,9 @@
           <div id="aiOptions">
             <div style="height:12px"></div><p class="grouplabel">You command</p>
             <div class="seg" id="colorSeg"><button data-color="w" class="on">Guards (Day)</button><button data-color="b">Nursing Staff</button></div>
-            <div style="height:12px"></div><p class="grouplabel">Opponent strength</p>
-            <div class="seg" id="diffSeg"><button data-diff="1">Easy</button><button data-diff="2" class="on">Medium</button><button data-diff="3">Hard</button></div>
+            <div style="height:12px"></div><p class="grouplabel">Opponent rank — five strengths</p>
+            <div class="seg diff-seg" id="diffSeg"><button data-diff="1"><span class="d-name">Rookie</span><span class="d-insig">—</span></button><button data-diff="2"><span class="d-name">Officer</span><span class="d-insig">›</span></button><button data-diff="3" class="on"><span class="d-name">Corporal</span><span class="d-insig">››</span></button><button data-diff="4"><span class="d-name">Sergeant</span><span class="d-insig">›››</span></button><button data-diff="5"><span class="d-name">Lieutenant</span><span class="d-insig">★</span></button></div>
+            <p class="diff-desc" id="diffDesc"></p>
           </div>
         </div>
 
@@ -539,7 +546,32 @@
     function search(s,depth,alpha,beta){ if(depth===0) return evaluate(s); var moves=legalMoves(s,s.turn); if(moves.length===0){ if(inCheck(s.board,s.turn)) return -100000-depth; return 0; } if(s.half>=100||insufficientMaterial(s.board)) return 0; orderMoves(s,moves); var best=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-beta,-alpha); if(sc>best) best=sc; if(best>alpha) alpha=best; if(alpha>=beta) break; } return best; }
     function aiBestMove(s,depth){ var moves=legalMoves(s,s.turn); if(!moves.length) return null; orderMoves(s,moves); var best=-Infinity,bestMoves=[],alpha=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-Infinity,-alpha===-Infinity?Infinity:-alpha); if(sc>best+0.001){ best=sc; bestMoves=[moves[i]]; } else if(Math.abs(sc-best)<=0.001) bestMoves.push(moves[i]); if(sc>alpha) alpha=sc; } return bestMoves[Math.floor(Math.random()*bestMoves.length)]; }
 
-    var state=startState(); var undoStack=[]; var sanList=[]; var posCounts={}; var selected=null; var currentLegal=[]; var legalFromSel=[]; var lastMove=null; var gameOver=null; var flipped=false; var mode="ai"; var playerColor="w"; var difficulty=2; var aiTimer=null; var pendingPromo=null; var battleBusy=false; var duelsOn=true; var marchingOn=true; var battleLogEntries=[];
+    /* ---- Five guard ranks, weakest to strongest. Each rank is a real step:
+       the blunder rate drops to zero, the forgiveness window for near-best
+       moves closes, and the search looks one move deeper per rank. ---- */
+    var DIFF_INFO = {
+      1: { name:"Rookie", depth:1, blunder:0.35, window:260, desc:"Rookie — fresh on the post. Looks one move ahead, guesses about a third of the time, and lets big slips slide. A gentle first shift." },
+      2: { name:"Officer", depth:1, blunder:0.08, window:60, desc:"Officer — on patrol. Still one move ahead, but steadier hands: a rare guess, and only small slips forgiven." },
+      3: { name:"Corporal", depth:2, blunder:0, window:0, desc:"Corporal — two chevrons, two moves ahead. No free guesses; plays the best move it can see." },
+      4: { name:"Sergeant", depth:3, blunder:0, window:0, desc:"Sergeant — three chevrons, three moves ahead. Sets traps and punishes loose fighters." },
+      5: { name:"Lieutenant", depth:4, blunder:0, window:0, desc:"Lieutenant — the bar. Four moves ahead: the engine's best chess on this post. Busy boards may take a few seconds to answer." }
+    };
+    function aiChooseMove(s,lvl){
+      var moves=legalMoves(s,s.turn); if(!moves.length) return null;
+      var info=DIFF_INFO[lvl]||DIFF_INFO[3];
+      if(info.blunder && Math.random()<info.blunder) return moves[Math.floor(Math.random()*moves.length)];
+      if(lvl<=2){
+        var scored=[], best=-Infinity, i, sc;
+        for(i=0;i<moves.length;i++){ sc=-search(applyTo(s,moves[i]).state,0,-Infinity,Infinity); scored.push({m:moves[i],sc:sc}); if(sc>best) best=sc; }
+        var pool=scored.filter(function(x){ return x.sc>=best-info.window; });
+        if(!pool.length) pool=scored;
+        return pool[Math.floor(Math.random()*pool.length)].m;
+      }
+      return aiBestMove(s,info.depth);
+    }
+    function updateDiffDesc(){ var el=document.getElementById("diffDesc"); if(el){ var info=DIFF_INFO[difficulty]; if(info) el.textContent=info.desc; } }
+
+    var state=startState(); var undoStack=[]; var sanList=[]; var posCounts={}; var selected=null; var currentLegal=[]; var legalFromSel=[]; var lastMove=null; var gameOver=null; var flipped=false; var mode="ai"; var playerColor="w"; var difficulty=3; var aiTimer=null; var pendingPromo=null; var battleBusy=false; var duelsOn=true; var marchingOn=true; var battleLogEntries=[];
     var boardEl=document.getElementById("board"); var boardFrame=document.getElementById("boardFrame"); var statusEl=document.getElementById("statusText"); var subEl=document.getElementById("subStatus"); var turnDot=document.getElementById("turnDot"); var overlay=document.getElementById("overlay"); var overlayCard=document.getElementById("overlayCard"); var arena=document.getElementById("battleArena");
     var audioCtx=null;
     function sound(kind){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); var notes = kind==="spray" ? [1500,1100,700] : kind==="strike" ? [170,85] : kind==="capture" ? [180,90,420] : kind==="check" ? [660,660] : kind==="end" ? [330,220,165] : [440]; notes.forEach(function(f,idx){ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); var t=audioCtx.currentTime+idx*0.09; o.frequency.value=f; o.type= (kind==="capture"||kind==="spray"||kind==="strike") ? "sawtooth" : "sine"; g.gain.setValueAtTime(0.07,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.14); o.start(t); o.stop(t+0.15); }); }catch(e){} }
@@ -999,7 +1031,7 @@
       if(ended){ sound("end"); showGameOver(); } else if(san.indexOf("+")>=0) sound("check"); else if(wasCapture) sound("capture"); else sound("move");
       maybeAI();
     }
-    function maybeAI(){ if(gameOver||mode!=="ai") return; if(state.turn===playerColor) return; subEl.textContent="The other side is plotting…"; render(); aiTimer=setTimeout(function(){ aiTimer=null; var m; if(difficulty===1&&Math.random()<0.25&&currentLegal.length>1){ m=currentLegal[Math.floor(Math.random()*currentLegal.length)]; } else { m=aiBestMove(state,difficulty); } if(m) doMove(m); },420); }
+    function maybeAI(){ if(gameOver||mode!=="ai") return; if(state.turn===playerColor) return; render(); subEl.textContent="The opposing "+(DIFF_INFO[difficulty]?DIFF_INFO[difficulty].name:"")+" is plotting…"; aiTimer=setTimeout(function(){ aiTimer=null; var m=aiChooseMove(state,difficulty); if(m) doMove(m); },420); }
     function undo(){ if(battleBusy) return; if(aiTimer){clearTimeout(aiTimer); aiTimer=null;} if(!undoStack.length) return; var steps=(mode==="ai"&&undoStack.length>=2&&state.turn===playerColor)?2:1; steps=Math.min(steps,undoStack.length); var key=posKey(state); for(var i=0;i<steps;i++){ var snap=undoStack.pop(); if(posCounts[key]) posCounts[key]--; state=snap.state; lastMove=snap.lastMove; sanList.length=snap.san; battleLogEntries.length=snap.logLen||0; key=posKey(state); } gameOver=null; selected=null; legalFromSel=[]; pendingPromo=null; hideOverlay(); refreshLegal(); render(); maybeAI(); }
 
     function render(){
@@ -1043,7 +1075,7 @@
     function segWire(id,attr,fn){ var seg=document.getElementById(id); seg.addEventListener("click",function(e){ var btn=e.target.closest("button"); if(!btn) return; seg.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); btn.classList.add("on"); fn(btn.getAttribute(attr)); }); }
     segWire("modeSeg","data-mode",function(v){ mode=v; document.getElementById("aiOptions").style.display=mode==="ai"?"":"none"; startGame(startState()); });
     segWire("colorSeg","data-color",function(v){ playerColor=v; startGame(startState()); });
-    segWire("diffSeg","data-diff",function(v){ difficulty=parseInt(v,10); });
+    segWire("diffSeg","data-diff",function(v){ difficulty=parseInt(v,10); updateDiffDesc(); });
     document.getElementById("battleToggle").addEventListener("click",function(){ duelsOn=!duelsOn; this.textContent="Takedowns: "+(duelsOn?"ON":"OFF"); this.classList.toggle("on-toggle",duelsOn); });
     document.getElementById("walkToggle").addEventListener("click",function(){ marchingOn=!marchingOn; this.textContent="Marching: "+(marchingOn?"ON":"OFF"); this.classList.toggle("on-toggle",marchingOn); });
     document.getElementById("walkToggle").classList.add("on-toggle");
@@ -1051,6 +1083,7 @@
     document.getElementById("undoBtn").addEventListener("click",undo);
     document.getElementById("flipBtn").addEventListener("click",function(){ flipped=!flipped; render(); });
     document.getElementById("pgnBtn").addEventListener("click",function(){ var pgn=""; for(var i=0;i<sanList.length;i+=2){ pgn+=(Math.floor(i/2)+1)+". "+sanList[i]+(sanList[i+1]?" "+sanList[i+1]+" ":" "); } if(gameOver){ if(gameOver.title.indexOf("Checkmate")===0) pgn+=state.turn==="w"?"0-1":"1-0"; else pgn+="1/2-1/2"; } else pgn+="*"; var blob=new Blob([pgn],{type:"text/plain"}); var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="guard-chess.pgn"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },400); });
+    updateDiffDesc();
     startGame(startState());
     </script>
   </body>
