@@ -1,0 +1,3249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCORCHED EARTH — The Mother of All Games (recreation)</title>
+<style>
+  :root{ --ink:#ffe9a8; --cy:#57e6ff; --pn:#0b0b2a; }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; background:#05051a; color:var(--ink);
+    font-family:"Courier New", Courier, monospace; overflow-x:hidden; }
+  /* Single stacked column: the cabinet (game + its controls) comes first and
+     fills exactly the first viewport; every bit of information content
+     lives below it in #info — never beside the game. */
+  #wrap{ width:100%; margin:0; outline:none; display:flex; flex-direction:column; }
+  /* One game screen: the battlefield fills it, controls live in a single bottom bar */
+  #screen{ height:100vh; height:100dvh; flex:0 0 auto; width:100%; display:flex; flex-direction:column; border:3px ridge #6a6ab0; background:#101038; }
+  #turnChip{ padding:2px 8px; border:2px outset #888; color:#000; font-weight:bold; white-space:nowrap; }
+  #windCell{ min-width:84px; text-align:center; }
+  #controls .cell b{ color:#fff; }
+  button, select, input{ font-family:inherit; }
+  button{ background:#2a2a6a; color:var(--ink); border:2px outset #7a7ad0; padding:4px 10px;
+    font-weight:bold; cursor:pointer; font-size:13px; }
+  button:active{ border-style:inset; }
+  button:disabled{ opacity:.45; cursor:default; }
+  button.fire{ background:#8a1010; color:#fff; border-color:#e07070; font-size:17px; padding:8px 22px; letter-spacing:2px;}
+  /* Stage: the battlefield takes every pixel the bottom bar doesn't */
+  #stage{ position:relative; flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; background:#000; overflow:hidden; }
+  /* Largest playfield the viewport allows: width capped by the viewport and
+     by a height-based cap (stage height × the 960:600 aspect), so the game
+     and its control bar are fully reachable without scrolling. */
+  canvas#cv{ display:block; width:100%; height:100%; max-width:100%; max-height:100%;
+    aspect-ratio:960 / 600; object-fit:contain; background:#000;
+    border:none; image-rendering:pixelated; touch-action:none; }
+  /* Controls: one bar along the bottom, like the original */
+  #controls{ display:flex; gap:8px; align-items:center; background:#101038; border-top:3px ridge #6a6ab0;
+    padding:6px 10px; margin-top:0; flex-wrap:wrap; font-size:13px; flex:0 0 auto; }
+  #controls .grp{ display:flex; align-items:center; gap:4px; }
+  #controls input[type=number]{ width:58px; background:#000; color:#fff; border:2px inset #555;
+    padding:3px 4px; text-align:center; font-weight:bold; font-size:14px; -moz-appearance:textfield; appearance:textfield; }
+  #controls input[type=number]::-webkit-outer-spin-button,
+  #controls input[type=number]::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+  #controls input[type=number]:disabled{ opacity:.45; }
+  #controls select{ background:#000; color:var(--ink); border:2px inset #555; padding:3px; max-width:170px;}
+  /* Game-flow panels (setup, shop, standings) sit inside the stage only —
+     they never cover the control bar below the game screen. */
+  .overlay{ position:absolute; inset:0; display:none; align-items:flex-start; justify-content:center;
+    background:rgba(2,2,20,.9); z-index:5; overflow:auto; padding:14px; }
+  .overlay.on{ display:flex; }
+  .panel{ background:#0d0d33; border:4px ridge #8a8ae0; padding:14px 18px; width:880px; max-width:96%;
+    box-shadow:8px 8px 0 #000; }
+  .panel h2{ margin:0 0 4px; color:#ffb347; letter-spacing:2px; font-size:20px; text-shadow:2px 2px 0 #000;}
+  .panel h3{ color:var(--cy); margin:10px 0 4px; font-size:15px; }
+  .panel p{ font-size:12px; color:#c8d4ff; margin:4px 0; }
+  table{ border-collapse:collapse; width:100%; font-size:13px; }
+  th,td{ border:1px solid #3a3a7a; padding:3px 6px; text-align:left; }
+  th{ background:#1c1c50; color:#fff; }
+  td.num, th.num{ text-align:right; }
+  .chip{ display:inline-block; width:14px; height:14px; border:2px outset #999; vertical-align:-2px; margin-right:5px;}
+  input[type=text]{ background:#000; color:#ffe9a8; border:2px inset #555; padding:3px 6px; width:130px;}
+  select{ background:#000; color:#ffe9a8; border:2px inset #555; padding:3px; }
+  .shopgrid{ display:grid; grid-template-columns:1fr 1fr; gap:0 22px; }
+  .shoprow{ display:flex; align-items:center; gap:6px; border-bottom:1px dotted #3a3a7a; padding:2px 0; font-size:12.5px;}
+  .shoprow .nm{ flex:1; }
+  .shoprow .own{ color:#9fe89f; min-width:34px; text-align:right;}
+  .shoprow button{ padding:1px 8px; font-size:12px; }
+  .bigbtn{ font-size:16px; padding:8px 26px; margin-top:10px; }
+  .center{ text-align:center; }
+  .warn{ color:#ff8080; font-weight:bold; }
+  .gold{ color:#ffd75e; }
+
+  /* ============ INFO — everything explanatory lives below the game ============ */
+  #info{ width:100%; max-width:920px; margin:0 auto; padding:28px 18px 44px;
+    display:flex; flex-direction:column; gap:8px; }
+  #info h2{ margin:10px 0 2px; color:#ffb347; letter-spacing:2px; font-size:20px;
+    text-shadow:2px 2px 0 #000; }
+  #info h2:first-child{ margin-top:0; }
+  #info p{ font-size:14px; line-height:1.65; color:#c8d4ff; margin:4px 0; }
+  @media (max-width:640px){
+    .shopgrid{ grid-template-columns:1fr; }
+    #info{ padding:22px 14px 36px; }
+  }
+
+  /* ============ OPENING CINEMATIC ============ */
+  #intro{ position:fixed; inset:0; z-index:60; background:#000; overflow:hidden;
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity .55s ease; }
+  #intro.gone{ opacity:0; pointer-events:none; }
+  #introCv{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .introCard{ position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center; padding:24px;
+    opacity:0; pointer-events:none; }
+  /* Card 1 — the production credit */
+  #introCard1{ transition:opacity .7s ease; }
+  #introCard1 .prod{ font-family:Georgia, "Times New Roman", serif;
+    font-size:clamp(26px, 6.2vw, 64px); letter-spacing:.32em; text-indent:.32em;
+    color:#f3d98b; text-transform:uppercase; line-height:1.15;
+    text-shadow:0 2px 0 #6a5210, 0 0 34px rgba(243,217,139,.25); }
+  #introCard1 .rule{ width:min(420px, 62vw); height:1px; margin:26px 0 20px;
+    background:#8a743a; box-shadow:0 6px 0 -2px rgba(138,116,58,.55); }
+  #introCard1 .presents{ font-family:Georgia, "Times New Roman", serif; font-style:italic;
+    font-size:clamp(18px, 3.4vw, 32px); letter-spacing:.18em; text-indent:.18em; color:#d8cba0; }
+  #intro.on1 #introCard1{ opacity:1; }
+  /* Card 2 — the title */
+  #introCard2{ transition:opacity .45s ease, transform .45s ease, filter .45s ease; }
+  #introCard2 .kicker{ font-size:clamp(11px, 2vw, 15px); letter-spacing:.5em; text-indent:.5em;
+    color:#57e6ff; margin-bottom:14px; font-weight:bold; }
+  #introCard2 .title{ font-weight:bold; line-height:.95;
+    font-size:clamp(44px, 11.5vw, 128px); letter-spacing:.04em; color:#ffb347;
+    text-shadow:4px 4px 0 #8a1010, 8px 8px 0 #000, 0 0 46px rgba(255,90,20,.45); }
+  #introCard2 .tag{ margin-top:20px; font-size:clamp(17px, 4.2vw, 38px); font-weight:bold;
+    letter-spacing:.28em; text-indent:.28em; color:#ffe9a8;
+    text-shadow:2px 2px 0 #000, 0 0 22px rgba(255,180,60,.5); }
+  #introCard2 .tag b{ color:#ff6a3c; }
+  #intro.on2 #introCard2{ opacity:1; }
+  #intro.boom #introCard2{ opacity:0; transform:scale(1.35) rotate(-2deg); filter:blur(3px); }
+  #introFlash{ position:absolute; inset:0; background:#fff7e0; opacity:0; pointer-events:none; }
+  #introSkip{ position:absolute; right:14px; bottom:14px; z-index:3;
+    background:rgba(10,10,30,.72); color:#ffe9a8; border:2px outset #7a7ad0;
+    padding:7px 14px; font-size:13px; letter-spacing:1px; }
+  #introSkip:hover{ background:rgba(42,42,106,.9); }
+  #introHint{ position:absolute; left:14px; bottom:18px; z-index:3; color:#8fa8d8;
+    font-size:11px; letter-spacing:1px; }
+  @media (prefers-reduced-motion: reduce){
+    #intro{ transition:opacity .2s ease; }
+    .introCard, #introCard2{ transition:opacity .2s ease; }
+  }
+</style>
+</head>
+<body>
+<!-- OPENING CINEMATIC — plays once on load, then hands over to the game -->
+<div id="intro" class="on1" aria-label="Opening: Angeles Productions presents Scorched Earth — Blast from the Past">
+  <canvas id="introCv"></canvas>
+  <div class="introCard" id="introCard1">
+    <div class="prod">Angeles<br>Productions</div>
+    <div class="rule"></div>
+    <div class="presents">presents</div>
+  </div>
+  <div class="introCard" id="introCard2">
+    <div class="kicker">THE MOTHER OF ALL GAMES · EST. 1991</div>
+    <div class="title">SCORCHED<br>EARTH</div>
+    <div class="tag">— BLAST FROM THE <b>PAST</b> —</div>
+  </div>
+  <div id="introFlash"></div>
+  <div id="introHint">HOLD ON TO SOMETHING</div>
+  <button id="introSkip" type="button">SKIP INTRO ▸</button>
+</div>
+<div id="wrap" tabindex="0">
+  <div id="screen">
+  <div id="stage">
+    <canvas id="cv" width="960" height="600"></canvas>
+
+    <!-- SETUP -->
+    <div class="overlay on" id="ovSetup">
+      <div class="panel">
+        <h2>TANK COMMANDERS</h2>
+        <table id="setupTable">
+          <tr><th>#</th><th>Name</th><th>Player Type</th><th>Tank</th></tr>
+        </table>
+        <h3>MATCH OPTIONS</h3>
+        <table>
+          <tr><td>Rounds to play</td><td><select id="optRounds">
+            <option>1</option><option>3</option><option>5</option><option selected>10</option><option>15</option><option>20</option></select></td>
+            <td>Starting cash</td><td><select id="optCash">
+            <option value="0" selected>$0</option><option value="1000">$1,000</option><option value="5000">$5,000</option>
+            <option value="10000">$10,000</option><option value="25000">$25,000</option><option value="50000">$50,000</option><option value="100000">$100,000</option></select></td></tr>
+          <tr><td>Wind</td><td><select id="optWind"><option value="on" selected>On</option><option value="off">Off</option></select></td>
+            <td>Talking tanks</td><td><select id="optTalk"><option value="on" selected>On</option><option value="off">Off</option></select></td></tr>
+        </table>
+        <p class="warn" id="setupWarn"></p>
+        <div class="center"><button class="bigbtn" id="btnStart" type="button">TO THE SHOP →</button></div>
+      </div>
+    </div>
+
+    <!-- SHOP -->
+    <div class="overlay" id="ovShop">
+      <div class="panel">
+        <h2 id="shopTitle">WEAPONS SHOP</h2>
+        <p id="shopInfo"></p>
+        <div class="shopgrid">
+          <div><h3>WEAPONS</h3><div id="shopWeapons"></div></div>
+          <div><h3>DEFENSE &amp; GEAR</h3><div id="shopGear"></div></div>
+        </div>
+        <div class="center"><button class="bigbtn" id="btnShopDone" type="button">DONE — NEXT</button></div>
+      </div>
+    </div>
+
+    <!-- STANDINGS -->
+    <div class="overlay" id="ovStand">
+      <div class="panel">
+        <h2 id="standTitle">STANDINGS</h2>
+        <table id="standTable"></table>
+        <div class="center"><button class="bigbtn" id="btnStandDone" type="button">CONTINUE</button></div>
+      </div>
+    </div>
+
+    <!-- MATCH END -->
+    <div class="overlay" id="ovEnd">
+      <div class="panel">
+        <h2 id="endTitle">MATCH OVER</h2>
+        <table id="endTable"></table>
+        <div class="center"><button class="bigbtn" id="btnAgain" type="button">NEW MATCH</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <span id="turnChip">SETUP</span>
+    <span class="cell">ROUND <b id="hudRound">–</b></span>
+    <span class="cell" id="windCell">WIND <b id="hudWind">–</b></span>
+    <span class="grp">ANGLE <button id="btnAngM" type="button" title="Angle up (hold to repeat)">◀</button><input type="number" id="numAngle" min="0" max="180" step="1" value="45" inputmode="numeric"><button id="btnAngP" type="button" title="Angle down (hold to repeat)">▶</button></span>
+    <span class="grp">POWER <button id="btnPowM" type="button" title="Power down (hold to repeat)">−</button><input type="number" id="numPower" min="0" max="500" step="1" value="50" inputmode="numeric"><button id="btnPowP" type="button" title="Power up (hold to repeat)">+</button></span>
+    <span class="grp"><select id="selWeapon"></select></span>
+    <span class="cell">CASH <b id="hudCash" class="gold">$0</b></span>
+    <button class="fire" id="btnFire" type="button">FIRE!</button>
+    <span class="grp"><button id="btnBattery" type="button">BATTERY</button><button id="btnShield" type="button">SHIELD</button></span>
+    <span class="grp">DRIVE <button id="btnMoveL" type="button">◀</button><button id="btnMoveR" type="button">▶</button></span>
+    <span class="grp"><button id="btnTrig" type="button">CONTACT TRIG: OFF</button></span>
+    <span class="grp"><button id="btnScores" type="button">SCORES</button><button id="btnSound" type="button">SOUND: ON</button><button id="btnRestart" type="button">NEW MATCH</button></span>
+  </div>
+  </div>
+
+  <!-- INFO — all explanatory content lives below the game, never beside it -->
+  <section id="info" aria-label="How to play">
+    <h2>HOW TO PLAY</h2>
+    <p>Up to 10 players — any mix of humans (hotseat) and computer opponents. Set each slot in the setup panel, then BUY UP and fight. First shop comes before Round 1, just like the original. Give two or more players the same Team letter and they fight as one side: a round is never over until only one side — one lone tank, or one whole team — is left standing.</p>
+    <h2>CONTROLS &amp; FIELD NOTES</h2>
+    <p>Angle &amp; power are numbers you dial in — type them, step them with the arrows, hold ←/→ and ↑/↓ · power now runs all the way to 500 · hold SHIFT + ←/→ to slide the view across the wide field · hold SHIFT + ↓ to stretch the view out — it snaps back when you let go · the moving dotted arc traces the first half of your shot before you fire · the camera follows your shot to its target · weather bombs are in the shop — sand, lightning, snow, fog and rain all bend the battle · the Ender Missile teleports your tank to wherever it lands · Q/E weapon · A/D drive (uses fuel) · B battery · S shield · SPACE fire · drag on the field to aim</p>
+  </section>
+</div>
+
+<script>
+'use strict';
+/* ============================================================
+   SCORCHED EARTH — faithful recreation of the 1991 DOS classic
+   (Wendell Hicken). Original code & art; mechanics recreated.
+   ============================================================ */
+const GW = 4800, GH = 600;        // world is 5 screens wide, same height
+const VIEW_W = 960;               // the viewable window stays exactly one screen
+const GRAV = 200;                 // px / s^2
+const TANK_HALF = 12;             // half hull width
+const INTEREST = 0.05;            // bank: 5% on cash at each shop phase
+const $ = (id) => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : (v > b ? b : v);
+const fmt$ = (n) => '$' + Math.round(n).toLocaleString('en-US');
+
+/* ---- seeded RNG (reproducible drives) ---- */
+let _seed = (parseInt(new URLSearchParams(location.search).get('seed') || '0', 10) >>> 0) || ((Math.random() * 1e9) >>> 0);
+function rng() { _seed |= 0; _seed = (_seed + 0x6D2B79F5) | 0; let t = Math.imul(_seed ^ (_seed >>> 15), 1 | _seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+const rr = (a, b) => a + rng() * (b - a);
+const ri = (a, b) => Math.floor(rr(a, b + 1));
+const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+
+/* ================= CATALOG (Scorched Earth 1.5) =================
+   pack = units per purchase, price = per pack. radius/dmg tuned to
+   the original's scale on a 960x600 field.                        */
+const WEAPONS = [
+  { id:'babymissile', name:'Baby Missile',    pack:0,  price:0,     free:true, kind:'shell', r:9,  dmg:70 },
+  { id:'missile',     name:'Missile',         pack:10, price:400,   kind:'shell', r:14, dmg:95 },
+  { id:'babynuke',    name:'Baby Nuke',       pack:5,  price:2000,  kind:'shell', r:24, dmg:115 },
+  { id:'nuke',        name:'Nuke',            pack:2,  price:12000, kind:'shell', r:50, dmg:165 },
+  { id:'mirv',        name:'MIRV',            pack:3,  price:7500,  kind:'mirv', warheads:5, r:13, dmg:95 },
+  { id:'deathshead',  name:"Death's Head",    pack:1,  price:20000, kind:'mirv', warheads:9, r:20, dmg:125 },
+  { id:'leapfrog',    name:'Leapfrog',        pack:3,  price:3000,  kind:'leapfrog' },
+  { id:'funky',       name:'Funky Bomb',      pack:2,  price:6000,  kind:'funky' },
+  { id:'napalm',      name:'Napalm',          pack:5,  price:1250,  kind:'napalm', hot:false },
+  { id:'hotnapalm',   name:'Hot Napalm',      pack:5,  price:3000,  kind:'napalm', hot:true },
+  { id:'tracer',      name:'Tracer',          pack:10, price:100,   kind:'tracer' },
+  { id:'smoketracer', name:'Smoke Tracer',    pack:10, price:200,   kind:'tracer', smoke:true },
+  { id:'dirtbomb',    name:'Dirt Bomb',       pack:5,  price:1000,  kind:'dirt', r:22 },
+  { id:'lgdirtbomb',  name:'Large Dirt Bomb', pack:3,  price:2000,  kind:'dirt', r:36 },
+  { id:'riot',        name:'Riot Bomb',       pack:5,  price:1250,  kind:'riot', r:32 },
+  { id:'heavyriot',   name:'Heavy Riot Bomb', pack:3,  price:3000,  kind:'riot', r:52 },
+  { id:'disrupter',   name:'Earth Disrupter', pack:1,  price:5000,  kind:'disrupter' },
+  { id:'babyroller',  name:'Baby Roller',     pack:5,  price:1000,  kind:'roller', r:12, dmg:75 },
+  { id:'roller',      name:'Roller',          pack:5,  price:2500,  kind:'roller', r:20, dmg:105 },
+  { id:'heavyroller', name:'Heavy Roller',    pack:3,  price:5000,  kind:'roller', r:32, dmg:135 },
+  { id:'digger',      name:'Digger',          pack:5,  price:2000,  kind:'digger', tunnel:6,  len:130, r:16, dmg:95 },
+  { id:'heavydigger', name:'Heavy Digger',    pack:3,  price:4000,  kind:'digger', tunnel:11, len:170, r:24, dmg:115 },
+  { id:'sandhog',     name:'Sandhog',         pack:3,  price:3500,  kind:'digger', tunnel:4,  len:250, r:28, dmg:135 },
+  { id:'sandstorm',   name:'Sand Storm',      pack:2,  price:4500,  kind:'weather', storm:'sand' },
+  { id:'elecstorm',   name:'Electrical Storm',pack:2,  price:5000,  kind:'weather', storm:'elec' },
+  { id:'snowstorm',   name:'Snow Storm',      pack:3,  price:3000,  kind:'weather', storm:'snow' },
+  { id:'fogbank',     name:'Fog Bank',        pack:3,  price:2500,  kind:'weather', storm:'fog' },
+  { id:'rainstorm',   name:'Rain Storm',      pack:2,  price:3500,  kind:'weather', storm:'rain' },
+  { id:'plasma',      name:'Plasma Blast',    pack:2,  price:8000,  kind:'shell', r:44, dmg:185 },
+  { id:'endermissile',name:'Ender Missile',   pack:3,  price:3000,  kind:'teleport' },
+];
+const GEAR = [
+  { id:'shield',      name:'Shield',         pack:1,  price:2000,  str:40 },
+  { id:'heavyshield', name:'Heavy Shield',   pack:1,  price:4000,  str:85 },
+  { id:'magshield',   name:'Mag Shield',     pack:1,  price:6000,  str:55,  mag:1 },
+  { id:'supermag',    name:'Super Mag',      pack:1,  price:10000, str:95,  mag:2 },
+  { id:'forceshield',name:'Force Shield',   pack:1,  price:15000, str:160 },
+  { id:'parachute',   name:'Parachutes',     pack:10, price:500 },
+  { id:'battery',     name:'Batteries',      pack:10, price:750 },
+  { id:'autodef',     name:'Auto Defense',   pack:1,  price:3000,  system:true },
+  { id:'fuel',        name:'Fuel',           pack:10, price:125 },
+  { id:'contact',     name:'Contact Trigger',pack:5,  price:1250 },
+];
+const WMAP = {}, GMAP = {};
+WEAPONS.forEach(w => WMAP[w.id] = w);
+GEAR.forEach(g => GMAP[g.id] = g);
+const SHIELD_IDS = ['shield','heavyshield','magshield','supermag','forceshield'];
+
+/* ---- tank talk (written for this recreation, in the original's spirit) ---- */
+const TALK_ATTACK = [
+  'Eat dirt!', 'Special delivery!', 'Incoming!', 'Fire in the hole!',
+  'This one has your name on it!', 'Watch the sky, pal!', 'Boom time!',
+  'I hope you bought insurance.', 'Say goodnight!', 'Wind? What wind? FIRE!',
+  'You are cordially invited to explode.', 'One lump or two?', 'Downrange!',
+  'Let\'s see how you like THIS one.', 'Target practice time!'
+];
+const TALK_DEATH = [
+  'AAARGH!', 'Tell my turret... I loved her...', 'MEDIC!!',
+  'I can see the light... it\'s beautiful...', 'My warranty!!',
+  'Down in flames!', 'Ouch. That was my everything.',
+  'You haven\'t seen the last of— *BOOM*', 'I\'m too young to be scrap!',
+  'So this is what the inside of a crater looks like...'
+];
+const TALK_WIN = [ 'Who\'s next?!', 'Too easy.', 'And THAT is how it\'s done.', 'Cha-ching!', 'Anybody else? Anybody?' ];
+const TALK_HIT = [ 'Hey! Watch the paint!', 'That cost money, you know!', 'I felt that one!', 'Is that all you\'ve got?' ];
+
+/* ---- round sky/terrain palettes ---- */
+const PALETTES = [
+  { skyT:'#0b0b3d', skyB:'#3a6bd8', dirt:'#8a5a2a', dirtD:'#5f3c17', top:'#c98f3f', stars:false, orb:'#ffd75e', name:'day' },
+  { skyT:'#ff9a3c', skyB:'#5a2a6a', dirt:'#7a4a22', dirtD:'#4f2f12', top:'#b87a34', stars:false, orb:'#ffdf8a', name:'sunset' },
+  { skyT:'#01010f', skyB:'#101038', dirt:'#6a4520', dirtD:'#452c10', top:'#a87a38', stars:true,  orb:'#e8e8ff', name:'night' },
+  { skyT:'#0a2a1a', skyB:'#2a7a4a', dirt:'#7d5226', dirtD:'#523311', top:'#bb8a3e', stars:false, orb:'#fff2b0', name:'green' },
+  { skyT:'#2a0a2a', skyB:'#8a2a5a', dirt:'#935f2c', dirtD:'#633d16', top:'#d09a48', stars:true,  orb:'#ffe8f0', name:'dusk' },
+  { skyT:'#3d0b0b', skyB:'#b83a1a', dirt:'#6e4520', dirtD:'#472b0f', top:'#b3813a', stars:false, orb:'#ffb060', name:'mars' },
+];
+const TANK_COLORS = ['#e33b3b','#3b6fe3','#3fae4a','#f2d13c','#c44fd8','#39c8d8','#f07f2a','#e8e8e8','#ff7fae','#9be32e'];
+const AI_TYPES = ['Moron','Shooter','PoolShark','Tosser','Chooser','Spoiler','Cyborg'];
+
+/* ---- bot stage names: the bots fight under famous names ----
+   Two lists — comedy actors and philosophers. When a match starts
+   every AI player draws a name from the combined pool, no repeats. */
+const COMEDY_NAMES = [
+  'Robin Williams', 'George Carlin', 'Richard Pryor', 'Groucho Marx',
+  'Lucille Ball', 'Eddie Murphy', 'Steve Martin', 'Carol Burnett',
+  'John Cleese', 'Peter Sellers', 'Joan Rivers', 'Bill Murray',
+  'Gene Wilder', 'Mel Brooks', 'Gilda Radner', 'Jim Carrey',
+  'Charlie Chaplin', 'Buster Keaton', 'Whoopi Goldberg', 'Chris Rock',
+  'Dave Chappelle', 'Tina Fey',
+];
+const PHILOSOPHER_NAMES = [
+  'Socrates', 'Plato', 'Aristotle', 'Confucius',
+  'Descartes', 'Nietzsche', 'Kant', 'Simone de Beauvoir',
+  'Marcus Aurelius', 'Laozi', 'Hume', 'Kierkegaard',
+  'Hypatia', 'Epicurus', 'Diogenes', 'Voltaire',
+  'John Stuart Mill', 'Mary Wollstonecraft', 'Zhuangzi', 'Hannah Arendt',
+  'Bertrand Russell', 'Sartre',
+];
+
+/* ---- the quote book: real lines actually said/written by the people above.
+   A bot fighting under a famous name speaks that person's own documented
+   words — stand-up material, writings, interviews, and their best-known
+   lines — loosely sorted by moment: a = firing, h = hurt, d = dying,
+   w = winning the round, g = general pool (also the fallback). ---- */
+const QUOTES = {
+'Robin Williams': {
+  a: ["Reality is just a crutch for people who can't cope with drugs.",
+      "Politics: 'Poli' means many, and 'tics' means blood-sucking creatures.",
+      "If women ran the world, we wouldn't have wars — just intense negotiations every 28 days.",
+      "The Second Amendment gives you the right to bear arms. Not artillery!"],
+  h: ["I'm sorry — if you were right, I'd agree with you.",
+      "Never pick a fight with an ugly person. They've got nothing to lose."],
+  d: ["Death is nature's way of saying: your table is ready.",
+      "Some are born great, some achieve greatness, and some get it as a graduation gift."],
+  w: ["No matter what people tell you, words and ideas can change the world.",
+      "Comedy is acting out optimism."],
+  g: ["You're only given a little spark of madness. You mustn't lose it.",
+      "Spring is nature's way of saying, 'Let's party!'",
+      "Why do they call it rush hour when nothing moves?",
+      "Cocaine is God's way of telling you you're making too much money.",
+      "Do you think God gets stoned? I think so. Look at the platypus.",
+      "Ah, yes, divorce — from the Latin word meaning to rip out a man's genitals through his wallet.",
+      "What's right is what's left if you do everything else wrong.",
+      "We had gay burglars the other night. They broke in and rearranged the furniture.",
+      "God gives men a brain and a penis, and only enough blood to run one at a time.",
+      "I used to think the worst thing in life was to end up alone. It's not."]},
+'George Carlin': {
+  a: ["Think how stupid the average person is — then realize half of them are stupider than that.",
+      "Never underestimate the power of stupid people in large groups.",
+      "If you can't beat them, arrange to have them beaten."],
+  h: ["It's a big club, and you ain't in it.",
+      "One tequila, two tequila, three tequila, floor."],
+  d: ["Death is caused by swallowing small amounts of saliva over a long period of time.",
+      "It's never just a game when you're winning."],
+  w: ["The reason I talk to myself is because I'm the only one whose answers I accept.",
+      "Just 'cause you got the monkey off your back doesn't mean the circus has left town."],
+  g: ["Have you ever noticed that anybody driving slower than you is an idiot, and anyone going faster is a maniac?",
+      "Most people work just hard enough not to get fired and get paid just enough not to quit.",
+      "A house is just a place to keep your stuff while you go out and get more stuff.",
+      "That's all a house is: a pile of stuff with a cover on it.",
+      "Your stuff is shit; my shit is stuff.",
+      "Weather forecast for tonight: dark.",
+      "Inside every older person is a younger person wondering what happened.",
+      "I'm not into working out. My philosophy: no pain, no pain.",
+      "I went to a bookstore and asked, 'Where's the self-help section?' She said if she told me, it would defeat the purpose.",
+      "What if there were no hypothetical questions?",
+      "Don't sweat the petty things, and don't pet the sweaty things.",
+      "Atheism is a non-prophet organization.",
+      "Some people dream of things that never were and ask, 'Why not?' Some people have to go to work.",
+      "The planet is fine. The people are the problem.",
+      "May the forces of evil become confused on the way to your house.",
+      "The other night I ate at a real nice family restaurant. Every table had an argument going."]},
+'Richard Pryor': {
+  a: ["The reason people use a crucifix against vampires is because vampires are allergic to bullshit."],
+  h: ["When you're on fire and running down the street, people will get out of your way."],
+  d: ["My father died at 57, with an 18-year-old. He came and went at the same time."],
+  w: ["What I'm saying might be profane, but it's also profound."],
+  g: ["I'm not addicted to cocaine. I just like the way it smells.",
+      "You don't get to be old being no fool.",
+      "I had to stop drinking because I got tired of waking up in my car, driving ninety.",
+      "Marriage is really tough, because you have to deal with feelings — and lawyers.",
+      "I went to Zimbabwe. I know how white people feel in America now: relaxed.",
+      "I thought I had everything — millions of dollars, mansions, cars. Now I struggle for peace.",
+      "I was a lonely, frightened little kid. That was my childhood.",
+      "There was a time in my life when I thought I had everything. Now I struggle for peace of mind.",
+      "I believe in divine forces, but I also believe in myself.",
+      "Comedy is a serious business. A serious business.",
+      "There's a thin line between to laugh with and to laugh at.",
+      "I went to Africa looking for my roots. I went through every phone book in the place and never found one Pryor.",
+      "When you ain't got no money, you've got to get an attitude.",
+      "You don't get old being a fool. A lot of young wise men are dead.",
+      "Pain will make you do things you never thought you could do — like laugh at it afterwards.",
+      "They say money changes you. Money don't change you; it just makes you more of what you already were."]},
+'Groucho Marx': {
+  a: ["I never forget a face, but in your case I'll be glad to make an exception.",
+      "He may look like an idiot and talk like an idiot, but don't let that fool you — he really is an idiot.",
+      "I have nothing but respect for you — and not much of that.",
+      "Whatever it is, I'm against it."],
+  h: ["Either this man is dead or my watch has stopped.",
+      "I've had a perfectly wonderful evening. But this wasn't it."],
+  d: ["I intend to live forever, or die trying.",
+      "Age is not a particularly interesting subject. Anyone can get old — all you have to do is live long enough."],
+  w: ["Those are my principles, and if you don't like them... well, I have others.",
+      "The secret of life is honesty and fair dealing. If you can fake that, you've got it made."],
+  g: ["Outside of a dog, a book is man's best friend. Inside of a dog it's too dark to read.",
+      "I find television very educating. Every time somebody turns on the set, I go into the other room and read a book.",
+      "I don't want to belong to any club that will accept me as a member.",
+      "One morning I shot an elephant in my pajamas. How he got into my pajamas I'll never know.",
+      "A child of five would understand this. Send someone to fetch a child of five.",
+      "Time flies like an arrow; fruit flies like a banana.",
+      "Politics is the art of looking for trouble, finding it everywhere, diagnosing it incorrectly, and applying the wrong remedies.",
+      "Military intelligence is a contradiction in terms.",
+      "She got her good looks from her father. He's a plastic surgeon.",
+      "From the moment I picked up your book until I laid it down, I was convulsed with laughter. Some day I intend reading it.",
+      "If you've heard this story before, don't stop me, because I'd like to hear it again.",
+      "While money can't buy happiness, it certainly lets you choose your own form of misery.",
+      "Humor is reason gone mad.",
+      "Learn from the mistakes of others. You can never live long enough to make them all yourself.",
+      "A black cat crossing your path signifies that the animal is going somewhere.",
+      "There's one way to find out if a man is honest: ask him. If he says 'yes,' he's a crook.",
+      "Room service? Send up a larger room.",
+      "A man's only as old as the woman he feels."]},
+'Lucille Ball': {
+  a: ["A man who correctly guesses a woman's age may be smart, but he's not very bright."],
+  h: ["I am not funny. My writers were funny. My directors were funny. The situations were funny. I am not funny."],
+  d: ["Once in his life, every man is entitled to fall madly in love with a gorgeous redhead."],
+  w: ["It's a helluva start, being able to recognize what makes you happy."],
+  g: ["The secret of staying young is to live honestly, eat slowly, and lie about your age.",
+      "Love yourself first and everything else falls into line.",
+      "I'd rather regret the things I've done than regret the things I haven't done.",
+      "One of the things I learned the hard way was that it doesn't pay to get discouraged.",
+      "In life, all good things come hard, but wisdom is the hardest to come by.",
+      "Ability is of little account without opportunity.",
+      "I don't know anything about luck. I've never banked on it, and I'm afraid of people who do.",
+      "The more things you do, the more you can do.",
+      "I think knowing what you cannot do is more important than knowing what you can do.",
+      "I'm happy that I have brought laughter, because I have been shown by many the value of it in so many lives, in so many ways.",
+      "I'm not funny. What I am is brave.",
+      "The best way to get a man to do something is to suggest that he is too old for it.",
+      "I cured myself of shyness when it finally occurred to me that people didn't think about me half as much as I gave them credit for.",
+      "I am a real ham. I love an audience. I need it.",
+      "I'm a workaholic. I have been a workaholic since I was fifteen years old.",
+      "WAAAAH!"]},
+'Eddie Murphy': {
+  a: ["I'm Gumby, dammit!",
+      "Good morning, my neighbors!",
+      "It was the Dukes! It was the Dukes!"],
+  h: ["I've always had confidence. It came because I have lots of initiative."],
+  d: ["I spent my thirties fixing everything I broke in my twenties."],
+  w: ["The advice I would give to someone is to not take anyone's advice."],
+  g: ["Merry New Year!",
+      "Looking good, Billy Ray!",
+      "Hercules! Hercules!",
+      "Sexual Chocolate!",
+      "Just let your Soul Glo!",
+      "Half! Half, Eddie!",
+      "Goony goo goo!",
+      "You want a lick? You can't have no ice cream — you can't afford it, you on welfare!",
+      "A bear and a rabbit are taking a crap in the woods. The bear says, 'Excuse me — do you have problems with crap sticking to your fur?'",
+      "You're not gonna fall for the banana in the tailpipe.",
+      "In the morning, I'm making waffles!",
+      "Dishonor! Dishonor on your whole family! Dishonor on you, dishonor on your cow!",
+      "Otay!",
+      "What have you done for me lately, Eddie?"]},
+'Steve Martin': {
+  a: ["Excuuuuuse me!",
+      "I'm a wild and crazy guy!"],
+  h: ["First the doctor told me the good news: I was going to have a disease named after me."],
+  d: ["I've got to keep breathing. It'll be my worst business mistake if I don't."],
+  w: ["Be so good they can't ignore you.",
+      "Thankfully, persistence is a great substitute for talent."],
+  g: ["A day without sunshine is like, you know, night.",
+      "Comedy is the art of making people laugh without making them puke.",
+      "I believe that sex is one of the most beautiful, natural, wholesome things that money can buy.",
+      "Chaos in the midst of chaos isn't funny. Chaos in the midst of order is.",
+      "I like a woman with a head on her shoulders. I hate necks.",
+      "I gave my cat a bath the other day. He enjoyed it. The fur stuck to my tongue, but other than that...",
+      "Don't have sex, man. It leads to kissing, and pretty soon you have to start talking to them.",
+      "Writer's block is a fancy term made up by whiners so they can have an excuse to drink alcohol.",
+      "The greatest thing you can do is surprise yourself.",
+      "I believe entertainment can aspire to be art — but if you set out to make art, you're an idiot.",
+      "Despite a lack of natural ability, I did have the one element necessary to all early creativity: naïveté.",
+      "Comedy isn't pretty.",
+      "The banjo is such a happy instrument. You can't play a sad song on the banjo.",
+      "A celebrity is any well-known TV or movie star who looks like he spends more than two hours working on his hair.",
+      "Talking about music is like dancing about architecture.",
+      "Before you criticize a man, walk a mile in his shoes. That way, when you do criticize him, you'll be a mile away — and you'll have his shoes.",
+      "I believe you have to be willing to be misunderstood if you're going to innovate."]},
+'Carol Burnett': {
+  a: ["It's almost impossible to be funnier than a cat with a piece of tape on its paw."],
+  h: ["Giving birth is like taking your lower lip and forcing it over your head."],
+  d: ["No one ever said life was fair. Just eventful."],
+  w: ["When you have a dream, you've got to grab it and never let go."],
+  g: ["Words, once they are printed, have a life of their own.",
+      "You have to love the characters you play, even if no one else does.",
+      "Adolescence is just one long, big time-out.",
+      "I'm so glad we had this time together.",
+      "Only I can change my life. No one can do it for me.",
+      "We don't stop going to school when we graduate.",
+      "Because nobody goes through life without a scar.",
+      "Ahh-uhh-ahh-uhh-AHHH!",
+      "I saw it in the window, and I just couldn't resist it.",
+      "I don't have false teeth. Do you think I'd buy teeth like these?",
+      "My parents were both alcoholics, and my grandmother raised me. She was the funniest person I ever knew.",
+      "I've always thought of myself as an actress who just happens to do comedy.",
+      "Harvey Korman could undo me with one look. I laughed on live television more times than I can count.",
+      "You can never have too much of a good laugh. That was the whole philosophy of our show.",
+      "We did that show for eleven years, and I'd walk out on that stage again tonight.",
+      "If a sketch wasn't funny at dress rehearsal, we didn't throw it out — we found the funny."]},
+'John Cleese': {
+  a: ["And now for something completely different.",
+      "Don't mention the war!",
+      "I fart in your general direction!",
+      "Your mother was a hamster and your father smelt of elderberries!",
+      "None shall pass."],
+  h: ["'Tis but a scratch!",
+      "I've had worse."],
+  d: ["This is an ex-parrot. It has ceased to be."],
+  w: ["I'm invincible!",
+      "The Black Knight always triumphs!"],
+  g: ["He who laughs most, learns best.",
+      "If you want creative workers, give them enough time to play.",
+      "Creativity is not a talent. It is a way of operating.",
+      "I find it rather easy to portray a businessman. Being bland, rather cruel and incompetent comes naturally to me.",
+      "If God did not intend for us to eat animals, then why did he make them out of meat?",
+      "All humor is critical. If you start saying 'we mustn't go there,' you're not a comedian.",
+      "A wonderful thing about true laughter is that it just destroys any kind of system of dividing people.",
+      "The problem with people like this is that they are so stupid, they have no idea how stupid they are.",
+      "I don't want to talk to you no more, you empty-headed animal food trough wiper!",
+      "'E's not pining — 'e's passed on! This parrot is no more!"]},
+'Peter Sellers': {
+  a: ["Gentlemen, you can't fight in here! This is the War Room!",
+      "There is a time and a place for everything, Cato!",
+      "The case is sol-ved!"],
+  h: ["I like to watch.",
+      "I thought you said your dog did not bite!"],
+  d: ["Mein Führer, I can walk!",
+      "Life is a state of mind."],
+  w: ["As long as the roots are not severed, all is well. And all will be well in the garden.",
+      "I will not go down in history as the greatest mass murderer since Adolf Hitler!"],
+  g: ["There used to be a me, but I had it surgically removed.",
+      "If you ask me to play myself, I will not know what to do. I do not know who or what I am.",
+      "You have to live before you die, or you'll die before you live.",
+      "I believe everything, and I believe nothing. I suspect everyone, and I suspect no one.",
+      "That is not my dog.",
+      "A minkey?",
+      "Not now, Cato!",
+      "I think you're some kind of deviated prevert.",
+      "Birdie num-num.",
+      "I am Chief Inspector Clouseau of the Sûreté, and I have a few questions.",
+      "To be perfectly honest, I have no idea who I am when I am not playing somebody else."]},
+'Joan Rivers': {
+  a: ["Can we talk?",
+      "Oh, grow up!"],
+  h: ["I knew I was an unwanted baby when I saw that my bath toys were a toaster and a radio.",
+      "I have flabby thighs, but fortunately my stomach covers them."],
+  d: ["My face has been tucked in more times than a bedsheet at a Holiday Inn.",
+      "It's been so long since I made love, I can't even remember who gets tied up."],
+  w: ["I succeeded by saying what everyone else is thinking but is afraid to say.",
+      "People say money is not the key to happiness, but if you have enough money, you can have a key made."],
+  g: ["I enjoy life when things are happening. I don't care if it's good things or bad things. That means you're alive.",
+      "My best birth control now is to just leave the lights on.",
+      "I hate housework! You make the beds, you do the dishes, and six months later you have to start all over again.",
+      "I told my mother-in-law my house was her house, and she said, 'Get the hell off my property.'",
+      "I wish I had a twin, so I could know what I'd look like without plastic surgery.",
+      "The first time I see a jogger smiling, I'll consider it.",
+      "I am definitely going to watch the Emmys this year! My makeup team is nominated for Best Special Effects.",
+      "My mother told me, 'The man goes on top and the woman underneath.' For three years we slept in bunk beds.",
+      "I don't exercise. If God had wanted me to bend over, he would have put diamonds on the floor.",
+      "When a man has a birthday, he takes a day off. When a woman has a birthday, she takes at least three years off.",
+      "My husband said he wanted to be cremated. I told him I'd scatter his ashes at Bloomingdale's — that way I'd visit him every day.",
+      "Life goes by fast. Enjoy it. Calm down. It's all funny."]},
+'Bill Murray': {
+  a: ["We came, we saw, we kicked its ass!",
+      "That's the fact, Jack!",
+      "Let's show this prehistoric bitch how we do things downtown."],
+  h: ["He slimed me.",
+      "Back off, man. I'm a scientist.",
+      "Don't drive angry!"],
+  d: ["I'm a god. I'm not the God — I don't think."],
+  w: ["Cinderella story, outta nowhere!",
+      "So I got that going for me, which is nice."],
+  g: ["The more you know who you are, and what you want, the less you let things upset you.",
+      "Whatever you do, always give 100%. Unless you're donating blood.",
+      "Human sacrifice, dogs and cats living together — mass hysteria!",
+      "I always want to say to people who want to be rich and famous: 'Try being rich first. See if that doesn't cover most of it.'",
+      "Don't think about your errors or failures; otherwise, you'll never do a thing.",
+      "What would you do if you were stuck in one place, and every day was exactly the same, and nothing that you did mattered?",
+      "License to kill gophers by the government of the United Nations.",
+      "So the Dalai Lama says: 'There won't be any money — but when you die, on your deathbed, you will receive total consciousness.'",
+      "Gunga galunga... gunga, gunga-lagunga.",
+      "This is a hybrid — a cross of Bluegrass, Kentucky Bluegrass, Featherbed Bent, and Northern California Sensemilia.",
+      "Well, what if there is no tomorrow? There wasn't one today.",
+      "Yes, it's true. This man has no dick."]},
+'Gene Wilder': {
+  a: ["You've got to remember these are just simple farmers. People of the land. The common clay of the new West. You know... morons.",
+      "There's no earthly way of knowing which direction we are going.",
+      "Wrong, sir! Wrong!",
+      "You get nothing! You lose! Good day, sir!"],
+  h: ["I'm in pain! I'm wet! And I'm still hysterical!",
+      "The suspense is terrible. I hope it'll last."],
+  d: ["I'm frightened!"],
+  w: ["It's alive! It's alive!",
+      "If you want to view paradise, simply look around and view it."],
+  g: ["Wow, what knockers!",
+      "My name is Jim. But most people call me... Jim.",
+      "That's right, that's right — we bad.",
+      "Time is a precious thing. Never waste it.",
+      "We are the music makers, and we are the dreamers of dreams.",
+      "A little nonsense now and then is relished by the wisest men.",
+      "Strike that. Reverse it.",
+      "Invention, my dear friends, is 93% perspiration, 6% electricity, 4% evaporation, and 2% butterscotch ripple.",
+      "Puttin' on the Ritz!",
+      "It's pronounced 'Fronkensteen.'",
+      "So shines a good deed in a weary world."]},
+'Mel Brooks': {
+  a: ["It's good to be the king.",
+      "May the Schwartz be with you."],
+  h: ["He who hesitates is poor."],
+  d: ["If Shaw and Einstein couldn't beat death, what chance have I got? Practically none."],
+  w: ["That's it, baby! When you've got it, flaunt it!",
+      "Never underestimate the power of the Schwartz!"],
+  g: ["Tragedy is when I cut my finger. Comedy is when you fall into an open sewer and die.",
+      "Hope for the best. Expect the worst. Life is a play. We're unrehearsed.",
+      "If you're quiet, you're not living. You've got to be noisy and colorful and lively.",
+      "As long as the world is turning and spinning, we're gonna be dizzy and we're gonna make mistakes.",
+      "Humor is just another defense against the universe.",
+      "Bad taste is simply saying the truth before it should be said.",
+      "If God wanted us to fly, he would have given us tickets.",
+      "Life literally abounds in comedy if you just look around you.",
+      "Look, I really don't want to wax philosophic, but I will say that if you're alive, you've got to flap your arms and legs.",
+      "Every human being has hundreds of separate people living under his skin.",
+      "Ludicrous speed — go!",
+      "I am your father's brother's nephew's cousin's former roommate.",
+      "Feeling alienated, the only way to deal with the world is to laugh — because if you don't laugh, you'll cry.",
+      "Rhetoric does not get you anywhere, because Hitler and Mussolini are just as good at rhetoric. But if you can bring these people down with comedy, they stand no chance."]},
+'Gilda Radner': {
+  a: ["It's always something — if it isn't one thing, it's another."],
+  h: ["Never mind!"],
+  d: ["Having cancer gave me membership in an elite club I'd rather not belong to."],
+  w: ["Life is about not knowing, having to change, taking the moment and making the best of it. Delicious ambiguity!"],
+  g: ["Some poems don't rhyme, and some stories don't have a clear beginning, middle, and end.",
+      "I base most of my fashion sense on what doesn't itch.",
+      "Motherhood is the biggest gamble in the world. It's huge and scary — an act of infinite optimism.",
+      "Fame changes a lot of things, but it can't change a lightbulb.",
+      "Cancer is probably the unfunniest thing in the world — but I'm a comedian, and even cancer couldn't stop me.",
+      "What's all this fuss I hear about violins on television?",
+      "The goal is to live a full, productive life even with all that ambiguity.",
+      "I'd much rather be a woman than a man. Women can cry, they can wear cute clothes, and they're the first to be rescued off sinking ships.",
+      "A Mr. Richard Feder of Fort Lee, New Jersey writes in and says...",
+      "What's all this fuss I hear about endangered feces?",
+      "What's all this fuss I hear about the presidential erection?",
+      "This is Baba Wawa, weporting.",
+      "That's so funny, I forgot to laugh.",
+      "There is no real security except the security you build inside yourself.",
+      "I think dogs are the most amazing creatures. They give unconditional love. For me, they are the role model for being alive.",
+      "Well, Jane, it just goes to show you — it's always something."]},
+'Jim Carrey': {
+  a: ["Somebody stop me!",
+      "Smokin'!"],
+  h: ["If I'm not back in five minutes, just wait longer."],
+  d: ["Please let me keep this memory. Just this one."],
+  w: ["Alrighty then!",
+      "So you're telling me there's a chance!"],
+  g: ["I think everybody should get rich and famous and do everything they ever dreamed of, so they can see that it's not the answer.",
+      "Behind every great man is a woman rolling her eyes.",
+      "Maybe other people will try to limit me, but I don't limit myself.",
+      "My focus is to forget the pain of life. Forget the pain, mock the pain, reduce it. And laugh.",
+      "Life opens up opportunities to you, and you either take them or you stay afraid of taking them.",
+      "It is better to risk starving to death than surrender. If you give up on your dreams, what's left?",
+      "The effect you have on others is the most valuable currency there is.",
+      "Desperation is a necessary ingredient to learning anything, or creating anything.",
+      "If you've got a talent, protect it.",
+      "Your need for acceptance can make you invisible in this world.",
+      "You are ready and able to do beautiful things in this world.",
+      "Risk being seen in all of your glory.",
+      "Good morning! And in case I don't see ya — good afternoon, good evening, and good night!",
+      "We got no food, we got no jobs. Our pets' heads are falling off!",
+      "My report card always said: 'Jim finishes first and then disrupts the other students.'"]},
+'Charlie Chaplin': {
+  a: ["Soldiers! Don't give yourselves to brutes — men who despise you, enslave you, who regiment your lives!",
+      "Greed has poisoned men's souls, has barricaded the world with hate, has goose-stepped us into misery and bloodshed."],
+  h: ["I always like walking in the rain, so no one can see me crying."],
+  d: ["I'm sorry, but I don't want to be an emperor. That's not my business.",
+      "In the end, everything is a gag."],
+  w: ["The hate of men will pass, and dictators die, and the power they took from the people will return to the people.",
+      "Let us fight for a new world — a decent world."],
+  g: ["A day without laughter is a day wasted.",
+      "Life is a tragedy when seen in close-up, but a comedy in long-shot.",
+      "Nothing is permanent in this wicked world — not even our troubles.",
+      "To truly laugh, you must be able to take your pain and play with it.",
+      "We think too much and feel too little.",
+      "Failure is unimportant. It takes courage to make a fool of yourself.",
+      "A tramp, a gentleman, a poet, a dreamer, a lonely fellow, always hopeful of romance and adventure.",
+      "You need power only when you want to do something harmful. Otherwise love is enough to get everything done.",
+      "Imagination means nothing without doing.",
+      "Simplicity is not a simple thing.",
+      "I have many problems in my life, but my lips don't know that. They always smile.",
+      "Movies are a fad. Audiences really want to see live actors on a stage.",
+      "Actors search for rejection. If they don't get it, they reject themselves.",
+      "Man as an individual is a genius. But men in the mass form the headless monster, a great, brutish idiot.",
+      "Why should poetry have to make sense?",
+      "Life can be wonderful if you're not afraid of it.",
+      "You'll never find a rainbow if you're looking down."]},
+'Buster Keaton': {
+  a: ["Think slow, act fast."],
+  h: ["Tragedy is a close-up; comedy, a long shot.",
+      "A fall only hurts if you think about it. I never thought about it."],
+  d: ["I hope they remember the falls — and that I always got back up."],
+  w: ["I always want the audience to outguess me, and then I double-cross them.",
+      "Keep the face still, and let the whole world go crazy around you."],
+  g: ["A comedian does funny things. A good comedian does things funny.",
+      "I don't act, anyway. The stuff is all injected as we go along.",
+      "I didn't smile on screen because the audience laughed harder when I didn't.",
+      "They called me the Great Stone Face. I earned it one fall at a time.",
+      "I learned to fall before I learned to act. Falling down was the family business.",
+      "Chaplin could make you cry. I was only ever after the laugh.",
+      "The camera didn't need my words. The falls said everything."]},
+'Whoopi Goldberg': {
+  a: ["Molly, you in danger, girl.",
+      "Until you do right by me, everything you even think about is gonna fail."],
+  h: ["Normal is in the eye of the beholder."],
+  d: ["I'm poor, black, I may even be ugly — but dear God, I'm here."],
+  w: ["We're here for a reason. Part of it is to throw little torches out to lead people through the dark."],
+  g: ["When you are kind to someone in trouble, you hope they'll remember and be kind to someone else. And it'll become like a wildfire.",
+      "I am where I am because I believe in all possibilities.",
+      "Art and life are subjective. Not everybody's gonna dig what I dig, but I reserve the right to dig it.",
+      "If you want to be somebody, if you want to go somewhere, you got to wake up and pay attention.",
+      "Normal is nothing more than a cycle on a washing machine.",
+      "I don't have pet peeves. I have major psychotic hatreds.",
+      "An actress can only play a woman. I'm an actor — I can play anything.",
+      "I am the American Dream. I am the epitome of what the American Dream basically said.",
+      "I'm not a nun. I'm a lounge singer.",
+      "If you want people to hear the truth, tell it funny — otherwise they stop listening.",
+      "Everybody knows my face. That doesn't mean anybody knows me.",
+      "Books saved me when I was a kid. Stories are how we survive.",
+      "I'm here. That's the whole speech — I'm still here.",
+      "I grew up in the projects. I learned timing on the street corner, and I never forgot a bit of it.",
+      "You know why I'm so big? Every time I make love to that man, he gives me a cookie."]},
+'Chris Rock': {
+  a: ["We don't need gun control. We need bullet control. A bullet should cost five thousand dollars.",
+      "Men lie the most. Women tell the biggest lies."],
+  h: ["I live in a neighborhood so bad, you can get shot while getting shot."],
+  d: ["Comedy is the blues for people who can't sing."],
+  w: ["Wealth is not about having a lot of money; it's about having a lot of options.",
+      "A man is only as faithful as his options."],
+  g: ["The best rapper is a white guy, the best golfer is a black guy, the tallest guy in the NBA is Chinese.",
+      "There are only three things women need in life: food, water, and compliments.",
+      "Only dumb people try to impress smart people. Smart people just do what they do.",
+      "If a woman tells you she's twenty-six and looks twenty-six, she's damn near forty.",
+      "You know what minimum wage means? 'I would pay you less — but it's against the law.'",
+      "Gay people have every right to be as miserable as everybody else.",
+      "If a man could have sex in a cardboard box, he wouldn't buy a house.",
+      "You don't pay taxes. They take taxes.",
+      "There's no rehab for stupidity.",
+      "What does daddy get for his hard work? The big piece of chicken. That's what daddy gets.",
+      "In my house, if you weren't bleeding, you weren't hurt.",
+      "A real man takes care of his family — and complains about it the entire time he's doing it.",
+      "You know you're getting old when your heroes start dying and your back starts lying.",
+      "Nelson Mandela spent 27 years in prison and got out — and got a divorce. Marriage is hard, man."]},
+'Dave Chappelle': {
+  a: ["I'm Rick James, bitch!",
+      "I'm rich, bitch!",
+      "What did the five fingers say to the face? SLAP!"],
+  h: ["The hardest thing to do is to be true to yourself, especially when everybody is watching."],
+  d: ["Fame is a horrifying concept for me."],
+  w: ["Modern problems require modern solutions."],
+  g: ["You know you must be doing something right if old people like you.",
+      "I'm cool with failing, so long as I know that there are people around me that love me unconditionally.",
+      "The worst thing to call somebody is 'crazy.' It's dismissive.",
+      "You can't get un-famous. You can get infamous, but you can't get un-famous.",
+      "All white people talk about, when they get high, is other times they got high.",
+      "I support anyone's right to be who they want to be. My question is: to what extent do I have to participate in your self-image?",
+      "BYAAAH!",
+      "Sugar, water, and of course — purple.",
+      "Game. Blouses.",
+      "Sometimes you have to be a lion so you can be the lamb you really are.",
+      "The mark of greatness is when everything before you is obsolete, and everything after you bears your mark.",
+      "Constantly take inventory of what's important to you.",
+      "I'm a flawed role model — but I never pretended to be a perfect one.",
+      "Chappelle's Show changed my life. It almost took it, too."]},
+'Tina Fey': {
+  a: ["Bitches get stuff done.",
+      "I can see Russia from my house!"],
+  h: ["My ability to turn good news into anxiety is rivaled by my ability to turn anxiety into chin acne."],
+  d: ["If you retain nothing else, always remember the most important rule of beauty: who cares?"],
+  w: ["Do your thing, and don't care if they like it."],
+  g: ["You can't be that kid standing at the top of the waterslide, overthinking it. You have to go down the chute.",
+      "Whatever the problem, be part of the solution. Don't just sit around raising questions and pointing out obstacles.",
+      "Confidence is 10% hard work and 90% delusion.",
+      "You can tell how smart people are by what they laugh at.",
+      "Don't waste your energy trying to educate or change opinions. Go over, under, through.",
+      "Say yes, and you'll figure it out afterward.",
+      "Politics and prostitution have to be the only jobs where inexperience is considered a virtue.",
+      "If you want to make an audience laugh, dress a man in an old lady's clothes and push him down the stairs.",
+      "I feel about Photoshop the way some people feel about abortion: appalling, and a bad solution to a vexing problem.",
+      "Only in comedy does an obedient white girl from the suburbs count as diversity.",
+      "I want to go to there.",
+      "Blurgh!",
+      "What the what?",
+      "Lovers. Ugh — that word bums me out, unless it's between 'meat' and 'pizza.'",
+      "When faced with sexism, ask yourself: 'Is this person in between me and what I want to do?'"]},
+'Socrates': {
+  a: ["I cannot teach anybody anything. I can only make them think.",
+      "False words are not only evil in themselves, but they infect the soul with evil."],
+  h: ["By all means marry. If you get a good wife, you'll be happy. If you get a bad one, you'll become a philosopher."],
+  d: ["The hour of departure has arrived: I to die, and you to live. Which is better, God only knows.",
+      "Death may be the greatest of all human blessings."],
+  w: ["The way to gain a good reputation is to endeavor to be what you desire to appear."],
+  g: ["The only true wisdom is in knowing you know nothing.",
+      "The unexamined life is not worth living.",
+      "To find yourself, think for yourself.",
+      "Wonder is the beginning of wisdom.",
+      "There is only one good — knowledge — and one evil — ignorance.",
+      "Beware the barrenness of a busy life.",
+      "He is richest who is content with the least.",
+      "Contentment is natural wealth; luxury is artificial poverty.",
+      "Let him that would move the world first move himself.",
+      "Employ your time in improving yourself by other men's writings.",
+      "Our prayers should be for blessings in general, for God knows best what is good for us.",
+      "An honest man is always a child.",
+      "Remember, no human condition is ever permanent.",
+      "Envy is the ulcer of the soul.",
+      "Regard your good name as the richest jewel you can possibly possess.",
+      "Not life, but good life, is to be chiefly valued.",
+      "I am not an Athenian or a Greek, but a citizen of the world."]},
+'Plato': {
+  a: ["No man is more hated than he who speaks the truth.",
+      "One of the penalties for refusing to participate in politics is that you end up governed by your inferiors."],
+  h: ["Courage is knowing what not to fear."],
+  d: ["At the touch of love, everyone becomes a poet."],
+  w: ["The beginning is the most important part of the work.",
+      "The measure of a man is what he does with power."],
+  g: ["We can easily forgive a child who is afraid of the dark; the real tragedy is when a man is afraid of the light.",
+      "Wise men speak because they have something to say; fools, because they have to say something.",
+      "Ignorance is the root and stem of all evil.",
+      "The greatest wealth is to live content with little.",
+      "Necessity is the mother of invention.",
+      "Human behavior flows from three main sources: desire, emotion, and knowledge.",
+      "Never discourage anyone who continually makes progress, no matter how slow.",
+      "Good actions give strength to ourselves and inspire good actions in others.",
+      "Until philosophers are kings, cities will never rest from their evils.",
+      "The heaviest penalty for declining to rule is to be ruled by someone inferior to yourself.",
+      "A good decision is based on knowledge, and not on numbers.",
+      "Better a little which is well done, than a great deal imperfectly.",
+      "Thinking is the talking of the soul with itself.",
+      "Wonder is the feeling of the philosopher, and philosophy begins in wonder.",
+      "Rhythm and harmony find their way into the inward places of the soul.",
+      "Access to power must be confined to those who are not in love with it."]},
+'Aristotle': {
+  a: ["The worst form of inequality is to try to make unequal things equal."],
+  h: ["We cannot learn without pain.",
+      "Youth is easily deceived, because it is quick to hope."],
+  d: ["Hope is a waking dream.",
+      "Man is by nature a political animal."],
+  w: ["Pleasure in the job puts perfection in the work.",
+      "Happiness depends upon ourselves."],
+  g: ["Knowing yourself is the beginning of all wisdom.",
+      "It is the mark of an educated mind to be able to entertain a thought without accepting it.",
+      "No great genius has ever existed without some touch of madness.",
+      "Education is the best provision for old age.",
+      "The roots of education are bitter, but the fruit is sweet.",
+      "Friendship is a single soul dwelling in two bodies.",
+      "Wishing to be friends is quick work, but friendship is a slow-ripening fruit.",
+      "A friend to all is a friend to none.",
+      "Happiness is the meaning and the purpose of life.",
+      "All men by nature desire to know.",
+      "Nature does nothing in vain.",
+      "The law is reason, free from passion.",
+      "Dignity does not consist in possessing honors, but in deserving them.",
+      "He who cannot be a good follower cannot be a good leader.",
+      "Patience is bitter, but its fruit is sweet.",
+      "The whole is greater than the sum of its parts."]},
+'Confucius': {
+  a: ["When anger rises, think of the consequences."],
+  h: ["If you make a mistake and do not correct it, this is called a mistake."],
+  d: ["Study the past if you would divine the future."],
+  w: ["The superior man acts before he speaks, and afterwards speaks according to his actions."],
+  g: ["It does not matter how slowly you go, as long as you do not stop.",
+      "Everything has beauty, but not everyone sees it.",
+      "By three methods we may learn wisdom: reflection, which is noblest; imitation, easiest; and experience, which is bitterest.",
+      "He who learns but does not think is lost; he who thinks but does not learn is in danger.",
+      "Real knowledge is to know the extent of one's ignorance.",
+      "When we see men of a contrary character, we should turn inwards and examine ourselves.",
+      "To see what is right and not do it is a want of courage.",
+      "Respect yourself, and others will respect you.",
+      "A superior man is modest in his speech, but exceeds in his actions.",
+      "The superior man understands what is right; the inferior man understands what will sell.",
+      "What you do not want done to yourself, do not do to others.",
+      "Silence is a true friend who never betrays.",
+      "If I am walking with two other men, each of them will serve as my teacher.",
+      "Hold faithfulness and sincerity as first principles.",
+      "Fine words and an insinuating appearance are seldom associated with true virtue.",
+      "The superior man is satisfied and composed; the mean man is always full of distress.",
+      "He who will not economize will have to agonize.",
+      "Better a diamond with a flaw than a pebble without."]},
+'Descartes': {
+  a: ["Conquer yourself rather than the world."],
+  h: ["The senses deceive from time to time, and it is prudent never to trust wholly those who have deceived us even once."],
+  d: ["I am indeed amazed when I consider how weak my mind is, and how prone to error."],
+  w: ["Each problem that I solved became a rule which served afterwards to solve other problems."],
+  g: ["I think, therefore I am.",
+      "Doubt is the origin of wisdom.",
+      "It is not enough to have a good mind; the main thing is to use it well.",
+      "The greatest minds are capable of the greatest vices as well as of the greatest virtues.",
+      "If you would be a real seeker after truth, doubt, as far as possible, all things at least once in your life.",
+      "The reading of all good books is like a conversation with the finest minds of past centuries.",
+      "Common sense is the most widely shared thing in the world, for everyone thinks he is so well supplied with it.",
+      "Divide each difficulty into as many parts as is feasible and necessary to resolve it.",
+      "An optimist may see a light where there is none; why must the pessimist always run to blow it out?",
+      "To know what people really think, pay regard to what they do, rather than what they say.",
+      "Traveling is almost like talking with those of other centuries.",
+      "A state is better governed which has few laws, and those laws strictly observed.",
+      "When it is not in our power to follow what is true, we ought to follow what is most probable.",
+      "Wonder is the first of all the passions.",
+      "Except our own thoughts, there is nothing absolutely in our power.",
+      "The first precept was never to accept a thing as true until I knew it as such, without a single doubt."]},
+'Nietzsche': {
+  a: ["Distrust all in whom the impulse to punish is powerful.",
+      "Faith means not wanting to know what is true."],
+  h: ["The snake which cannot cast its skin has to die.",
+      "Sometimes people don't want to hear the truth, because they don't want their illusions destroyed."],
+  d: ["God is dead. God remains dead. And we have killed him."],
+  w: ["That which does not kill us makes us stronger.",
+      "He who has a why to live can bear almost any how."],
+  g: ["When you gaze long into an abyss, the abyss also gazes into you.",
+      "He who fights with monsters should be careful lest he thereby become a monster.",
+      "You must have chaos in you to give birth to a dancing star.",
+      "In heaven, all the interesting people are missing.",
+      "Without music, life would be a mistake.",
+      "There are no facts, only interpretations.",
+      "What is great in man is that he is a bridge, and not a goal.",
+      "Man is the cruelest animal.",
+      "All truly great thoughts are conceived by walking.",
+      "The higher we soar, the smaller we appear to those who cannot fly.",
+      "Hope in reality is the worst of all evils, because it prolongs the torments of man.",
+      "A casual stroll through the lunatic asylum shows that faith does not prove anything.",
+      "Is man merely a mistake of God's? Or God merely a mistake of man?",
+      "We love life, not because we are used to living, but because we are used to loving.",
+      "It is not a lack of love, but a lack of friendship that makes unhappy marriages.",
+      "The individual has always had to struggle to keep from being overwhelmed by the tribe.",
+      "No price is too high to pay for the privilege of owning yourself.",
+      "One repays a teacher badly if one always remains nothing but a pupil.",
+      "Man is a rope, tied between beast and overman — a rope over an abyss.",
+      "He who cannot obey himself will be commanded.",
+      "Become who you are."]},
+'Kant': {
+  a: ["Act only according to that maxim whereby you can at the same time will that it become a universal law."],
+  h: ["Out of the crooked timber of humanity, no straight thing was ever made."],
+  d: ["Two things fill the mind with admiration and awe: the starry heavens above me, and the moral law within me."],
+  w: ["Dare to know! Have the courage to use your own understanding."],
+  g: ["Science is organized knowledge. Wisdom is organized life.",
+      "Live your life as though your every act were to become a universal law.",
+      "Happiness is not an ideal of reason, but of imagination.",
+      "We are not rich by what we own, but by what we can do without.",
+      "Rules for happiness: something to do, someone to love, something to hope for.",
+      "Man must be disciplined, for he is by nature raw and wild.",
+      "Ingratitude is the essence of vileness.",
+      "Experience without theory is blind, but theory without experience is mere intellectual play.",
+      "Thoughts without content are empty; intuitions without concepts are blind.",
+      "By a lie, a man throws away and, as it were, annihilates his dignity as a man.",
+      "Treat humanity, in your own person or another's, always also as an end — never merely as a means.",
+      "Morality is not the doctrine of how we may make ourselves happy, but how we may make ourselves worthy of happiness.",
+      "All our knowledge begins with the senses, proceeds then to the understanding, and ends with reason.",
+      "He who is cruel to animals becomes hard also in his dealings with men.",
+      "It is beyond a doubt that all our knowledge begins with experience.",
+      "The possession of power inevitably spoils the free use of reason.",
+      "Patience is the strength of the weak; impatience is the weakness of the strong."]},
+'Marcus Aurelius': {
+  a: ["The best revenge is to be unlike him who performed the injury."],
+  h: ["Reject your sense of injury, and the injury itself disappears.",
+      "How much more grievous are the consequences of anger than the causes of it."],
+  d: ["It is not death that a man should fear, but he should fear never beginning to live.",
+      "You could leave life right now. Let that determine what you do, and say, and think."],
+  w: ["The impediment to action advances action. What stands in the way becomes the way.",
+      "Waste no more time arguing about what a good man should be. Be one."],
+  g: ["You have power over your mind — not outside events. Realize this, and you will find strength.",
+      "Very little is needed to make a happy life; it is all within yourself, in your way of thinking.",
+      "The soul becomes dyed with the color of its thoughts.",
+      "If it is not right, do not do it; if it is not true, do not say it.",
+      "Dwell on the beauty of life. Watch the stars, and see yourself running with them.",
+      "Never let the future disturb you. You will meet it with the same weapons of reason that arm you today.",
+      "Accept the things to which fate binds you, and love the people with whom fate brings you together.",
+      "The universe is change; our life is what our thoughts make it.",
+      "Our life is what our thoughts make it.",
+      "The object of life is not to be on the side of the majority, but to escape finding oneself in the ranks of the insane.",
+      "If someone can show me that what I think or do is not right, I will happily change.",
+      "Loss is nothing else but change, and change is nature's delight.",
+      "Look well into yourself; there is a source of strength which will always spring up if you will always look there.",
+      "Confine yourself to the present.",
+      "Think of yourself as dead. You have lived your life. Now take what's left, and live it properly.",
+      "He who lives in harmony with himself lives in harmony with the universe.",
+      "Nothing happens to anyone that he is not fitted by nature to bear.",
+      "Do every act of your life as though it were the very last act of your life.",
+      "When you arise in the morning, think of what a precious privilege it is to be alive — to breathe, to think, to enjoy, to love."]},
+'Simone de Beauvoir': {
+  a: ["All oppression creates a state of war."],
+  h: ["To lose confidence in one's body is to lose confidence in oneself."],
+  d: ["It is old age, rather than death, that is to be contrasted with life.",
+      "If you live long enough, you'll see that every victory turns into a defeat."],
+  w: ["Change your life today. Don't gamble on the future. Act now, without delay."],
+  g: ["One is not born, but rather becomes, a woman.",
+      "I am too intelligent, too demanding, and too resourceful for anyone to be able to take charge of me entirely.",
+      "Self-knowledge is no guarantee of happiness, but it is on the side of happiness.",
+      "The present is not a potential past; it is the moment of choice and action.",
+      "What is an adult? A child blown up by age.",
+      "One's life has value so long as one attributes value to the life of others.",
+      "When I was a child, when I was an adolescent, books saved me from despair.",
+      "That's what I consider true generosity: you give your all, and yet you always feel as if it costs you nothing.",
+      "I tore myself away from the safe comfort of certainties through my love for truth.",
+      "To be free is not to have the power to do anything you like; it is to be able to surpass the given toward an open future.",
+      "I wish that every human life might be pure, transparent freedom.",
+      "She was ready to deny the existence of space and time rather than admit that love might not be eternal.",
+      "Representation of the world, like the world itself, is the work of men.",
+      "No one is more arrogant toward women than the man who is anxious about his virility.",
+      "The body is not a thing. It is a situation.",
+      "Man is defined as a human being, and woman as a female.",
+      "One is not born a genius; one becomes a genius."]},
+'Laozi': {
+  a: ["He who conquers others is strong; he who conquers himself is mighty."],
+  h: ["He who stands on tiptoe is not steady. He who strides cannot maintain the pace."],
+  d: ["To know that you do not know is the best.",
+      "The five colors blind the eye. The five tones deafen the ear."],
+  w: ["When I let go of what I am, I become what I might be."],
+  g: ["The journey of a thousand miles begins with a single step.",
+      "Knowing others is intelligence; knowing yourself is true wisdom.",
+      "Mastering others is strength; mastering yourself is true power.",
+      "A good traveler has no fixed plans, and is not intent on arriving.",
+      "When you are content to be simply yourself and don't compare or compete, everybody will respect you.",
+      "Nature does not hurry, yet everything is accomplished.",
+      "Silence is a source of great strength.",
+      "He who knows that enough is enough will always have enough.",
+      "The more he gives to others, the more he has for his own.",
+      "If you do not change direction, you may end up where you are heading.",
+      "The best leader is one whose existence people barely know.",
+      "Water will wear away rock, which is rigid and cannot yield.",
+      "He who knows others is wise; he who knows himself is enlightened.",
+      "The softest thing in the world dashes against and overcomes the hardest.",
+      "Manifest plainness. Embrace simplicity. Reduce selfishness. Have few desires.",
+      "Being deeply loved by someone gives you strength, while loving someone deeply gives you courage.",
+      "Do the difficult things while they are easy, and do the great things while they are small.",
+      "An ant on the move does more than a dozing ox."]},
+'Hume': {
+  a: ["Reason is, and ought only to be, the slave of the passions."],
+  h: ["It is not contrary to reason to prefer the destruction of the whole world to the scratching of my finger."],
+  d: ["The life of man is of no greater importance to the universe than that of an oyster."],
+  w: ["A wise man proportions his belief to the evidence."],
+  g: ["Beauty in things exists merely in the mind which contemplates them.",
+      "Generally speaking, the errors in religion are dangerous; those in philosophy, only ridiculous.",
+      "Custom is the great guide of human life.",
+      "A miracle is a violation of the laws of nature.",
+      "It is seldom that liberty of any kind is lost all at once.",
+      "He is happy whom circumstances suit his temper; but he is more excellent who suits his temper to any circumstances.",
+      "Where men are most sure and arrogant, they are commonly most mistaken.",
+      "Nothing is more surprising than the easiness with which the many are governed by the few.",
+      "Truth springs from argument amongst friends.",
+      "The corruption of the best things gives rise to the worst.",
+      "Be a philosopher; but amidst all your philosophy, be still a man.",
+      "The mind is a kind of theatre, where several perceptions successively make their appearance.",
+      "The rules of morality are not the conclusion of our reason.",
+      "Avarice is the spur of industry.",
+      "Nothing is more free than the imagination of man.",
+      "Reading and sauntering and lounging and dosing — which I call thinking — is my supreme happiness."]},
+'Kierkegaard': {
+  a: ["Once you label me, you negate me."],
+  h: ["People understand me so poorly that they don't even understand my complaint about them not understanding me."],
+  d: ["Despair is the sickness unto death.",
+      "The tyrant dies and his rule is over; the martyr dies and his rule begins."],
+  w: ["To dare is to lose one's footing momentarily. Not to dare is to lose oneself."],
+  g: ["Life can only be understood backwards, but it must be lived forwards.",
+      "Anxiety is the dizziness of freedom.",
+      "The function of prayer is not to influence God, but rather to change the nature of the one who prays.",
+      "People demand freedom of speech as a compensation for the freedom of thought which they seldom use.",
+      "The most common form of despair is not being who you are.",
+      "Life is not a problem to be solved, but a reality to be experienced.",
+      "It is so hard to believe, because it is so hard to obey.",
+      "Most men pursue pleasure with such breathless haste that they hurry past it.",
+      "Patience is necessary, and one cannot reap immediately where one has sown.",
+      "Do it or do not do it — you will regret both.",
+      "What is a poet? An unhappy man whose sighs and cries sound like beautiful music.",
+      "Faith sees best in the dark.",
+      "The moment is an atom of eternity.",
+      "The highest and most beautiful things in life are not to be heard about, nor read about, nor seen — they are to be lived.",
+      "Truth is subjectivity.",
+      "The self is a relation which relates itself to its own self.",
+      "It is impossible to exist without passion."]},
+'Epicurus': {
+  a: ["It is impossible to live a pleasant life without living wisely, and well, and justly."],
+  h: ["Nothing is enough for the man to whom enough is too little."],
+  d: ["Death is nothing to us: when we are, death has not come; and when death has come, we are not.",
+      "The art of living well and the art of dying well are one."],
+  w: ["Pleasure is the beginning and the goal of a happy life."],
+  g: ["Do not spoil what you have by desiring what you have not; what you now have was once among the things you only hoped for.",
+      "If the gods listened to the prayers of men, all humankind would quickly perish.",
+      "Not what we have, but what we enjoy, constitutes our abundance.",
+      "Of all the things which wisdom provides to make us entirely happy, much the greatest is the possession of friendship.",
+      "He who has peace of mind disturbs neither himself nor another.",
+      "We should look for someone to eat and drink with before looking for something to eat and drink.",
+      "Empty is the argument of the philosopher which does not relieve any human suffering.",
+      "The wealth required by nature is limited and easy to procure; the wealth required by vain ideals extends to infinity.",
+      "Is God willing to prevent evil, but not able? Then he is not omnipotent.",
+      "He who is not satisfied with a little is satisfied with nothing.",
+      "Let no one delay the study of philosophy while young, nor weary of it when old.",
+      "Self-sufficiency is the greatest of all wealth.",
+      "It is not so much our friends' help that helps us, as the confidence of their help.",
+      "Skillful pilots gain their reputation from storms and tempests.",
+      "In a philosophical dispute, he gains more who is defeated, in so far as he learns more."]},
+'Hypatia': {
+  a: ["To teach superstitions as truth is a most terrible thing.",
+      "All formal dogmatic religions are fallacious, and must never be accepted by self-respecting persons as final."],
+  d: ["Men will fight for a superstition quite as quickly as for a living truth — often more so."],
+  g: ["Reserve your right to think, for even to think wrongly is better than not to think at all.",
+      "Fables should be taught as fables, myths as myths, and miracles as poetic fancies.",
+      "Life is an unfoldment, and the further we travel the more truth we can comprehend.",
+      "To rule by fettering the mind through fear of punishment in another world is just as base as to use force.",
+      "He who influences the thought of his times influences all the times that follow."]},
+'Diogenes': {
+  a: ["What I like to drink most is wine that belongs to others.",
+      "Other dogs bite their enemies. I bite my friends — to save them."],
+  h: ["Would that hunger could be satisfied by rubbing my belly as easily as this."],
+  d: ["I am looking for an honest man."],
+  w: ["I am a citizen of the world."],
+  g: ["The sun, too, shines into cesspools and is not polluted.",
+      "I threw my cup away when I saw a child drinking from his hands.",
+      "Stand a little less between me and the sun.",
+      "Man is the most intelligent of animals — and the most silly.",
+      "We have two ears and one tongue, so that we would listen more and talk less.",
+      "It is folly for a man to pray to the gods for that which he has the power to obtain by himself.",
+      "The vine bears three grapes: pleasure, drunkenness, and repentance.",
+      "Education is a controlling grace to the young, consolation to the old, wealth to the poor, and ornament to the rich.",
+      "Most men are within a finger's breadth of being mad.",
+      "As houses well stored with provisions are likely to be full of mice, so the bodies of those that eat much are full of diseases.",
+      "Blushing is the color of virtue.",
+      "Dogs and philosophers do the greatest good and get the fewest rewards.",
+      "The mob is the mother of tyrants.",
+      "He has the most who is most content with the least.",
+      "I am a dog. I fawn on those who give me anything, I bark at those who give me nothing, and I bite the rogues."]},
+'Voltaire': {
+  a: ["Those who can make you believe absurdities can make you commit atrocities.",
+      "It is dangerous to be right in matters on which the established authorities are wrong."],
+  h: ["Uncertainty is an uncomfortable position, but certainty is an absurd one."],
+  d: ["It is forbidden to kill; therefore all murderers are punished — unless they kill in large numbers and to the sound of trumpets."],
+  w: ["If God did not exist, it would be necessary to invent him.",
+      "Man is free at the moment he wishes to be."],
+  g: ["Common sense is not so common.",
+      "Judge a man by his questions rather than by his answers.",
+      "Prejudices are what fools use for reason.",
+      "The art of medicine consists in amusing the patient while nature cures the disease.",
+      "A witty saying proves nothing.",
+      "Every man is guilty of all the good he did not do.",
+      "Work saves us from three great evils: boredom, vice, and need.",
+      "Originality is nothing but judicious imitation.",
+      "Fools admire everything in an author of reputation.",
+      "The secret of being a bore is to tell everything.",
+      "Opinions have caused more harm on this earth than plagues or earthquakes.",
+      "Love truth, but pardon error.",
+      "To hold a pen is to be at war.",
+      "It is not love that should be depicted as blind, but self-love.",
+      "Superstition is to religion what astrology is to astronomy: the mad daughter of a wise mother.",
+      "Let us read, and let us dance — these two amusements will never do any harm to the world.",
+      "Paradise is where I am.",
+      "I would rather obey a fine lion, much stronger than myself, than two hundred rats of my own species.",
+      "God is a comedian playing to an audience too afraid to laugh."]},
+'John Stuart Mill': {
+  a: ["Bad men need nothing more to compass their ends than that good men should look on and do nothing."],
+  h: ["Ask yourself whether you are happy, and you cease to be so."],
+  d: ["War is an ugly thing, but not the ugliest of things."],
+  w: ["The only freedom which deserves the name is that of pursuing our own good in our own way.",
+      "Over himself, over his own body and mind, the individual is sovereign."],
+  g: ["A man who has nothing for which he is willing to fight is a miserable creature.",
+      "Conservatives are not necessarily stupid, but most stupid people are conservatives.",
+      "I never meant to say that the conservatives are generally stupid. I meant to say that stupid people are generally conservative.",
+      "The worth of a state, in the long run, is the worth of the individuals composing it.",
+      "He who knows only his own side of the case knows little of that.",
+      "Liberty consists in doing what one desires.",
+      "Genius can only breathe freely in an atmosphere of freedom.",
+      "Eccentricity has always abounded when and where strength of character has abounded.",
+      "The peculiar evil of silencing the expression of an opinion is that it is robbing the human race.",
+      "We can never be sure that the opinion we are endeavoring to stifle is a false opinion.",
+      "He who lets the world choose his plan of life for him has no need of any other faculty than the ape-like one of imitation.",
+      "A person may cause evil to others not only by his actions, but by his inaction.",
+      "The liberty of the individual must be thus far limited: he must not make himself a nuisance to other people.",
+      "It is better to be a human being dissatisfied than a pig satisfied; better to be Socrates dissatisfied than a fool satisfied.",
+      "Truth, in the great practical concerns of life, is so much a question of the reconciling and combining of opposites."]},
+'Mary Wollstonecraft': {
+  a: ["The divine right of husbands, like the divine right of kings, may be contested without danger."],
+  h: ["Taught from infancy that beauty is woman's sceptre, the mind shapes itself to the body."],
+  d: ["Surely something resides in this heart that is not perishable — and life is more than a dream."],
+  w: ["I do not wish women to have power over men, but over themselves."],
+  g: ["The beginning is always today.",
+      "Strengthen the female mind by enlarging it, and there will be an end to blind obedience.",
+      "My own sex, I hope, will excuse me if I treat them like rational creatures, instead of flattering their fascinating graces.",
+      "Virtue can only flourish amongst equals.",
+      "No man chooses evil because it is evil; he only mistakes it for happiness, the good he seeks.",
+      "Men and women must be educated, in a great degree, by the opinions and manners of the society they live in.",
+      "Friendship is a serious affection; the most sublime of all affections.",
+      "Independence I have long considered as the grand blessing of life, the basis of every virtue.",
+      "It is time to effect a revolution in female manners.",
+      "Make women rational creatures and free citizens, and they will quickly become good wives and mothers.",
+      "I love man as my fellow; but his sceptre, real or usurped, extends not to me, unless the reason of an individual demands my homage.",
+      "Children, I grant, should be innocent; but when the epithet is applied to men or women, it is but a civil term for weakness.",
+      "Till women are more rationally educated, the progress in human virtue and improvement in knowledge must receive continual checks.",
+      "My dreams were all my own; I accounted for them to nobody.",
+      "I earnestly wish to point out in what true dignity and human happiness consists.",
+      "If women are by nature inferior to men, their virtues must be the same in quality, if not in degree."]},
+'Zhuangzi': {
+  a: ["He who steals a belt buckle pays with his life; he who steals a state gets to be a feudal lord."],
+  h: ["To a frog in a well, one cannot speak of the ocean."],
+  d: ["Man's life is like a white pony galloping past a crack in the wall — suddenly, it is gone."],
+  w: ["A path is made by walking on it."],
+  g: ["Happiness is the absence of the striving for happiness.",
+      "Once I dreamt I was a butterfly. Now I do not know whether I was a man dreaming I was a butterfly.",
+      "Great wisdom is generous; petty wisdom is contentious.",
+      "Forget the years, forget distinctions. Leap into the boundless and make it your home!",
+      "Perfect happiness is keeping our nature intact.",
+      "The straight tree is the first to be cut down; the spring of clear water is the first to be drained.",
+      "The fish trap exists because of the fish. Once you've gotten the fish, you can forget the trap.",
+      "When an archer is shooting for nothing, he has all his skill. If he shoots for a brass buckle, he is already nervous.",
+      "Easy is right. Begin right, and you are easy.",
+      "Cherish that which is within you, and shut off that which is without.",
+      "He who knows his foolishness is not a great fool.",
+      "Rewards and punishments are the lowest form of education.",
+      "Life comes from the earth, and life returns to the earth.",
+      "Great truths do not take hold of the hearts of the masses.",
+      "The Perfect Man uses his mind like a mirror: it grasps nothing, it refuses nothing, it responds but does not store.",
+      "While dreaming, a man does not know he is dreaming.",
+      "The sound of water says what I think."]},
+'Hannah Arendt': {
+  a: ["Truth and politics are on rather bad terms with each other."],
+  h: ["The sad truth is that most evil is done by people who never make up their minds to be good or evil."],
+  d: ["Death not merely ends life; it also bestows upon it a silent completeness."],
+  w: ["The most radical revolutionary will become a conservative the day after the revolution."],
+  g: ["Evil is never radical; it is only extreme. Goodness can be radical; evil never can.",
+      "Power and violence are opposites: where the one rules absolutely, the other is absent.",
+      "Violence can destroy power; it is utterly incapable of creating it.",
+      "Forgiveness is the key to action and freedom.",
+      "Storytelling reveals meaning without committing the error of defining it.",
+      "The aim of totalitarian education has never been to instill convictions, but to destroy the capacity to form any.",
+      "To act, in its most general sense, means to take an initiative — to begin.",
+      "There are no dangerous thoughts; thinking itself is dangerous.",
+      "Promises are the uniquely human way of ordering the future.",
+      "The world found nothing sacred in the abstract nakedness of being human.",
+      "Only crime and the criminal confront us with the perplexity of radical evil; but only the hypocrite is really rotten to the core.",
+      "Revolutionaries do not make revolutions. They are those who know when power is lying in the street, and then pick it up.",
+      "The raison d'être of politics is freedom.",
+      "No punishment has ever possessed enough power of deterrence to prevent the commission of crimes.",
+      "The banality of evil.",
+      "The ideal subject of totalitarian rule is not the convinced fanatic, but people for whom the distinction between fact and fiction no longer exists.",
+      "Action without a name, a 'who' attached to it, is meaningless.",
+      "Under conditions of terror, most people will comply — but many will not."]},
+'Bertrand Russell': {
+  a: ["Patriots always talk of dying for their country, and never of killing for their country.",
+      "No one gossips about other people's secret virtues."],
+  h: ["Most people would rather die than think; in fact, they do so."],
+  d: ["I would never die for my beliefs, because I might be wrong."],
+  w: ["The good life is one inspired by love and guided by knowledge."],
+  g: ["Fools and fanatics are always so certain of themselves, and wiser people so full of doubts.",
+      "War does not determine who is right — only who is left.",
+      "Do not fear to be eccentric in opinion, for every opinion now accepted was once eccentric.",
+      "Science is what we know, and philosophy is what we don't know.",
+      "Men are born ignorant, not stupid. They are made stupid by education.",
+      "To be without some of the things you want is an indispensable part of happiness.",
+      "Fear is the main source of superstition, and one of the main sources of cruelty.",
+      "To conquer fear is the beginning of wisdom.",
+      "The secret of happiness is to face the fact that the world is horrible.",
+      "In all affairs, it's a healthy thing now and then to hang a question mark on the things you have long taken for granted.",
+      "Everything is vague to a degree you do not realize till you have tried to make it precise.",
+      "The only thing that will redeem mankind is cooperation.",
+      "One should respect public opinion insofar as it is necessary to avoid starvation and keep out of prison.",
+      "A sense of duty is useful in work, but offensive in personal relations.",
+      "Of all forms of caution, caution in love is perhaps the most fatal to true happiness.",
+      "Mathematics, rightly viewed, possesses not only truth, but supreme beauty.",
+      "Emotion varies inversely with knowledge of the facts: the less you know, the hotter you get.",
+      "The place of the father in the modern suburban family is a very small one, particularly if he plays golf."]},
+'Sartre': {
+  a: ["Words are loaded pistols.",
+      "When the rich wage war, it's the poor who die."],
+  h: ["If you're lonely when you're alone, you're in bad company."],
+  d: ["One always dies too soon — or too late.",
+      "Nothingness lies coiled in the heart of being, like a worm."],
+  w: ["Freedom is what you do with what's been done to you.",
+      "Commitment is an act, not a word."],
+  g: ["Hell is other people.",
+      "Man is condemned to be free.",
+      "Existence precedes essence.",
+      "Man is nothing else but what he makes of himself.",
+      "Everything has been figured out, except how to live.",
+      "Man can will nothing unless he has first understood that he must count on no one but himself.",
+      "To eat is to appropriate by destruction.",
+      "We do not judge the people we love.",
+      "Three o'clock is always too late or too early for anything you want to do.",
+      "Every existing thing is born without reason, prolongs itself out of weakness, and dies by chance.",
+      "There is no reality except in action.",
+      "Life begins on the other side of despair.",
+      "I hate victims who respect their executioners.",
+      "A writer must never allow himself to be turned into an institution."]},
+};
+</script>
+<script>
+'use strict';
+/* ================= GAME STATE ================= */
+const G = {
+  phase: 'setup',          // setup | shop | aim | ai | flying | roundEnd | standings | matchEnd
+  players: [], round: 0, totalRounds: 10, turnIdx: 0,
+  wind: 0, windOn: true, talkOn: true, palette: PALETTES[0],
+  projectiles: [], particles: [], napalm: [], floaters: [], bubbles: [],
+  deathQueue: [], shake: 0, time: 0, banner: '', bannerT: 0,
+  tracerPaths: {},          // playerIdx -> last tracer polyline
+  smokePaths: [],           // persistent smoke tracer polylines (round)
+  storms: [], bolts: [],      // active weather (sand / electrical) + lightning flashes
+  shopQueue: [], shopFor: -1, standNext: null, aiTimer: 0, started: false,
+  camX: 0, camFree: false,       // camera: left edge of the 960px window into the wide world
+  zoom: 1, zoomV: 0,             // elastic scouting zoom (SHIFT+DOWN): 1 = normal view
+  sound: true,
+};
+const cur = () => G.players[G.turnIdx];
+const alivePlayers = () => G.players.filter(p => p.alive);
+/* A "side" is one solo player, or every living member of a team.
+   A round is not over until exactly one side is left standing. */
+const sameSide = (a, b) => !!(a && b && a.team && a.team === b.team);
+function aliveSides() {
+  const map = new Map();
+  for (const p of G.players) {
+    if (!p.alive) continue;
+    const key = p.team ? 'T:' + p.team : 'P:' + p.slot;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(p);
+  }
+  return [...map.values()];
+}
+
+/* ---- sound (tiny synth, original had PC-speaker blips) ---- */
+let AC = null;
+function beep(freq, dur, type, vol) {
+  if (!G.sound) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || 'square'; o.frequency.value = freq;
+    g.gain.value = vol || 0.04; g.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + dur);
+    o.connect(g); g.connect(AC.destination); o.start(); o.stop(AC.currentTime + dur);
+  } catch (e) {}
+}
+function boomSound(big) {
+  if (!G.sound) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const len = AC.sampleRate * (big ? 0.5 : 0.28), buf = AC.createBuffer(1, len, AC.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const s = AC.createBufferSource(); s.buffer = buf;
+    const g = AC.createGain(); g.gain.value = big ? 0.22 : 0.12;
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = big ? 500 : 800;
+    s.connect(f); f.connect(g); g.connect(AC.destination); s.start();
+  } catch (e) {}
+}
+
+/* ================= TERRAIN (2D dirt grid) ================= */
+let dirt = new Uint8Array(GW * GH);
+let colTop = new Int16Array(GW);
+let snowH = new Int16Array(GW);   // snow cover depth per column (Snow Storm) — melts round over round
+let terrainDirty = true;
+
+function recomputeCol(x) {
+  let y = 0; while (y < GH && !dirt[y * GW + x]) y++;
+  colTop[x] = y;
+}
+function surfY(x) { x = clamp(Math.round(x), 0, GW - 1); return colTop[x]; }
+function dirtAt(x, y) {
+  x = Math.floor(x); y = Math.floor(y);
+  if (x < 0 || x >= GW || y < 0) return false;
+  if (y >= GH) return true;
+  return dirt[y * GW + x] === 1;
+}
+function dirtCellCount() { let n = 0; for (let i = 0; i < dirt.length; i++) n += dirt[i]; return n; }
+
+function genTerrain() {
+  dirt = new Uint8Array(GW * GH);
+  const base = rr(330, 430), amp1 = rr(28, 95), amp2 = rr(8, 34), amp3 = rr(2, 9);
+  const p1 = rr(0, 9), p2 = rr(0, 9), p3 = rr(0, 9);
+  const f1 = rr(0.9, 1.9) / VIEW_W * Math.PI * 2, f2 = rr(2.2, 4.2) / VIEW_W * Math.PI * 2, f3 = rr(6, 11) / VIEW_W * Math.PI * 2;
+  let walk = 0;
+  for (let x = 0; x < GW; x++) {
+    walk = clamp(walk + rr(-3.2, 3.2), -36, 36);
+    let y = base + Math.sin(x * f1 + p1) * amp1 + Math.sin(x * f2 + p2) * amp2 + Math.sin(x * f3 + p3) * amp3 + walk;
+    y = clamp(Math.round(y), 170, 520);
+    for (let yy = y; yy < GH; yy++) dirt[yy * GW + x] = 1;
+    colTop[x] = y;
+  }
+  terrainDirty = true;
+}
+function setSurfaceY(x, y) { // make topmost dirt of column x exactly y
+  x = clamp(Math.round(x), 0, GW - 1); y = clamp(Math.round(y), 4, GH - 1);
+  const t = colTop[x];
+  if (y > t) { for (let yy = t; yy < y; yy++) dirt[yy * GW + x] = 0; }
+  else if (y < t) { for (let yy = y; yy < t; yy++) dirt[yy * GW + x] = 1; }
+  colTop[x] = y; terrainDirty = true;
+}
+function compactColumn(x) { // dirt falls straight down (original behavior)
+  let c = 0; for (let y = 0; y < GH; y++) c += dirt[y * GW + x];
+  for (let y = 0; y < GH; y++) dirt[y * GW + x] = (y >= GH - c) ? 1 : 0;
+  colTop[x] = GH - c; terrainDirty = true;
+}
+function clearCircle(cx, cy, r, compact) {
+  const touched = [];
+  const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(GW - 1, Math.ceil(cx + r));
+  for (let x = x0; x <= x1; x++) {
+    const dx = x - cx, dy = Math.sqrt(Math.max(0, r * r - dx * dx));
+    const y0 = Math.max(0, Math.floor(cy - dy)), y1 = Math.min(GH - 1, Math.ceil(cy + dy));
+    let hit = false;
+    for (let y = y0; y <= y1; y++) { if (dirt[y * GW + x]) { dirt[y * GW + x] = 0; hit = true; } }
+    if (hit) touched.push(x);
+  }
+  if (compact) touched.forEach(compactColumn); else touched.forEach(recomputeCol);
+  if (touched.length) terrainDirty = true;
+  return touched.length;
+}
+function fillCircle(cx, cy, r) {
+  const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(GW - 1, Math.ceil(cx + r));
+  for (let x = x0; x <= x1; x++) {
+    const dx = x - cx, dy = Math.sqrt(Math.max(0, r * r - dx * dx));
+    const y0 = Math.max(0, Math.floor(cy - dy)), y1 = Math.min(GH - 1, Math.ceil(cy + dy));
+    for (let y = y0; y <= y1; y++) dirt[y * GW + x] = 1;
+    recomputeCol(x);
+  }
+  terrainDirty = true;
+}
+
+/* ================= PLAYERS ================= */
+function makePlayer(slot, name, type, team) {
+  return {
+    slot, name, type,                       // type 'Human' or AI class name
+    team: team || '',                       // '' = solo; players sharing a letter fight as one side
+    color: TANK_COLORS[slot % TANK_COLORS.length],
+    x: 0, y: 0, vy: 0, falling: false, fallFrom: 0, movePx: 0,
+    angle: 45, power: 50, hp: 100, alive: true,
+    cash: 0, score: 0, kills: 0, wins: 0,
+    inv: { babymissile: Infinity },          // weapon id -> count
+    gear: {},                                // gear id -> count (shields, parachute, battery, fuel, contact)
+    shieldOn: null,                          // {id, str, max, mag}
+    autoDef: false, selWeapon: 'babymissile', trigArmed: false,
+    lastMiss: null,                          // AI learning: signed x error of last shot
+    talkCd: 0,
+  };
+}
+function supportY(p) { // first dirt at/below tank bottom in its column span
+  const bx = Math.round(p.x);
+  for (let y = Math.floor(p.y + 6); y < GH; y++) if (dirt[y * GW + bx]) return y;
+  return GH;
+}
+function isBuried(p) { return surfY(p.x) < p.y - 6; }
+
+function settleTank(p, dt) {
+  if (!p.alive) return;
+  const sup = supportY(p);
+  const bottom = p.y + 6;
+  if (bottom < sup - 0.5) {
+    if (!p.falling) { p.falling = true; p.fallFrom = bottom; p.vy = 0; }
+    p.vy += GRAV * dt; p.y += p.vy * dt;
+    if (p.y + 6 >= sup) {
+      p.y = sup - 6;
+      const fell = sup - p.fallFrom;
+      p.falling = false; p.vy = 0;
+      if (fell > 20) {
+        if ((p.gear.parachute | 0) > 0) {
+          p.gear.parachute--; addFloater(p.x, p.y - 26, 'PARACHUTE!', '#fff');
+        } else {
+          const dmg = Math.round((fell - 20) * 1.1);
+          if (dmg > 0) applyDamage(p, dmg, null, 'fall');
+        }
+      }
+    }
+  } else { p.y = sup - 6; p.falling = false; }
+}
+
+/* ================= DAMAGE & EXPLOSIONS ================= */
+function addFloater(x, y, text, color) {
+  G.floaters.push({ x, y, text, color: color || '#fff', t: 0 });
+  if (G.floaters.length > 24) G.floaters.shift();
+}
+function bubble(p, text, dur) {
+  if (!G.talkOn) return;
+  G.bubbles = G.bubbles.filter(b => b.p !== p);
+  G.bubbles.push({ p, text, t: 0, dur: dur || 2.4 });
+}
+/* Speech for a moment ('a' firing, 'h' hurt, 'd' dying, 'w' winning):
+   a bot named for a famous person speaks that person's own quotes from
+   QUOTES (kind-specific lines first, then their general pool); humans
+   and any gap fall back to the generic tank-talk lines. Bubble time
+   grows with line length so a real quote can actually be read. */
+const TALK_GENERIC = { a: TALK_ATTACK, h: TALK_HIT, d: TALK_DEATH, w: TALK_WIN };
+function talkLine(p, kind) {
+  const q = QUOTES[p.name];
+  if (q) {
+    const pool = (q[kind] || []).concat(q.g || []);
+    if (pool.length) return pick(pool);
+  }
+  return pick(TALK_GENERIC[kind]);
+}
+function sayTalk(p, kind, baseDur) {
+  const t = talkLine(p, kind);
+  bubble(p, t, Math.max(baseDur, Math.min(5, t.length / 24)));
+}
+function credit(attacker, hullDmg, shieldDmg) {
+  if (!attacker) return;
+  const pts = Math.round(hullDmg + shieldDmg * 0.5);
+  if (pts > 0) { attacker.cash += pts * 10; attacker.score += pts; }
+}
+function applyDamage(p, dmg, attacker, cause) {
+  if (!p.alive || dmg <= 0) return 0;
+  let hull = dmg, shieldDmg = 0;
+  if (p.shieldOn) {
+    shieldDmg = Math.min(p.shieldOn.str, dmg);
+    p.shieldOn.str -= shieldDmg; hull = dmg - shieldDmg;
+    if (p.shieldOn.str <= 0) { p.shieldOn = null; addFloater(p.x, p.y - 30, 'SHIELD DOWN!', '#ff9a9a'); }
+  }
+  p.hp -= hull;
+  credit(attacker, hull, shieldDmg);
+  if (hull > 4 && attacker && attacker !== p) addFloater(p.x, p.y - 22, '-' + Math.round(hull), '#ffd75e');
+  if (p.hp <= 0) killTank(p, attacker);
+  else if (hull >= 12 && attacker && attacker !== p && rng() < 0.4) sayTalk(p, 'h', 1.6);
+  return hull;
+}
+function killTank(p, attacker) {
+  if (!p.alive) return;
+  p.alive = false; p.hp = 0; p.shieldOn = null;
+  if (attacker && attacker !== p) { attacker.kills++; attacker.cash += 500; attacker.score += 400; }
+  sayTalk(p, 'd', 2.6);
+  G.deathQueue.push({ x: p.x, y: p.y, t: 0.35, attacker });
+  beep(90, 0.4, 'sawtooth', 0.05);
+}
+/* Central blast: carves terrain, damages tanks by falloff. opts: {noTankDmg, dirtOnly} */
+function explode(cx, cy, r, maxDmg, attacker, opts) {
+  opts = opts || {};
+  clearCircle(cx, cy, r, true);
+  for (let x = Math.max(0, Math.floor(cx - r)); x <= Math.min(GW - 1, Math.ceil(cx + r)); x++) snowH[x] = 0;   // a blast digs snow cover away
+  spawnBlastParticles(cx, cy, r);
+  G.shake = Math.min(16, Math.max(G.shake, r * 0.22));
+  boomSound(r >= 34);
+  if (!opts.dirtOnly) {
+    const effR = r + 12;
+    for (const p of G.players) {
+      if (!p.alive) continue;
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      if (d < effR) {
+        let dmg = maxDmg * (1 - d / effR);
+        const sn = snowDepthAt(p.x);
+        if (sn >= 6) dmg *= Math.max(0.45, 1 - sn * 0.021);   // a snowpack insulates the tank under it
+        if (dmg >= 1) applyDamage(p, dmg, attacker === p ? null : attacker, 'blast');
+      }
+    }
+  }
+  for (const p of G.players) if (p.alive) p.falling = p.falling || (p.y + 6 < supportY(p) - 0.5);
+  terrainDirty = true;
+}
+function addDirt(cx, cy, r) { fillCircle(cx, cy, r); for (const p of G.players) if (p.alive) settleTank(p, 0); }
+function spawnBlastParticles(x, y, r) {
+  const n = Math.round(clamp(r * 1.1, 8, 46));
+  for (let i = 0; i < n; i++) {
+    const a = rr(0, Math.PI * 2), sp = rr(20, 60 + r * 2.4);
+    G.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - rr(10, 60), t: 0,
+      life: rr(0.35, 0.95), size: rr(1.5, 3.6), color: pick(['#ffd75e', '#ff9a3c', '#e33b3b', '#8a8a8a', '#fff2b0']), grav: 160 });
+  }
+}
+</script>
+<script>
+'use strict';
+/* ================= FIRING & PROJECTILES ================= */
+function turretTip(p) {
+  const a = p.angle * Math.PI / 180;
+  return { x: p.x + Math.cos(a) * 19, y: (p.y - 7) - Math.sin(a) * 19, a };
+}
+/* ---- live aim tracer (human players only) ----
+   Simulates the exact flight the shell will take — same muzzle,
+   same speed formula, same gravity and wind the projectile step
+   uses. The full path is computed honestly, but only the first
+   half of it is drawn: enough to judge the aim, never enough to
+   give away the exact landing point. */
+function computeAimPath(p) {
+  if (!p) return [];
+  const tip = turretTip(p);
+  const a = p.angle * Math.PI / 180;
+  const spd = 60 + p.power * 5.6;
+  let x = tip.x, y = tip.y;
+  let vx = Math.cos(a) * spd, vy = -Math.sin(a) * spd;
+  const h = 1 / 240;   // same substep the projectile sim uses at 60fps
+  const wa = G.windOn ? G.wind * 7 : 0;
+  const pts = [{ x, y }];
+  for (let step = 0; step < 240 * 12; step++) {
+    vy += GRAV * h; vx += wa * Math.min(4, 1 + step * h * 0.8) * h;   // same airtime-scaled wind the real shell feels
+    x += vx * h; y += vy * h;
+    pts.push({ x, y });
+    const t = step * h;
+    if (x < 0 || x >= GW || y >= GH || y < -2400) break;
+    if (dirtAt(x, y)) break;
+    let hit = false;
+    for (const q of G.players) {
+      if (!q.alive) continue;
+      if (q === p && t < 0.22) continue;
+      if (Math.hypot(q.x - x, q.y - y) < 13) { hit = true; break; }
+    }
+    if (hit) break;
+  }
+  return pts;
+}
+function drawAimTracer(p) {
+  const pts = computeAimPath(p);
+  if (pts.length < 2) return;
+  // By design the arc traces only the FIRST HALF of the flight: the full
+  // path is simulated honestly, then cut at half its length — enough to
+  // judge the aim, never enough to give away the exact landing point.
+  let total = 0;
+  for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  const limit = total * 0.5;
+  const spacing = 15;
+  const offset = (G.time * 85) % spacing;   // dots march along the arc toward the target
+  ctx.save();
+  let walked = 0, next = offset <= 0.01 ? spacing * 0.5 : offset;
+  for (let i = 1; i < pts.length; i++) {
+    const x0 = pts[i - 1].x, y0 = pts[i - 1].y;
+    const dx = pts[i].x - x0, dy = pts[i].y - y0;
+    const seg = Math.hypot(dx, dy);
+    if (seg < 0.001) continue;
+    while (next <= walked + seg && next <= limit) {
+      const f = (next - walked) / seg;
+      const x = x0 + dx * f, y = y0 + dy * f;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,.72)'; ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 2.1, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff'; ctx.fill();
+      next += spacing;
+    }
+    walked += seg;
+    if (walked >= limit) break;
+  }
+  ctx.restore();
+}
+function activateShield(p, itemId) {
+  const g = GMAP[itemId]; if (!g || (p.gear[itemId] | 0) <= 0 || p.shieldOn) return false;
+  p.gear[itemId]--; p.shieldOn = { id: itemId, str: g.str, max: g.str, mag: g.mag || 0 };
+  addFloater(p.x, p.y - 30, g.name.toUpperCase() + ' UP!', '#9fe8ff');
+  return true;
+}
+function bestShieldId(p) {
+  let best = null, bs = -1;
+  for (const id of SHIELD_IDS) if ((p.gear[id] | 0) > 0 && GMAP[id].str > bs) { bs = GMAP[id].str; best = id; }
+  return best;
+}
+function fireShot(p, weaponId) {
+  const w = WMAP[weaponId]; if (!w) return false;
+  if (isBuriedSnow(p)) { addFloater(p.x, p.y - 32, 'BURIED IN SNOW!', '#ffffff'); beep(90, 0.15, 'square', 0.04); return false; }
+  if (!w.free) { if ((p.inv[weaponId] | 0) <= 0) return false; p.inv[weaponId]--; }
+  const tip = turretTip(p);
+  const spd = 60 + p.power * 5.6;
+  const pr = {
+    x: tip.x, y: tip.y, vx: Math.cos(tip.a) * spd, vy: -Math.sin(tip.a) * spd,
+    w, owner: p, kind: w.kind, state: 'fly', age: 0, path: [], hops: 3, stage: 0,
+    dist: 0, rollV: 0, rollT: 0, stillT: 0, dir: 1, digDir: null, split: false,
+    trig: false, noHitT: 0, color: p.color,
+  };
+  if (p.trigArmed && (p.gear.contact | 0) > 0) { p.gear.contact--; pr.trig = true; p.trigArmed = false; }
+  pr.path.push({ x: pr.x, y: pr.y });
+  G.projectiles.push(pr);
+  G.phase = 'flying';
+  beep(220 + p.power * 2, 0.12, 'square', 0.05);
+  if (rng() < 0.5) sayTalk(p, 'a', 1.8);
+  // Auto Defense: enemies with the system + a spare shield raise it as the shot leaves
+  for (const q of G.players) {
+    if (q !== p && q.alive && q.autoDef && !q.shieldOn) { const id = bestShieldId(q); if (id) activateShield(q, id); }
+  }
+  refreshControls();
+  return true;
+}
+function explodeProj(pr, x, y) {
+  const w = pr.w, o = pr.owner;
+  if (o && o.aimTargetX != null) o.lastMiss = x - o.aimTargetX;
+  switch (pr.kind) {
+    case 'shell': explode(x, y, w.r, w.dmg, o); break;
+    case 'mirv': explode(x, y, w.r, w.dmg, o); break;
+    case 'plasma': explode(x, y, w.r, w.dmg, o); break;
+    case 'dirt': addDirt(x, y, w.r); spawnDust(x, y, w.r); break;
+    case 'riot': explode(x, y, w.r, 6, o); break;
+    case 'disrupter': explode(x, y, 14, 60, o); disruptTerrain(); break;
+    case 'napalm': burstNapalm(x, y, w, o, pr.vx); break;
+    case 'funky': explode(x, y, 13, 60, o); spawnFunky(x, y, o); break;
+    case 'leapfrog': {
+      const radii = [12, 20, 30], dmgs = [70, 95, 120], st = pr.stage;
+      explode(x, y, radii[st], dmgs[st], o);
+      if (st < 2) {
+        pr.stage++; pr.state = 'fly'; pr.age = 0; pr.noHitT = 0.14;
+        const dirS = pr.vx >= 0 ? 1 : -1;
+        pr.vx = dirS * (55 + st * 26); pr.vy = -(185 + st * 45);
+        pr.x = x; pr.y = y - 4;
+        return true; // projectile survives (next hop) — stepProjectile keeps it
+      }
+      break;
+    }
+    case 'digger': explode(x, y, w.r, w.dmg, o); break;
+    case 'roller': explode(x, y, w.r, w.dmg, o); break;
+    case 'weather': spawnStorm(x, pr); break;
+    case 'teleport': teleportTank(pr, x, y); break;
+    case 'tracer': finishTracer(pr); break;
+  }
+  return false; // projectile consumed — stepProjectile drops it
+}
+function spawnDust(x, y, r) {
+  for (let i = 0; i < 10; i++)
+    G.particles.push({ x: x + rr(-r / 2, r / 2), y: y - rr(0, 6), vx: rr(-24, 24), vy: rr(-46, -6), t: 0, life: rr(.4, .9), size: rr(2, 4), color: '#caa06a', grav: 60 });
+}
+function spawnFunky(x, y, owner) {
+  const colors = ['#e33b3b', '#f2d13c', '#3fae4a', '#39c8d8', '#c44fd8', '#f07f2a'];
+  for (let i = 0; i < 16; i++) {
+    const a = rr(0, Math.PI * 2), sp = rr(70, 300);
+    G.projectiles.push({ x, y: y - 4, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, w: WMAP.babymissile,
+      owner, kind: 'shell', state: 'fly', age: 0, path: [], hops: 0, stage: 0, dist: 0, rollV: 0, rollT: 0,
+      stillT: 0, dir: 1, digDir: null, split: true, trig: false, noHitT: 0.1, color: pick(colors), mini: true });
+  }
+}
+function burstNapalm(x, y, w, owner, vxIn) {
+  const n = w.hot ? 34 : 26;
+  for (let i = 0; i < n; i++) {
+    G.napalm.push({ x: x + rr(-3, 3), y: y - 2, vx: (vxIn || 0) * 0.22 + rr(-64, 64), vy: rr(-95, -8),
+      mode: 'fly', t: 0, bt: 0, pulse: rr(0, 0.3), hot: w.hot, owner });
+  }
+  beep(140, 0.25, 'sawtooth', 0.05);
+}
+/* ---- Ender Missile: no blast at all — when it lands, the tank that
+   fired it blinks to the impact point and sets down on the surface of
+   whatever column it hit (cliff top, crater floor, enemy's doorstep). */
+function teleportFx(x, y) {
+  for (let i = 0; i < 16; i++) {
+    const a = rr(0, Math.PI * 2), sp = rr(14, 66);
+    G.particles.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 18, t: 0,
+      life: rr(0.3, 0.7), size: rr(1.6, 3.2), color: pick(['#b48cff', '#7fe8d8', '#e0c8ff']), grav: -30 });
+  }
+}
+function teleportTank(pr, x, y) {
+  const p = pr.owner;
+  if (!p || !p.alive) return;
+  teleportFx(p.x, p.y - 4);
+  p.x = clamp(x, 20, GW - 20);
+  p.y = surfY(p.x) - 6;
+  p.falling = false; p.vy = 0;
+  teleportFx(p.x, p.y - 4);
+  addFloater(p.x, p.y - 34, 'TELEPORT!', '#b48cff');
+  beep(1240, 0.1, 'sine', 0.05); beep(520, 0.16, 'sine', 0.05);
+}
+function finishTracer(pr) {
+  if (pr.w.smoke) { G.smokePaths.push({ pts: pr.path, color: pr.owner.color }); if (G.smokePaths.length > 14) G.smokePaths.shift(); }
+  else G.tracerPaths[pr.owner.slot] = pr.path;
+  if (pr.owner && pr.owner.aimTargetX != null) pr.owner.lastMiss = pr.x - pr.owner.aimTargetX;
+}
+/* ---- weather bombs: storms that hang over the field ----
+   Sand:  6 turns of grit — 6 dmg a turn to any tank inside, blinds the
+          elastic zoom, shears shells passing through, crawls downwind.
+   Elec:  clouds for ~2 rounds; lightning hunts the high ground under
+          them (26 dmg within 18px of a strike).
+   Snow:  a HUGE tapered snowpack (±1100px wide, up to 70px deep)
+          that buries tanks (18px+ = cannot fire until it drives/plows
+          out or a blast digs it free), insulates covered tanks from
+          blast damage, and melts ~10px per round — shrinking until
+          it is gone.
+   Fog:   5 turns, zero damage — inside it there is no tracer arc and
+          no elastic zoom. Pure information denial.
+   Rain:  6 turns of mud — driving costs double fuel, tanks slip on
+          slopes, and napalm fizzles out in it. */
+function snowDepthAt(x) { return snowH[clamp(Math.round(x), 0, GW - 1)]; }
+function isBuriedSnow(p) { return snowDepthAt(p.x) >= 18; }
+function weatherBlinded(p) { return G.storms.some(s => (s.type === 'sand' || s.type === 'fog') && Math.abs(p.x - s.x) <= s.r); }
+function rainAt(x) { return G.storms.some(s => s.type === 'rain' && Math.abs(x - s.x) <= s.r); }
+function spawnStorm(x, pr) {
+  const o = pr.owner, t = pr.w.storm;
+  x = clamp(x, 0, GW - 1);
+  if (t === 'sand') {
+    G.storms.push({ type: 'sand', x, r: 190, turns: 6, owner: o });
+    addFloater(x, 90, 'SAND STORM!', '#e8c88a');
+  } else if (t === 'elec') {
+    G.storms.push({ type: 'elec', x, r: 210, rounds: 2, owner: o, strikeT: rr(0.7, 1.5) });
+    addFloater(x, 90, 'ELECTRICAL STORM!', '#9fe8ff');
+  } else if (t === 'snow') {
+    const R = 1100;   // much much much bigger: a 2200px-wide blizzard footprint
+    for (let dx = -R; dx <= R; dx++) {
+      const cx = Math.round(x) + dx; if (cx < 0 || cx >= GW) continue;
+      const c = Math.cos((dx / R) * Math.PI / 2);
+      const d = Math.round(70 * c * c);
+      if (d > snowH[cx]) snowH[cx] = d;
+    }
+    addFloater(x, 90, 'SNOW STORM!', '#ffffff');
+    spawnDust(x, surfY(x), 70);
+  } else if (t === 'fog') {
+    G.storms.push({ type: 'fog', x, r: 200, turns: 5, owner: o });
+    addFloater(x, 90, 'FOG BANK!', '#d8dee8');
+  } else if (t === 'rain') {
+    G.storms.push({ type: 'rain', x, r: 200, turns: 6, owner: o });
+    addFloater(x, 90, 'RAIN STORM!', '#a8c8ff');
+  }
+  beep(120, 0.3, 'sawtooth', 0.05);
+}
+function disruptTerrain() {
+  const counts = new Int32Array(GW);
+  for (let x = 0; x < GW; x++) { let c = 0; for (let y = 0; y < GH; y++) c += dirt[y * GW + x]; counts[x] = c; }
+  const out = new Int32Array(GW);
+  for (let x = 0; x < GW; x++) {
+    const avg = (counts[Math.max(0, x - 6)] + counts[x] * 2 + counts[Math.min(GW - 1, x + 6)]) / 4;
+    out[x] = clamp(Math.round(counts[x] * 0.45 + avg * 0.45 - rr(0, 14)), 30, GH - 6);
+  }
+  for (let x = 0; x < GW; x++) {
+    for (let y = 0; y < GH; y++) dirt[y * GW + x] = (y >= GH - out[x]) ? 1 : 0;
+    colTop[x] = GH - out[x];
+  }
+  G.shake = 14; terrainDirty = true;
+  addFloater(G.camX + VIEW_W / 2, 90, 'EARTH DISRUPTED!', '#ffb347');
+}
+
+/* ---- projectile stepping ---- */
+function stepProjectile(pr, h) {
+  pr.age += h;
+  if (pr.state === 'roll') return stepRoller(pr, h);
+  if (pr.state === 'dig') return stepDigger(pr, h);
+  // mag shield deflection
+  for (const q of G.players) {
+    if (!q.alive || q === pr.owner || !q.shieldOn || !q.shieldOn.mag) continue;
+    const dx = pr.x - q.x, dy = pr.y - q.y, d = Math.hypot(dx, dy);
+    if (d > 4 && d < 60) {
+      const k = (q.shieldOn.mag === 1 ? 320 : 560) * (1.15 - d / 60);
+      pr.vx += (dx / d) * k * h; pr.vy += (dy / d) * k * h;
+    }
+  }
+  pr.vy += GRAV * h;
+  pr.vx += (G.windOn ? G.wind * 7 : 0) * Math.min(4, 1 + pr.age * 0.8) * h;   // long-airtime shells get pushed harder — power-500 shots are genuinely wind-sensitive
+  // sandstorm shear: gritty crosswinds inside a sand storm knock shells around
+  for (const s of G.storms) {
+    if (s.type === 'sand' && Math.abs(pr.x - s.x) <= s.r) {
+      pr.vx += Math.sin(pr.age * 31 + pr.y * 0.05) * 320 * h;
+      pr.vy += Math.cos(pr.age * 27 + pr.x * 0.03) * 130 * h;
+    }
+  }
+  pr.x += pr.vx * h; pr.y += pr.vy * h;
+  if (pr.kind === 'teleport' && rng() < 0.55)   // the Ender Missile sheds ender motes as it flies
+    G.particles.push({ x: pr.x, y: pr.y, vx: rr(-8, 8), vy: rr(-8, 8), t: 0, life: rr(0.25, 0.5), size: rr(1.4, 2.6), color: pick(['#b48cff', '#7fe8d8']), grav: 0 });
+  if (pr.kind === 'tracer' && pr.path.length < 2600) pr.path.push({ x: pr.x, y: pr.y });
+  // MIRV / Death's Head split just past apex
+  if (pr.kind === 'mirv' && !pr.split && pr.vy > 6 && (surfY(pr.x) - pr.y) > 44) {
+    pr.split = true;
+    for (let i = 0; i < pr.w.warheads; i++) {
+      G.projectiles.push({ x: pr.x + rr(-4, 4), y: pr.y + rr(-2, 2), vx: pr.vx + (i - (pr.w.warheads - 1) / 2) * rr(16, 26), vy: pr.vy + rr(-6, 6),
+        w: pr.w, owner: pr.owner, kind: 'shell', state: 'fly', age: 0, path: [], hops: 0, stage: 0, dist: 0, rollV: 0,
+        rollT: 0, stillT: 0, dir: 1, digDir: null, split: true, trig: pr.trig, noHitT: 0.05, color: pr.color });
+    }
+    return false;
+  }
+  if (pr.x < -90 || pr.x > GW + 90 || pr.y > GH + 60 || pr.y < -2400) return false;
+  if (pr.noHitT > 0) { pr.noHitT -= h; return true; }
+  // contact trigger proximity fuse
+  if (pr.trig) {
+    for (const q of G.players) {
+      if (q.alive && q !== pr.owner && Math.hypot(q.x - pr.x, q.y - pr.y) < 17) return explodeProj(pr, pr.x, pr.y);
+    }
+  }
+  // tank hit
+  for (const q of G.players) {
+    if (!q.alive) continue;
+    if (q === pr.owner && pr.age < 0.22) continue;
+    if (Math.hypot(q.x - pr.x, q.y - pr.y) < 13) {
+      if (pr.kind === 'tracer') { finishTracer(pr); return false; }
+      if (pr.state === 'fly' && pr.kind === 'roller') return toRoller(pr);
+      if (pr.state === 'fly' && pr.kind === 'digger') { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+      return explodeProj(pr, pr.x, pr.y);
+    }
+  }
+  // ground hit
+  if (dirtAt(pr.x, pr.y)) {
+    if (pr.kind === 'tracer') { finishTracer(pr); return false; }
+    if (pr.kind === 'roller') return toRoller(pr);
+    if (pr.kind === 'digger') return toDigger(pr);
+    return explodeProj(pr, pr.x, pr.y);
+  }
+  return true;
+}
+function toRoller(pr) {
+  pr.state = 'roll'; pr.rollT = 0; pr.stillT = 0;
+  pr.dir = pr.vx >= 0 ? 1 : -1;
+  pr.rollV = clamp(Math.abs(pr.vx) * 0.55, 46, 200) * pr.dir;
+  pr.y = surfY(pr.x) - 3;
+  return true;
+}
+function stepRoller(pr, h) {
+  pr.rollT += h;
+  const powered = pr.w.id === 'heavyroller';   // the Heavy Roller is motorized
+  const here = surfY(pr.x), ahead = surfY(pr.x + pr.dir * 5);
+  if (powered) {
+    // cliff: a wall-step of dirt right at the wheel (generated hills never
+    // step more than ~9px in 2px; crater rims and ledges do) — it plows
+    // into anything steeper and detonates
+    if (here - surfY(pr.x + pr.dir * 2) > 9) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+    // the motor holds cruising speed: powers up slopes and out of dips, never stalls
+    const target = 175 * pr.dir;
+    pr.rollV += clamp(target - pr.rollV, -340 * h, 340 * h);
+  } else {
+    pr.rollV += (ahead - here) * 26 * h;               // downhill speeds up, uphill bleeds off
+  }
+  pr.rollV = clamp(pr.rollV, -250, 250);
+  if (Math.sign(pr.rollV) !== 0) pr.dir = Math.sign(pr.rollV);
+  pr.x += pr.rollV * h;
+  pr.y = surfY(pr.x) - 3;
+  if (Math.abs(pr.rollV) < 7) pr.stillT += h; else pr.stillT = 0;
+  for (const q of G.players) {
+    if (q.alive && q !== pr.owner && Math.hypot(q.x - pr.x, q.y - pr.y) < 14) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+  }
+  if (pr.x < 2 || pr.x > GW - 2) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+  if (!powered && (pr.stillT > 0.7 || pr.rollT > 4.5)) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+  return true;
+}
+function toDigger(pr) {
+  const sp = Math.hypot(pr.vx, pr.vy) || 1;
+  pr.state = 'dig'; pr.dist = 0;
+  pr.digDir = { x: pr.vx / sp, y: Math.max(0.25, pr.vy / sp) };
+  const n = Math.hypot(pr.digDir.x, pr.digDir.y); pr.digDir.x /= n; pr.digDir.y /= n;
+  return true;
+}
+function stepDigger(pr, h) {
+  const speed = 95, step = speed * h;
+  pr.x += pr.digDir.x * step; pr.y += pr.digDir.y * step; pr.dist += step;
+  clearCircle(pr.x, pr.y, pr.w.tunnel, false);
+  if (rng() < 0.3) G.particles.push({ x: pr.x, y: pr.y, vx: rr(-14, 14), vy: rr(-24, 0), t: 0, life: .4, size: 2, color: '#caa06a', grav: 90 });
+  for (const q of G.players) {
+    if (q.alive && q !== pr.owner && Math.hypot(q.x - pr.x, q.y - pr.y) < 12) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+  }
+  if (pr.dist >= pr.w.len) { explode(pr.x, pr.y, pr.w.r, pr.w.dmg, pr.owner); return false; }
+  if (!dirtAt(pr.x + pr.digDir.x * 3, pr.y + pr.digDir.y * 3)) { // broke out into air: fly on, explode on next impact
+    pr.state = 'fly'; pr.kind = 'shell'; pr.vx = pr.digDir.x * speed; pr.vy = pr.digDir.y * speed; pr.noHitT = 0.05;
+  }
+  if (pr.x < 0 || pr.x >= GW || pr.y >= GH - 1) { explode(pr.x, clamp(pr.y, 0, GH - 2), pr.w.r, pr.w.dmg, pr.owner); return false; }
+  return true;
+}
+
+/* ---- napalm ---- */
+function stepNapalm(dt) {
+  const done = [];
+  for (const np of G.napalm) {
+    if (rainAt(np.x)) { done.push(np); continue; }   // rain fizzles napalm out
+    if (np.mode === 'fly') {
+      np.vy += GRAV * dt; np.x += np.vx * dt; np.y += np.vy * dt;
+      if (dirtAt(np.x, np.y) || np.y >= surfY(np.x) - 1) { np.mode = 'flow'; np.t = 0; np.y = surfY(np.x) - 1; }
+      if (np.x < 0 || np.x >= GW || np.y > GH) { done.push(np); }
+    } else if (np.mode === 'flow') {
+      np.t += dt;
+      const sl = surfY(np.x + 3) - surfY(np.x - 3);
+      np.x = clamp(np.x + clamp(sl * 9, -48, 48) * dt, 1, GW - 2);
+      np.y = surfY(np.x) - 1;
+      if (np.t > 1.15) { np.mode = 'burn'; np.bt = np.hot ? 3.4 : 2.3; }
+    } else if (np.mode === 'burn') {
+      np.bt -= dt; np.pulse -= dt;
+      if (np.pulse <= 0) {
+        np.pulse = 0.3;
+        for (const q of G.players) {
+          if (q.alive && Math.abs(q.x - np.x) < 16 && Math.abs(q.y - np.y) < 18)
+            applyDamage(q, np.hot ? 7.5 : 4.5, np.owner, 'napalm');
+        }
+      }
+      if (np.bt <= 0) done.push(np);
+    }
+  }
+  if (done.length) G.napalm = G.napalm.filter(n => !done.includes(n));
+}
+
+/* ---- master sim tick ---- */
+function tick(dt) {
+  G.time += dt;
+  if (G.bannerT > 0) G.bannerT -= dt;
+  G.shake = Math.max(0, G.shake - dt * 26);
+  // bubbles & floaters
+  for (const b of G.bubbles) b.t += dt;
+  G.bubbles = G.bubbles.filter(b => b.t < b.dur);
+  for (const f of G.floaters) { f.t += dt; f.y -= 13 * dt; }
+  G.floaters = G.floaters.filter(f => f.t < 1.5);
+  // particles
+  for (const pt of G.particles) {
+    pt.t += dt; pt.vy += (pt.grav || 0) * dt; pt.x += pt.vx * dt; pt.y += pt.vy * dt;
+  }
+  G.particles = G.particles.filter(pt => pt.t < pt.life);
+  // electrical storms: lightning walks under the cloud — and hunts
+  // high ground: of a few candidate points it takes the highest, so
+  // the best sniping peaks become the most dangerous spots
+  for (const s of G.storms) {
+    if (s.type !== 'elec') continue;
+    s.strikeT -= dt;
+    if (s.strikeT <= 0) {
+      s.strikeT = rr(0.9, 2.2);
+      let sx = s.x, bestY = Infinity;
+      for (let i = 0; i < 5; i++) { const cx2 = clamp(s.x + rr(-s.r, s.r), 2, GW - 2), cy2 = surfY(cx2); if (cy2 < bestY) { bestY = cy2; sx = cx2; } }
+      G.bolts.push({ x: sx, t: 0, seed: rr(0, 999) });
+      G.shake = Math.max(G.shake, 3);
+      beep(1400, 0.07, 'sawtooth', 0.03);
+      for (const p of G.players) if (p.alive && Math.abs(p.x - sx) < 18) applyDamage(p, 26, p === s.owner ? null : s.owner, 'lightning');
+    }
+  }
+  for (const b of G.bolts) b.t += dt;
+  G.bolts = G.bolts.filter(b => b.t < 0.22);
+  // sand storms throw grit
+  for (const s of G.storms) {
+    if (s.type !== 'sand') continue;
+    for (let i = 0; i < 3; i++) G.particles.push({ x: s.x + rr(-s.r, s.r), y: surfY(s.x) - rr(4, 130), vx: rr(120, 260) * (rng() < 0.5 ? -1 : 1), vy: rr(-14, 14), t: 0, life: rr(0.3, 0.7), size: rr(1.5, 3), color: '#dcbc7f', grav: 0 });
+  }
+  // death explosions (chain)
+  for (const d of G.deathQueue) d.t -= dt;
+  const fired = G.deathQueue.filter(d => d.t <= 0);
+  G.deathQueue = G.deathQueue.filter(d => d.t > 0);
+  for (const d of fired) explode(d.x, d.y, 24, 85, d.attacker);
+  // projectiles in fine substeps
+  if (G.projectiles.length) {
+    const steps = Math.max(1, Math.ceil(dt / (1 / 240)));
+    const h = dt / steps;
+    for (let s = 0; s < steps; s++) {
+      const keep = [];
+      for (const pr of G.projectiles) if (stepProjectile(pr, h)) keep.push(pr);
+      G.projectiles = keep;
+      if (!G.projectiles.length) break;
+    }
+  }
+  stepNapalm(dt);
+  for (const p of G.players) if (p.alive) settleTank(p, dt);
+  // rain-slick slopes: a tank standing in the mud may slip downhill
+  for (const p of G.players) {
+    if (!p.alive || p.falling || !rainAt(p.x)) continue;
+    const slope = surfY(p.x + 7) - surfY(p.x - 7);
+    if (Math.abs(slope) > 6 && rng() < dt * 0.9) { p.x = clamp(p.x + Math.sign(slope), 14, GW - 14); p.y = surfY(p.x) - 6; }
+  }
+  // resolution complete?
+  if (G.phase === 'flying' && !G.projectiles.length && !G.napalm.length && !G.deathQueue.length &&
+      !G.players.some(p => p.alive && p.falling)) {
+    endResolution();
+  }
+  // a tank can also die outside shot resolution (fall damage, a chain
+  // explosion) — the round still ends the moment only one side is left
+  if ((G.phase === 'aim' || G.phase === 'ai') && G.started && !G.deathQueue.length) {
+    if (!checkRoundEnd() && cur() && !cur().alive) nextTurn();   // e.g. lightning claimed the player to move
+  }
+  if (G.phase === 'ai') {
+    G.aiTimer -= dt;
+    if (G.aiTimer <= 0) aiTakeTurn(cur());
+  }
+}
+</script>
+<script>
+'use strict';
+/* ================= BALLISTICS SOLVER (AI brains) ================= */
+function simulateImpact(sx, sy, angle, power, windFactor) {
+  const a = angle * Math.PI / 180, spd = 60 + power * 5.6;
+  let x = sx, y = sy, vx = Math.cos(a) * spd, vy = -Math.sin(a) * spd;
+  const h = 1 / 30, wa = G.windOn ? G.wind * 7 * windFactor : 0;
+  for (let t = 0; t < 14; t += h) {
+    vy += GRAV * h; vx += wa * Math.min(4, 1 + t * 0.8) * h; x += vx * h; y += vy * h;   // same airtime-scaled wind as the live sim
+    if (x < 0 || x >= GW || y >= GH) return { x, out: true };
+    if (dirtAt(x, y)) return { x };
+  }
+  return { x, out: true };
+}
+function solveShot(p, tx, windFactor, fixedAngles) {
+  // Angles are absolute (0-180), so a target on the left needs mirrored
+  // candidate angles (180-a), and the power search must run along the
+  // firing direction — otherwise leftward shots can never be solved.
+  const dir = tx < p.x ? -1 : 1;
+  const base = fixedAngles || [32, 40, 48, 56, 64, 72, 80];
+  const angles = base.map(a => dir < 0 ? 180 - a : a);
+  let best = null;
+  for (const ang of angles) {
+    // the muzzle sits on the turret pivot, so its position depends on the
+    // candidate angle — solve from where this shot will actually leave
+    const aR = ang * Math.PI / 180;
+    const tip = { x: p.x + Math.cos(aR) * 19, y: (p.y - 7) - Math.sin(aR) * 19 };
+    let lo = 4, hi = 500;   // power now runs to 500 — the solver searches the whole dial
+    for (let it = 0; it < 16; it++) {
+      const mid = (lo + hi) / 2;
+      const imp = simulateImpact(tip.x, tip.y, ang, mid, windFactor);
+      if ((imp.x - tx) * dir < 0) lo = mid; else hi = mid;
+    }
+    const pw = (lo + hi) / 2;
+    const imp = simulateImpact(tip.x, tip.y, ang, pw, windFactor);
+    const err = Math.abs((imp.x || tx) - tx);
+    if (!best || err < best.err) best = { angle: ang, power: pw, err };
+  }
+  return best;
+}
+
+/* ================= AI ================= */
+function aiChooseTarget(p) {
+  const foes = G.players.filter(q => q.alive && q !== p && !sameSide(p, q));
+  if (!foes.length) return null;
+  if (p.type === 'Moron') return pick(foes);
+  if (p.type === 'Spoiler') return foes.reduce((a, b) => (b.score > a.score ? b : a), foes[0]);
+  if (p.type === 'Chooser' && rng() < 0.5) return foes.reduce((a, b) => (b.hp < a.hp ? b : a), foes[0]);
+  return foes.reduce((a, b) => (Math.abs(b.x - p.x) < Math.abs(a.x - p.x) ? b : a), foes[0]);
+}
+function aiChooseWeapon(p, target) {
+  const owned = WEAPONS.filter(w => !w.free && (p.inv[w.id] | 0) > 0);
+  if (!owned.length) return 'babymissile';
+  const specialChance = { Moron: 0.12, Shooter: 0.25, PoolShark: 0.3, Tosser: 0.35, Chooser: 0.42, Spoiler: 0.45, Cyborg: 0.55 }[p.type] || 0.3;
+  if (target && isBuried(target)) {
+    const dig = owned.find(w => w.kind === 'digger');
+    if (dig && rng() < 0.8) return dig.id;
+  }
+  if (rng() >= specialChance) return 'babymissile';
+  const pref = {
+    Tosser: ['leapfrog', 'napalm', 'hotnapalm', 'funky'],
+    Cyborg: ['deathshead', 'mirv', 'nuke', 'plasma', 'sandhog', 'elecstorm', 'rainstorm'],
+    Spoiler: ['nuke', 'mirv', 'babynuke', 'heavyroller'],
+    Chooser: ['mirv', 'babynuke', 'roller', 'napalm', 'digger', 'snowstorm', 'rainstorm'],
+    PoolShark: ['tracer', 'babynuke', 'missile', 'roller'],
+    Shooter: ['babynuke', 'missile', 'babyroller'],
+    Moron: [],
+  }[p.type] || [];
+  // Spoiler makes weather on the leader — his target IS the leader
+  if (p.type === 'Spoiler') pref.unshift('elecstorm', 'sandstorm', 'fogbank');
+  for (const id of pref) if ((p.inv[id] | 0) > 0 && rng() < 0.75) return id;
+  return pick(owned).id;
+}
+function aiTakeTurn(p) {
+  if (!p || !p.alive || G.phase !== 'ai') return;
+  // batteries & shield first
+  let guard = 0;
+  while (p.hp < 55 && (p.gear.battery | 0) > 0 && guard++ < 3) { p.gear.battery--; p.hp = Math.min(100, p.hp + 10); }
+  if (p.hp > 1 && guard) addFloater(p.x, p.y - 30, '+BATTERY', '#9fe89f');
+  if (!p.shieldOn && rng() < (p.type === 'Cyborg' ? 0.9 : 0.55)) { const id = bestShieldId(p); if (id) activateShield(p, id); }
+  if (isBuriedSnow(p)) {
+    // buried: drive toward the shallow side; shovel if it cannot move —
+    // and if it is still stuck, the digging costs it the turn
+    const dirS = snowDepthAt(p.x - 30) < snowDepthAt(p.x + 30) ? -1 : 1;
+    for (let i = 0; i < 40 && isBuriedSnow(p) && (p.gear.fuel | 0) > 0; i++) { const ox = p.x; tryMove(p, dirS); if (p.x === ox) break; }
+    if (isBuriedSnow(p)) {
+      for (let dx = -16; dx <= 16; dx++) { const cx = clamp(Math.round(p.x) + dx, 0, GW - 1); snowH[cx] = Math.max(0, snowH[cx] - 7); }
+      addFloater(p.x, p.y - 30, 'DIGGING OUT!', '#ffffff');
+    }
+    if (isBuriedSnow(p)) { G.phase = 'flying'; return; }
+  }
+  const target = aiChooseTarget(p);
+  if (!target) return;
+  p.aimTargetX = target.x;
+  const wid = aiChooseWeapon(p, target);
+  const wdef = WMAP[wid];
+  // ranging tracer: PoolShark sometimes spends the turn ranging
+  const learn = (p.lastMiss != null) ? p.lastMiss : 0;
+  let aimTx = target.x - learn * ({ Moron: 0, Shooter: 0.5, PoolShark: 0.8, Tosser: 0.85, Chooser: 0.7, Spoiler: 0.7, Cyborg: 0.95 }[p.type] || 0);
+  if (p.type === 'Moron') {
+    p.angle = ri(15, 165); p.power = ri(15, 100);
+  } else if (p.type === 'Tosser') {
+    const s = solveShot(p, aimTx, 0.4, [64, 70, 76, 82]);
+    p.angle = s.angle; p.power = clamp(s.power * rr(0.96, 1.04), 2, 500);
+  } else {
+    const wf = { Shooter: 0, PoolShark: 0.75, Chooser: 1, Spoiler: 1, Cyborg: 1 }[p.type] || 0;
+    const s = solveShot(p, aimTx, wf);
+    const eA = { Shooter: 3, PoolShark: 1.2, Chooser: 1.6, Spoiler: 1.6, Cyborg: 0.4 }[p.type] || 2;
+    const eP = { Shooter: 0.05, PoolShark: 0.02, Chooser: 0.03, Spoiler: 0.03, Cyborg: 0.005 }[p.type] || 0.03;
+    p.angle = clamp(s.angle + rr(-eA, eA), 0, 180);
+    p.power = clamp(s.power * rr(1 - eP, 1 + eP), 2, 500);
+  }
+  p.selWeapon = wid;
+  if ((p.type === 'Cyborg' || p.type === 'Chooser') && (p.gear.contact | 0) > 0 && wdef.kind === 'shell' && rng() < 0.3) p.trigArmed = true;
+  fireShot(p, wid);
+}
+
+/* ================= TURN / ROUND FLOW ================= */
+function setTurn(i) {
+  G.turnIdx = i;
+  G.camFree = false;   // camera re-centers on whoever's turn it is
+  const p = cur();
+  addFloater(p.x, p.y - 44, p.name.toUpperCase() + "'S TURN", p.color);
+  if (p.type === 'Human') { G.phase = 'aim'; }
+  else { G.phase = 'ai'; G.aiTimer = rr(0.7, 1.5); }
+  refreshControls();
+}
+function nextTurn() {
+  const n = G.players.length;
+  for (let k = 1; k <= n; k++) {
+    const i = (G.turnIdx + k) % n;
+    if (G.players[i].alive) { setTurn(i); return; }
+  }
+}
+function endResolution() {
+  // Weather ticks once per turn: sand bites and crawls downwind a
+  // little; fog and rain simply burn one of their turns.
+  for (const s of G.storms) {
+    if (s.type === 'sand') {
+      for (const p of G.players) {
+        if (p.alive && Math.abs(p.x - s.x) <= s.r) applyDamage(p, 6, p === s.owner ? null : s.owner, 'sand');
+      }
+      s.x = clamp(s.x + (G.windOn ? G.wind * 3 : 0) + rr(-4, 4), s.r, GW - s.r);
+      s.turns--;
+    } else if (s.type === 'fog' || s.type === 'rain') s.turns--;
+  }
+  G.storms = G.storms.filter(s => s.type === 'elec' || s.turns > 0);
+  // A round is NOT over until all but one side is dead: in free-for-all
+  // that means one tank left standing; in team play, one whole team.
+  if (checkRoundEnd()) return;
+  nextTurn();
+}
+function checkRoundEnd() {
+  const sides = aliveSides();
+  if (sides.length > 1) return false;
+  endRound(sides[0] || null);
+  return true;
+}
+function endRound(winners) {
+  G.phase = 'roundEnd'; G.roundEndT = 1.7;
+  if (winners && winners.length) {
+    for (const w of winners) { w.wins++; w.cash += 1000; w.score += 250; }
+    sayTalk(winners[0], 'w', 2.6);
+    G.banner = winners[0].team
+      ? 'ROUND ' + G.round + ' — TEAM ' + winners[0].team + ' WINS!'
+      : 'ROUND ' + G.round + ' — ' + winners[0].name.toUpperCase() + ' WINS!';
+  } else G.banner = 'ROUND ' + G.round + ' — A DRAW. EVERYBODY BLEW UP.';
+  G.bannerT = 2.4;
+}
+function startRound(n) {
+  G.round = n;
+  genTerrain();
+  G.palette = pick(PALETTES);
+  G.wind = G.windOn ? ri(-15, 15) : 0;
+  G.projectiles = []; G.particles = []; G.napalm = []; G.deathQueue = [];
+  G.bubbles = []; G.floaters = []; G.tracerPaths = {}; G.smokePaths = [];
+  // weather persistence: sand, fog and rain die with the round;
+  // electrical storms burn one of their rounds; the snowpack melts a
+  // layer off the top, so the covered area shrinks round over round
+  G.storms = G.storms.filter(s => s.type === 'elec' && --s.rounds >= 0);
+  for (let x = 0; x < GW; x++) if (snowH[x] > 0) snowH[x] = Math.max(0, snowH[x] - 10);
+  const ps = G.players, cnt = ps.length;
+  const xs = [];
+  for (let i = 0; i < cnt; i++) xs.push(clamp((i + 0.5) * (GW - 90) / cnt + 45 + rr(-16, 16), 30, GW - 30));
+  ps.forEach((p, i) => {
+    p.alive = true; p.hp = 100; p.shieldOn = null; p.trigArmed = false; p.lastMiss = null; p.falling = false; p.vy = 0;
+    p.x = xs[i];
+    const ty = surfY(p.x);
+    for (let dx = -17; dx <= 17; dx++) setSurfaceY(p.x + dx, ty);
+    p.y = surfY(p.x) - 6;
+    p.angle = p.x < GW / 2 ? 45 : 135; p.power = 50;
+    if (!WMAP[p.selWeapon] || (!WMAP[p.selWeapon].free && (p.inv[p.selWeapon] | 0) <= 0)) p.selWeapon = 'babymissile';
+  });
+  G.banner = 'ROUND ' + n + ' OF ' + G.totalRounds;
+  G.bannerT = 2.0;
+  setTurn(0);
+}
+function shopPhase(after) {
+  G.afterShop = after;
+  if (G.round >= 1) for (const p of G.players) p.cash += Math.floor(p.cash * INTEREST);   // the bank pays 5% between rounds (not before Round 1)
+  for (const p of G.players) if (p.type !== 'Human') aiShop(p);
+  G.shopQueue = G.players.filter(p => p.type === 'Human').map(p => p.slot);
+  nextShop();
+}
+function nextShop() {
+  const slot = G.shopQueue.shift();
+  if (slot === undefined) { hideOverlays(); const f = G.afterShop; G.afterShop = null; if (f) f(); return; }
+  G.shopFor = slot; G.phase = 'shop';
+  buildShopUI(G.players[slot]);
+  $('ovShop').classList.add('on');
+}
+function matchEnd() {
+  G.phase = 'matchEnd';
+  const sorted = [...G.players].sort((a, b) => b.score - a.score);
+  $('endTitle').textContent = '🏆 ' + sorted[0].name.toUpperCase() + ' WINS THE MATCH!';
+  fillStandings($('endTable'), sorted);
+  hideOverlays(); $('ovEnd').classList.add('on');
+}
+function fillStandings(tbl, sorted) {
+  const anyTeam = sorted.some(p => p.team);
+  let h = '<tr><th>#</th><th>Player</th>' + (anyTeam ? '<th>Team</th>' : '') + '<th>Type</th><th class="num">Score</th><th class="num">Cash</th><th class="num">Kills</th><th class="num">Rounds Won</th></tr>';
+  sorted.forEach((p, i) => {
+    h += '<tr><td>' + (i + 1) + '</td><td><span class="chip" style="background:' + p.color + '"></span>' + p.name + '</td>' +
+      (anyTeam ? '<td>' + (p.team ? 'Team ' + p.team : 'Solo') + '</td>' : '') + '<td>' + p.type +
+      '</td><td class="num">' + p.score + '</td><td class="num">' + fmt$(p.cash) + '</td><td class="num">' + p.kills + '</td><td class="num">' + p.wins + '</td></tr>';
+  });
+  tbl.innerHTML = h;
+}
+function showStandings(next) {
+  const sorted = [...G.players].sort((a, b) => b.score - a.score);
+  $('standTitle').textContent = 'STANDINGS — AFTER ROUND ' + G.round;
+  fillStandings($('standTable'), sorted);
+  G.standNext = next || null;
+  $('ovStand').classList.add('on');
+}
+function hideOverlays() { document.querySelectorAll('.overlay').forEach(o => o.classList.remove('on')); }
+
+/* ================= SHOP ================= */
+function shopBuy(p, cat, id) {
+  const def = cat === 'w' ? WMAP[id] : GMAP[id];
+  if (!def || def.free) return false;
+  if (id === 'autodef' && p.autoDef) return false;
+  if (p.cash < def.price) return false;
+  p.cash -= def.price;
+  if (cat === 'w') p.inv[id] = (p.inv[id] | 0) + def.pack;
+  else if (id === 'autodef') p.autoDef = true;
+  else p.gear[id] = (p.gear[id] | 0) + def.pack;
+  return true;
+}
+function aiShop(p) {
+  const buy = (c, id) => shopBuy(p, c, id);
+  if (!p.autoDef && p.cash > 6500 && rng() < 0.6) buy('g', 'autodef');
+  if (p.type === 'Spoiler') {   // Spoiler stocks weather to throw at the leader
+    if (p.cash > 5200 && !(p.inv.elecstorm | 0)) buy('w', 'elecstorm');
+    if (p.cash > 4700 && !(p.inv.sandstorm | 0)) buy('w', 'sandstorm');
+    if (p.cash > 2700 && !(p.inv.fogbank | 0)) buy('w', 'fogbank');
+  }
+  const shieldOwned = SHIELD_IDS.some(id => (p.gear[id] | 0) > 0);
+  if (!shieldOwned && p.cash > 3200) {
+    if (p.cash > 22000) buy('g', 'forceshield');
+    else if (p.cash > 11000 && rng() < 0.5) buy('g', 'supermag');
+    else if (rng() < 0.5) buy('g', 'magshield'); else buy('g', 'heavyshield');
+  }
+  if ((p.gear.parachute | 0) < 3 && p.cash > 900) buy('g', 'parachute');
+  if ((p.gear.battery | 0) < 5 && p.cash > 1200) buy('g', 'battery');
+  if ((p.gear.fuel | 0) < 20 && p.cash > 700) { buy('g', 'fuel'); buy('g', 'fuel'); }
+  if ((p.type === 'Cyborg' || p.type === 'PoolShark') && (p.gear.contact | 0) < 2 && p.cash > 1800) buy('g', 'contact');
+  let guard = 0;
+  while (p.cash > 400 && guard++ < 14) {
+    const c = p.cash; let id = null;
+    if (c > 24000 && !(p.inv.deathshead | 0)) id = 'deathshead';
+    else if (c > 13000) id = pick(['nuke', 'mirv', 'plasma']);
+    else if (c > 8000) id = pick(['mirv', 'babynuke', 'hotnapalm', 'funky', 'rainstorm']);
+    else if (c > 4200) id = pick(['babynuke', 'leapfrog', 'heavydigger', 'roller', 'sandstorm']);
+    else if (c > 2200) id = pick(['babynuke', 'digger', 'dirtbomb', 'napalm', 'sandhog', 'snowstorm', 'fogbank', 'endermissile']);
+    else if (c > 900) id = pick(['napalm', 'babyroller', 'missile', 'riot']);
+    else break;
+    if (!buy('w', id)) break;
+  }
+}
+let shopPlayer = null;
+function shopRow(def, cat, p) {
+  const owned = cat === 'w' ? (def.free ? '∞' : (p.inv[def.id] | 0))
+    : (def.id === 'autodef' ? (p.autoDef ? 1 : 0) : (p.gear[def.id] | 0));
+  const dis = def.free || p.cash < def.price || (def.id === 'autodef' && p.autoDef);
+  return '<div class="shoprow"><span class="nm">' + def.name + (def.pack ? ' <span style="color:#8fa8d8">(×' + def.pack + ')</span>' : '') +
+    '</span><span>' + (def.free ? 'FREE' : fmt$(def.price)) + '</span><span class="own">own ' + owned + '</span>' +
+    '<button type="button" data-buy="' + cat + ':' + def.id + '"' + (dis ? ' disabled' : '') + '>BUY</button></div>';
+}
+function buildShopUI(p) {
+  shopPlayer = p;
+  $('shopTitle').innerHTML = 'WEAPONS SHOP — <span style="color:' + p.color + '">' + p.name.toUpperCase() + '</span>';
+  $('shopInfo').innerHTML = 'Cash: <b class="gold">' + fmt$(p.cash) + '</b> · ' + (G.round >= 1 ? 'Bank paid 5% interest · ' : '') +
+    (G.round === 0 ? 'First battle: Round 1 of ' + G.totalRounds : 'Next: Round ' + (G.round + 1) + ' of ' + G.totalRounds) +
+    ' · Damage pays $10 a point — kills pay $500. Spend it or save it.';
+  $('shopWeapons').innerHTML = WEAPONS.map(w => shopRow(w, 'w', p)).join('');
+  $('shopGear').innerHTML = GEAR.map(g => shopRow(g, 'g', p)).join('');
+  $('shopWeapons').querySelectorAll('button[data-buy]').forEach(b => b.onclick = () => { const [c, id] = b.dataset.buy.split(':'); if (shopBuy(shopPlayer, c, id)) { beep(880, 0.07, 'square', 0.04); buildShopUI(shopPlayer); } });
+  $('shopGear').querySelectorAll('button[data-buy]').forEach(b => b.onclick = () => { const [c, id] = b.dataset.buy.split(':'); if (shopBuy(shopPlayer, c, id)) { beep(880, 0.07, 'square', 0.04); buildShopUI(shopPlayer); } });
+}
+
+/* ================= MATCH SETUP ================= */
+function startMatch(roster, opts) {
+  G.players = roster.map((r, i) => makePlayer(i, r.name, r.type, r.team));
+  // Bots take the field under famous names — comics and philosophers,
+  // shuffled together, never the same name twice in one match.
+  // (Their AI tier/personality is untouched; humans keep their names.)
+  const namePool = [...COMEDY_NAMES, ...PHILOSOPHER_NAMES];
+  for (let i = namePool.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [namePool[i], namePool[j]] = [namePool[j], namePool[i]]; }
+  for (const p of G.players) if (p.type !== 'Human' && namePool.length) p.name = namePool.pop();
+  G.players.forEach(p => { p.cash = opts.cash | 0; });
+  G.totalRounds = opts.rounds | 0; G.windOn = !!opts.wind; G.talkOn = opts.talk !== false;
+  G.round = 0; G.started = true;
+  G.storms = []; G.bolts = []; snowH.fill(0);
+  hideOverlays();
+  shopPhase(() => startRound(1));
+}
+function backToSetup() {
+  G.phase = 'setup'; G.started = false;
+  hideOverlays(); $('ovSetup').classList.add('on');
+}
+function buildSetup() {
+  const tbl = $('setupTable');
+  let h = '<tr><th>#</th><th>Name</th><th>Player Type</th><th>Team</th><th>Tank</th></tr>';
+  for (let i = 0; i < 10; i++) {
+    const defType = i === 0 ? 'Human' : (i === 1 ? 'Shooter' : (i === 2 ? 'Tosser' : (i === 3 ? 'Cyborg' : 'None')));
+    const opts = ['None', 'Human', ...AI_TYPES].map(t => '<option' + (t === defType ? ' selected' : '') + '>' + t + '</option>').join('');
+    const topts = ['', 'A', 'B', 'C', 'D', 'E'].map(t => '<option value="' + t + '">' + (t ? 'Team ' + t : 'Solo') + '</option>').join('');
+    h += '<tr><td>' + (i + 1) + '</td><td><input type="text" id="nm' + i + '" maxlength="14" placeholder="' +
+      (i === 0 ? 'Player 1' : '—') + '"></td><td><select id="tp' + i + '">' + opts + '</select></td>' +
+      '<td><select id="tm' + i + '">' + topts + '</select></td>' +
+      '<td><span class="chip" style="background:' + TANK_COLORS[i] + '"></span></td></tr>';
+  }
+  tbl.innerHTML = h;
+}
+$('btnStart').onclick = () => {
+  const roster = [];
+  for (let i = 0; i < 10; i++) {
+    const type = $('tp' + i).value;
+    if (type === 'None') continue;
+    let name = $('nm' + i).value.trim();
+    if (!name) name = type === 'Human' ? 'Player ' + (roster.filter(r => r.type === 'Human').length + 1) : type + (roster.filter(r => r.type === type).length ? ' ' + (roster.filter(r => r.type === type).length + 1) : '');
+    roster.push({ name, type, team: $('tm' + i).value });
+  }
+  if (roster.length < 2) { $('setupWarn').textContent = 'You need at least 2 players!'; return; }
+  const sideCount = new Set(roster.map((r, i) => r.team ? 'T:' + r.team : 'P:' + i)).size;
+  if (sideCount < 2) { $('setupWarn').textContent = 'Everybody is on the same team — a round needs at least two sides. Split the teams up, or set some players to Solo.'; return; }
+  $('setupWarn').textContent = '';
+  $('wrap').focus();
+  startMatch(roster, { rounds: parseInt($('optRounds').value, 10), cash: parseInt($('optCash').value, 10), wind: $('optWind').value === 'on', talk: $('optTalk').value === 'on' });
+};
+$('btnShopDone').onclick = () => { $('ovShop').classList.remove('on'); nextShop(); };
+$('btnStandDone').onclick = () => {
+  $('ovStand').classList.remove('on');
+  const f = G.standNext; G.standNext = null;
+  if (f) f();
+};
+$('btnAgain').onclick = backToSetup;
+$('btnRestart').onclick = backToSetup;
+$('btnScores').onclick = () => { if (G.started) showStandings(() => {}); };
+</script>
+<script>
+'use strict';
+/* ================= RENDERING ================= */
+const cv = $('cv'), ctx = cv.getContext('2d');
+/* terrain is prerendered in one-screen chunks (a single full-world
+   canvas would exceed some browsers' canvas size limits) */
+const CHUNK_W = 960;
+let terChunks = [];
+
+/* ---- living sky: the sun and the moon cycle across the backdrop ----
+   Purely cosmetic — no effect on wind, ballistics or gameplay. One
+   full cycle every SKY_CYCLE seconds of game time, so the light
+   visibly shifts across a round or two: day → dusk → night → dawn,
+   the sun riding the first half of the cycle, the moon the second. */
+const SKY_CYCLE = 240;
+const STARS = (() => { let s = 987654321; const lr = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const arr = []; for (let i = 0; i < 150; i++) arr.push({ x: lr() * VIEW_W, y: lr() * GH * 0.66, sz: 0.6 + lr() * 1.4, a: 0.3 + lr() * 0.7 });
+  return arr; })();
+function hexRgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+function mixHex(h1, h2, f) { const a = hexRgb(h1), b = hexRgb(h2); return 'rgb(' + Math.round(a[0] + (b[0] - a[0]) * f) + ',' + Math.round(a[1] + (b[1] - a[1]) * f) + ',' + Math.round(a[2] + (b[2] - a[2]) * f) + ')'; }
+function drawSky() {
+  const pal = G.palette;
+  const ph = ((G.time / SKY_CYCLE) + 0.14) % 1;   // phase 0..1 — starts mid-morning
+  const stops = [
+    { p: 0.00, top: pal.skyT, bot: pal.skyB, dark: 0 },
+    { p: 0.40, top: pal.skyT, bot: pal.skyB, dark: 0 },
+    { p: 0.50, top: '#4a2a6a', bot: '#e0682a', dark: 0.45 },
+    { p: 0.58, top: '#02020e', bot: '#101038', dark: 1 },
+    { p: 0.90, top: '#02020e', bot: '#101038', dark: 1 },
+    { p: 0.97, top: '#3a3a6a', bot: '#d88a5a', dark: 0.35 },
+    { p: 1.00, top: pal.skyT, bot: pal.skyB, dark: 0 },
+  ];
+  let a = stops[0], b = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) if (ph >= stops[i].p && ph <= stops[i + 1].p) { a = stops[i]; b = stops[i + 1]; break; }
+  const f = b.p > a.p ? (ph - a.p) / (b.p - a.p) : 0;
+  const gr = ctx.createLinearGradient(0, 0, 0, GH);
+  gr.addColorStop(0, mixHex(a.top, b.top, f)); gr.addColorStop(1, mixHex(a.bot, b.bot, f));
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, VIEW_W, GH);
+  const dark = a.dark + (b.dark - a.dark) * f;
+  if (dark > 0.03) {
+    ctx.fillStyle = '#fff';
+    for (const st of STARS) { ctx.globalAlpha = st.a * dark; ctx.fillRect(st.x, st.y, st.sz, st.sz); }
+    ctx.globalAlpha = 1;
+  }
+  if (ph < 0.52) {   // the sun
+    const u = clamp(ph / 0.5, 0, 1), sx = 40 + (VIEW_W - 80) * u, sy = 348 - 322 * Math.sin(Math.PI * u);
+    ctx.fillStyle = 'rgba(255,214,94,.28)';
+    ctx.beginPath(); ctx.arc(sx, sy, 38, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = pal.orb;
+    ctx.beginPath(); ctx.arc(sx, sy, 24, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.25)';
+    ctx.beginPath(); ctx.arc(sx - 8, sy - 8, 20, 0, Math.PI * 2); ctx.fill();
+  }
+  if (ph > 0.48) {   // the moon
+    const u = clamp((ph - 0.5) / 0.5, 0, 1), mx = 40 + (VIEW_W - 80) * u, my = 338 - 306 * Math.sin(Math.PI * u);
+    ctx.fillStyle = 'rgba(210,220,255,.18)';
+    ctx.beginPath(); ctx.arc(mx, my, 32, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#e8e8ff';
+    ctx.beginPath(); ctx.arc(mx, my, 19, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(160,170,220,.5)';
+    ctx.beginPath(); ctx.arc(mx - 6, my - 4, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(mx + 7, my + 6, 3, 0, Math.PI * 2); ctx.fill();
+  }
+}
+function redrawTerrain() {
+  const pal = G.palette;
+  if (!terChunks.length) {
+    for (let i = 0; i < Math.ceil(GW / CHUNK_W); i++) {
+      const c = document.createElement('canvas'); c.width = CHUNK_W; c.height = GH;
+      terChunks.push(c);
+    }
+  }
+  // speckle pattern
+  const pat = document.createElement('canvas'); pat.width = pat.height = 64;
+  const pc = pat.getContext('2d');
+  pc.fillStyle = pal.dirt; pc.fillRect(0, 0, 64, 64);
+  pc.fillStyle = pal.dirtD;
+  let s = 12345; const lr = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 90; i++) pc.fillRect(Math.floor(lr() * 62), Math.floor(lr() * 62), 2, 2);
+  const pattern = terChunks[0].getContext('2d').createPattern(pat, 'repeat');
+  for (let ci = 0; ci < terChunks.length; ci++) {
+    const c = terChunks[ci].getContext('2d');
+    c.clearRect(0, 0, CHUNK_W, GH);
+    const x0 = ci * CHUNK_W, x1 = Math.min(GW, x0 + CHUNK_W);
+    for (let x = x0; x < x1; x++) {
+      let y = 0;
+      while (y < GH) {
+        if (dirt[y * GW + x]) {
+          let y2 = y; while (y2 < GH && dirt[y2 * GW + x]) y2++;
+          c.fillStyle = pattern; c.fillRect(x - x0, y, 1, y2 - y);
+          if (y === colTop[x]) { c.fillStyle = pal.top; c.fillRect(x - x0, y, 1, Math.min(3, y2 - y)); }
+          y = y2;
+        } else y++;
+      }
+    }
+  }
+  terrainDirty = false;
+}
+const SHIELD_COLORS = { shield: '#9fe8ff', heavyshield: '#57e6ff', magshield: '#c44fd8', supermag: '#ff7fae', forceshield: '#ffd75e' };
+function drawTank(p) {
+  const x = p.x, y = p.y;
+  ctx.save();
+  if (isBuried(p)) ctx.globalAlpha = 0.45;
+  if (p.falling && (p.gear.parachute | 0) > 0) { // chute out
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.arc(x, y - 22, 11, Math.PI, 0); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 11, y - 22); ctx.lineTo(x - 4, y - 10); ctx.moveTo(x + 11, y - 22); ctx.lineTo(x + 4, y - 10); ctx.stroke();
+  }
+  // treads + hull
+  ctx.fillStyle = '#191919'; ctx.fillRect(x - 13, y + 2, 26, 5);
+  ctx.fillStyle = p.color; ctx.fillRect(x - 12, y - 4, 24, 7);
+  ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(x - 12, y + 1, 24, 2);
+  // dome + barrel
+  const a = p.angle * Math.PI / 180;
+  ctx.strokeStyle = '#141414'; ctx.lineWidth = 3.4;
+  ctx.beginPath(); ctx.moveTo(x, y - 6); ctx.lineTo(x + Math.cos(a) * 18, y - 6 - Math.sin(a) * 18); ctx.stroke();
+  ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(x, y - 4, 6.4, Math.PI, 0); ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y - 4, 6.4, Math.PI, 0); ctx.stroke();
+  ctx.restore();
+  // shield bubble
+  if (p.shieldOn) {
+    ctx.save();
+    ctx.globalAlpha = 0.3 + 0.35 * (p.shieldOn.str / p.shieldOn.max);
+    ctx.strokeStyle = SHIELD_COLORS[p.shieldOn.id] || '#9fe8ff'; ctx.lineWidth = 2.4;
+    ctx.beginPath(); ctx.arc(x, y - 2, 20, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  // name + hp
+  ctx.save();
+  ctx.font = 'bold 11px "Courier New", monospace'; ctx.textAlign = 'center';
+  const label = (p.team ? '[' + p.team + '] ' : '') + p.name;
+  ctx.fillStyle = '#000'; ctx.fillText(label, x + 1, y - 27 + 1);
+  ctx.fillStyle = p.color; ctx.fillText(label, x, y - 27);
+  if (p.hp < 100) {
+    ctx.fillStyle = '#5a0d0d'; ctx.fillRect(x - 14, y - 24, 28, 4);
+    ctx.fillStyle = p.hp > 35 ? '#39d353' : '#e33b3b'; ctx.fillRect(x - 14, y - 24, 28 * Math.max(0, p.hp) / 100, 4);
+  }
+  if (G.phase !== 'setup' && cur() === p && (G.phase === 'aim' || G.phase === 'ai')) {
+    const bob = Math.sin(G.time * 5) * 2.4;
+    ctx.fillStyle = '#ffd75e';
+    ctx.beginPath(); ctx.moveTo(x - 6, y - 44 + bob); ctx.lineTo(x + 6, y - 44 + bob); ctx.lineTo(x, y - 37 + bob); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawProjectile(pr) {
+  ctx.save();
+  if (pr.kind === 'tracer' && pr.path.length > 1) {
+    ctx.strokeStyle = 'rgba(255,255,255,.75)'; ctx.lineWidth = 1.4; ctx.beginPath();
+    pr.path.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)); ctx.stroke();
+  }
+  ctx.translate(pr.x, pr.y);
+  if (pr.state === 'dig') {
+    ctx.fillStyle = '#d8d8d8'; ctx.beginPath(); ctx.moveTo(6, 0); ctx.lineTo(-5, -4); ctx.lineTo(-5, 4); ctx.fill();
+  } else if (pr.kind === 'roller' || pr.state === 'roll') {
+    ctx.rotate(pr.x / 7);
+    ctx.fillStyle = '#c8c8c8'; ctx.beginPath(); ctx.arc(0, 0, 5.4, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(-5, 0); ctx.lineTo(5, 0); ctx.moveTo(0, -5); ctx.lineTo(0, 5); ctx.stroke();
+  } else if (pr.kind === 'napalm') {
+    ctx.fillStyle = '#a33b12'; ctx.fillRect(-3.4, -2.4, 6.8, 4.8);
+    ctx.fillStyle = '#e33b3b'; ctx.fillRect(-3.4, -2.4, 6.8, 1.8);
+  } else if (pr.kind === 'dirt' || pr.kind === 'riot') {
+    ctx.fillStyle = pr.kind === 'dirt' ? '#8a5a2a' : '#7a7a7a'; ctx.beginPath(); ctx.arc(0, 0, 4.6, 0, Math.PI * 2); ctx.fill();
+  } else if (pr.kind === 'tracer') {
+    ctx.fillStyle = '#fff'; ctx.fillRect(-1.6, -1.6, 3.2, 3.2);
+  } else if (pr.kind === 'teleport') {
+    ctx.fillStyle = 'rgba(46,230,200,.3)'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#17b39a'; ctx.beginPath(); ctx.arc(0, 0, 4.4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#a8fff2'; ctx.beginPath(); ctx.arc(-1.4, -1.4, 1.8, 0, Math.PI * 2); ctx.fill();
+  } else {
+    const r = pr.mini ? 3 : (pr.w.r >= 40 ? 5.4 : (pr.w.r >= 20 ? 4.6 : 3.4));
+    ctx.fillStyle = '#2b2b2b'; ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = pr.color; ctx.beginPath(); ctx.arc(-r * 0.3, -r * 0.3, r * 0.45, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawWeather(view) {
+  // sand: a gritty band hanging over its stretch of the ridge
+  for (const s of G.storms) {
+    if (s.type !== 'sand') continue;
+    const gr = ctx.createLinearGradient(s.x - s.r, 0, s.x + s.r, 0);
+    gr.addColorStop(0, 'rgba(216,184,120,0)');
+    gr.addColorStop(0.5, 'rgba(216,184,120,.30)');
+    gr.addColorStop(1, 'rgba(216,184,120,0)');
+    ctx.fillStyle = gr;
+    ctx.fillRect(s.x - s.r, 40, s.r * 2, GH - 40);
+  }
+  // electrical: storm clouds
+  for (const s of G.storms) {
+    if (s.type !== 'elec') continue;
+    ctx.fillStyle = 'rgba(16,16,34,.88)';
+    for (let cx = s.x - s.r; cx <= s.x + s.r; cx += 46) {
+      ctx.beginPath(); ctx.ellipse(cx, 64 + Math.sin(cx * 0.05) * 7, 40, 17, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(60,60,96,.5)';
+    for (let cx = s.x - s.r + 20; cx <= s.x + s.r; cx += 46) {
+      ctx.beginPath(); ctx.ellipse(cx, 80 + Math.sin(cx * 0.05) * 7, 34, 12, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // rain: a grayer cloud and falling streaks
+  for (const s of G.storms) {
+    if (s.type !== 'rain') continue;
+    ctx.fillStyle = 'rgba(40,48,72,.75)';
+    for (let cx = s.x - s.r; cx <= s.x + s.r; cx += 52) {
+      ctx.beginPath(); ctx.ellipse(cx, 58 + Math.sin(cx * 0.04) * 6, 42, 15, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(170,200,255,.5)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 46; i++) {
+      const rx = s.x - s.r + ((i * 83 + G.time * 330) % (s.r * 2));
+      const ry = 84 + ((i * 61 + G.time * 560) % 300);
+      ctx.moveTo(rx, ry); ctx.lineTo(rx - 3, ry + 11);
+    }
+    ctx.stroke();
+  }
+  // fog: a low soft bank hugging the ground
+  for (const s of G.storms) {
+    if (s.type !== 'fog') continue;
+    ctx.fillStyle = 'rgba(216,222,232,.34)';
+    for (let cx = s.x - s.r; cx <= s.x + s.r; cx += 34) {
+      ctx.beginPath(); ctx.ellipse(cx, surfY(cx) - 12 + Math.sin(cx * 0.11) * 4, 44, 15, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(216,222,232,.22)';
+    for (let cx = s.x - s.r + 17; cx <= s.x + s.r; cx += 34) {
+      ctx.beginPath(); ctx.ellipse(cx, surfY(cx) - 26 + Math.cos(cx * 0.09) * 4, 50, 13, 0, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  // snowpack: white cover over the dirt — and over any tank buried in it
+  ctx.fillStyle = '#f4f8ff';
+  const x0 = Math.max(0, Math.floor(view.left) - 2), x1 = Math.min(GW - 1, Math.ceil(view.left + view.w) + 2);
+  for (let x = x0; x <= x1; x++) {
+    if (snowH[x] > 0) ctx.fillRect(x, colTop[x] - snowH[x], 1, snowH[x] + 2);
+  }
+  // lightning bolts
+  for (const b of G.bolts) {
+    const yTop = 78, yBot = surfY(b.x);
+    ctx.save();
+    ctx.globalAlpha = clamp(1 - b.t / 0.22, 0, 1);
+    ctx.strokeStyle = '#fdfdff'; ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(b.x, yTop);
+    const segs = 6;
+    for (let i = 1; i <= segs; i++) {
+      const bx = b.x + Math.sin(b.seed * 12.9 + i * 78.2) * 11 * (i < segs ? 1 : 0.15);
+      ctx.lineTo(bx, yTop + (yBot - yTop) * (i / segs));
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+function draw() {
+  if (terrainDirty) redrawTerrain();
+  drawSky();   // living backdrop — the world scrolls (and zooms) beneath it
+  const view = currentView();
+  ctx.save();
+  const shx = G.shake > 0.2 ? rr(-G.shake, G.shake) * 0.5 : 0;
+  const shy = G.shake > 0.2 ? rr(-G.shake, G.shake) * 0.5 : 0;
+  ctx.translate(shx, shy);
+  ctx.scale(view.z, view.z);
+  ctx.translate(-view.left, -view.top);
+  for (let i = 0; i < terChunks.length; i++) {
+    const cx0 = i * CHUNK_W;
+    if (cx0 + CHUNK_W < view.left - 48 || cx0 > view.left + view.w + 48) continue;
+    ctx.drawImage(terChunks[i], cx0, 0);
+  }
+  // tracer paths (aim memory)
+  for (const sp of G.smokePaths) {
+    if (sp.pts.length < 2) continue;
+    ctx.strokeStyle = 'rgba(230,230,230,.28)'; ctx.lineWidth = 2; ctx.beginPath();
+    sp.pts.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)); ctx.stroke();
+  }
+  for (const slot in G.tracerPaths) {
+    const pts = G.tracerPaths[slot]; if (!pts || pts.length < 2) continue;
+    const pl = G.players[slot];
+    ctx.strokeStyle = pl ? pl.color : '#fff'; ctx.globalAlpha = 0.55; ctx.lineWidth = 1.6; ctx.beginPath();
+    pts.forEach((pt, i) => i ? ctx.lineTo(pt.x, pt.y) : ctx.moveTo(pt.x, pt.y)); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  // napalm
+  for (const np of G.napalm) {
+    if (np.mode === 'burn') {
+      ctx.fillStyle = pick(['#ff9a3c', '#ffd75e', '#e33b3b']);
+      ctx.beginPath(); ctx.arc(np.x, np.y - rr(1, 5), rr(2, 4.6), 0, Math.PI * 2); ctx.fill();
+    } else {
+      ctx.fillStyle = np.hot ? '#ff5a1a' : '#c33d08';
+      ctx.fillRect(np.x - 1.8, np.y - 1.8, 3.6, 3.6);
+    }
+  }
+  for (const p of G.players) if (p.alive) drawTank(p);
+  for (const pr of G.projectiles) drawProjectile(pr);
+  // live dotted aim tracer — human turns only, before the shot is fired;
+  // a player standing in sand or fog is blinded and gets no arc
+  if (G.phase === 'aim' && G.started && G.players.length && cur() && cur().type === 'Human' && cur().alive && !weatherBlinded(cur())) drawAimTracer(cur());
+  drawWeather(view);
+  // particles
+  for (const pt of G.particles) {
+    ctx.globalAlpha = clamp(1 - pt.t / pt.life, 0, 1);
+    ctx.fillStyle = pt.color; ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
+  }
+  ctx.globalAlpha = 1;
+  // floaters
+  ctx.font = 'bold 12px "Courier New", monospace'; ctx.textAlign = 'center';
+  for (const f of G.floaters) {
+    ctx.globalAlpha = clamp(1.3 - f.t / 1.5, 0, 1);
+    ctx.fillStyle = '#000'; ctx.fillText(f.text, f.x + 1, f.y + 1);
+    ctx.fillStyle = f.color; ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+  // speech bubbles
+  ctx.font = '11px "Courier New", monospace';
+  for (const b of G.bubbles) {
+    const p = b.p, w = ctx.measureText(b.text).width + 14, x = clamp(p.x, view.left + w / 2 + 2, view.left + view.w - w / 2 - 2), y = p.y - 62;
+    ctx.fillStyle = 'rgba(255,255,255,.94)';
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.rect(x - w / 2, y - 11, w, 17); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(p.x - 4, y + 6); ctx.lineTo(p.x + 4, y + 6); ctx.lineTo(p.x, y + 13); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#000'; ctx.textAlign = 'center'; ctx.fillText(b.text, x, y + 2);
+  }
+  ctx.restore();
+  // banner (screen space — stays put while the world scrolls beneath it)
+  if (G.bannerT > 0) {
+    ctx.save();
+    ctx.globalAlpha = clamp(G.bannerT, 0, 1);
+    ctx.font = 'bold 34px "Courier New", monospace'; ctx.textAlign = 'center';
+    ctx.fillStyle = '#000'; ctx.fillText(G.banner, VIEW_W / 2 + 3, 110 + 3);
+    ctx.fillStyle = '#ffd75e'; ctx.fillText(G.banner, VIEW_W / 2, 110);
+    ctx.restore();
+  }
+}
+
+/* ================= HUD & CONTROLS ================= */
+function humanTurn() { return G.phase === 'aim' && G.started && cur() && cur().type === 'Human'; }
+function updateHUD() {
+  const started = G.started && G.players.length;
+  $('hudRound').textContent = started ? (Math.max(1, G.round) + ' / ' + G.totalRounds) : '–';
+  $('hudWind').textContent = !G.windOn ? 'OFF' : (G.wind === 0 ? 'CALM' : (G.wind < 0 ? '◀ ' : '▶ ') + Math.abs(G.wind));
+  const chip = $('turnChip');
+  if (started && (G.phase === 'aim' || G.phase === 'ai' || G.phase === 'flying')) {
+    chip.textContent = (cur().team ? '[' + cur().team + '] ' : '') + cur().name.toUpperCase(); chip.style.background = cur().color;
+  } else { chip.textContent = G.phase.toUpperCase(); chip.style.background = '#666'; }
+  const p = started ? cur() : null;
+  $('hudCash').textContent = p ? fmt$(p.cash) : '$0';
+}
+function refreshControls() {
+  const p = G.started ? cur() : null;
+  if (!p) return;
+  $('numAngle').value = Math.round(p.angle); $('numPower').value = Math.round(p.power);
+  const sel = $('selWeapon'), prev = sel.value;
+  sel.innerHTML = WEAPONS.filter(w => w.free || (p.inv[w.id] | 0) > 0)
+    .map(w => '<option value="' + w.id + '">' + w.name + ' (' + (w.free ? '∞' : (p.inv[w.id] | 0)) + ')</option>').join('');
+  sel.value = (WMAP[p.selWeapon] && (WMAP[p.selWeapon].free || (p.inv[p.selWeapon] | 0) > 0)) ? p.selWeapon : 'babymissile';
+  if (sel.value !== prev && sel.value) p.selWeapon = sel.value;
+  const ht = humanTurn();
+  $('numAngle').disabled = $('numPower').disabled = !ht;
+  $('btnFire').disabled = !ht;
+  $('btnBattery').disabled = !ht || (p.gear.battery | 0) <= 0 || p.hp >= 100;
+  $('btnBattery').textContent = 'BATTERY (' + (p.gear.battery | 0) + ')';
+  $('btnShield').disabled = !ht || !!p.shieldOn || !bestShieldId(p);
+  $('btnShield').textContent = p.shieldOn ? 'SHIELD: ' + GMAP[p.shieldOn.id].name + ' ' + Math.ceil(p.shieldOn.str) : 'SHIELD';
+  $('btnTrig').disabled = !ht || ((p.gear.contact | 0) <= 0 && !p.trigArmed);
+  $('btnTrig').textContent = 'CONTACT TRIG: ' + (p.trigArmed ? 'ARMED' : 'OFF') + ' (' + (p.gear.contact | 0) + ')';
+  $('btnMoveL').disabled = $('btnMoveR').disabled = !ht || (p.gear.fuel | 0) <= 0;
+}
+function humanFire() { if (humanTurn()) { fireShot(cur(), cur().selWeapon); refreshControls(); } }
+function useBattery() {
+  const p = cur(); if (!p || (p.gear.battery | 0) <= 0 || p.hp >= 100) return;
+  p.gear.battery--; p.hp = Math.min(100, p.hp + 10);
+  addFloater(p.x, p.y - 30, '+10', '#9fe89f'); beep(660, 0.08, 'square', 0.04); refreshControls();
+}
+function useShield() { const p = cur(); if (!p || p.shieldOn) return; const id = bestShieldId(p); if (id) { activateShield(p, id); refreshControls(); } }
+const FUEL_RANGE = 10;   // one fuel unit drives the tank 10 px across the wide field
+function tryMove(p, dx) {
+  if ((p.gear.fuel | 0) <= 0) return;
+  const dir = Math.sign(dx);
+  let steps = Math.abs(dx);
+  while (steps-- > 0) {
+    if ((p.gear.fuel | 0) <= 0) break;
+    const nx = clamp(p.x + dir, 14, GW - 14);
+    if (Math.abs(nx - p.x) < 0.5) break;
+    if (surfY(nx) < surfY(p.x) - 4) break; // too steep to climb
+    p.x = nx; p.y = surfY(p.x) - 6;
+    const scx = Math.round(p.x);
+    if (snowH[scx] > 0) snowH[scx] = Math.max(0, snowH[scx] - 3);   // driving plows a path through snow
+    p.movePx = (p.movePx | 0) + 1;
+    if (p.movePx >= (rainAt(p.x) ? FUEL_RANGE / 2 : FUEL_RANGE)) { p.movePx = 0; p.gear.fuel--; }   // mud: double fuel
+  }
+  if ((p.gear.fuel | 0) <= 0) refreshControls();
+}
+
+/* ---- input ---- */
+const keys = {};
+let moveAcc = 0;
+window.addEventListener('keydown', (e) => {
+  const tag = (e.target && e.target.tagName) || '';
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  keys[e.code] = true;
+  if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  if (!humanTurn()) return;
+  const p = cur();
+  if (e.code === 'Space' || e.code === 'Enter') humanFire();
+  else if (e.code === 'KeyQ' || e.code === 'KeyE') {
+    const list = WEAPONS.filter(w => w.free || (p.inv[w.id] | 0) > 0).map(w => w.id);
+    let i = list.indexOf(p.selWeapon);
+    i = (i + (e.code === 'KeyE' ? 1 : -1) + list.length) % list.length;
+    p.selWeapon = list[i]; refreshControls();
+  }
+  else if (e.code === 'KeyB') useBattery();
+  else if (e.code === 'KeyS') useShield();
+});
+window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+function applyHeldKeys(dt) {
+  if (!humanTurn()) return;
+  const p = cur();
+  if (keys.ShiftLeft || keys.ShiftRight) {
+    // Shift + arrows slides the view back and forth across the wide field
+    if (keys.ArrowLeft) { G.camX = clamp(G.camX - 840 * dt, 0, GW - VIEW_W); G.camFree = true; }
+    if (keys.ArrowRight) { G.camX = clamp(G.camX + 840 * dt, 0, GW - VIEW_W); G.camFree = true; }
+  } else {
+    if (keys.ArrowLeft) p.angle = clamp(p.angle + 52 * dt, 0, 180);
+    if (keys.ArrowRight) p.angle = clamp(p.angle - 52 * dt, 0, 180);
+    const pRate = p.power >= 100 ? 260 : 60;   // fine dialing down low, fast sweep through the boosted range
+    if (keys.ArrowUp) p.power = clamp(p.power + pRate * dt, 0, 500);
+    if (keys.ArrowDown) p.power = clamp(p.power - pRate * dt, 0, 500);
+  }
+  if (keys.KeyA || keys.KeyD) {
+    moveAcc += dt * 26;
+    while (moveAcc >= 1) { moveAcc -= 1; tryMove(p, keys.KeyA ? -1 : 1); }
+  }
+  if (document.activeElement !== $('numAngle')) $('numAngle').value = Math.round(p.angle);
+  if (document.activeElement !== $('numPower')) $('numPower').value = Math.round(p.power);
+}
+function holdBtn(id, fn) {
+  const el = $(id); let iv = null;
+  const start = (e) => { e.preventDefault(); fn(); iv = setInterval(fn, 55); };
+  const stop = () => { if (iv) clearInterval(iv); iv = null; };
+  el.addEventListener('pointerdown', start);
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, stop));
+}
+holdBtn('btnAngM', () => { if (humanTurn()) { cur().angle = clamp(cur().angle + 1, 0, 180); refreshControls(); } });
+holdBtn('btnAngP', () => { if (humanTurn()) { cur().angle = clamp(cur().angle - 1, 0, 180); refreshControls(); } });
+const powStep = () => { const v = cur().power; return v >= 200 ? 10 : (v >= 100 ? 5 : 1); };   // 1s down low for close shots, bigger steps up the boosted range
+holdBtn('btnPowM', () => { if (humanTurn()) { cur().power = clamp(cur().power - powStep(), 0, 500); refreshControls(); } });
+holdBtn('btnPowP', () => { if (humanTurn()) { cur().power = clamp(cur().power + powStep(), 0, 500); refreshControls(); } });
+holdBtn('btnMoveL', () => { if (humanTurn()) tryMove(cur(), -2); });
+holdBtn('btnMoveR', () => { if (humanTurn()) tryMove(cur(), 2); });
+$('btnFire').onclick = humanFire;
+$('btnBattery').onclick = useBattery;
+$('btnShield').onclick = useShield;
+$('btnTrig').onclick = () => { const p = cur(); if (p) { p.trigArmed = !p.trigArmed && (p.gear.contact | 0) > 0; refreshControls(); } };
+$('btnSound').onclick = () => { G.sound = !G.sound; $('btnSound').textContent = 'SOUND: ' + (G.sound ? 'ON' : 'OFF'); };
+/* Dial-in numbers, like the original: type the exact angle/power, or step it.
+   Typing sets the value live; blur/Enter snaps it to a whole number. */
+function bindDial(id, key, lo, hi) {
+  const el = $(id);
+  el.addEventListener('input', () => {
+    if (!humanTurn()) return;
+    const v = parseFloat(el.value);
+    if (!isNaN(v)) cur()[key] = clamp(v, lo, hi);
+  });
+  el.addEventListener('change', () => { if (G.started && cur()) refreshControls(); });
+  el.addEventListener('keydown', (e) => { if (e.code === 'Enter') el.blur(); });
+}
+bindDial('numAngle', 'angle', 0, 180);
+bindDial('numPower', 'power', 0, 500);
+$('selWeapon').addEventListener('change', () => { if (cur()) { cur().selWeapon = $('selWeapon').value; refreshControls(); } });
+/* drag to aim */
+let dragging = false;
+function canvasPos(e) {
+  const r = cv.getBoundingClientRect();
+  const scale = Math.min(r.width / VIEW_W, r.height / GH);   // canvas uses object-fit: contain
+  const ox = r.left + (r.width - VIEW_W * scale) / 2, oy = r.top + (r.height - GH * scale) / 2;
+  return { x: (e.clientX - ox) / scale, y: (e.clientY - oy) / scale };
+}
+cv.addEventListener('pointerdown', (e) => { $('wrap').focus(); if (!humanTurn()) return; dragging = true; dragAim(e); });
+cv.addEventListener('pointermove', (e) => { if (dragging) dragAim(e); });
+window.addEventListener('pointerup', () => { dragging = false; });
+function dragAim(e) {
+  const p = cur(), m = canvasPos(e);
+  const view = currentView();
+  const wx = view.left + m.x / view.z, wy = view.top + m.y / view.z;   // canvas point → world point (zoom-aware)
+  const dx = wx - p.x, dy = (p.y - 7) - wy;
+  if (Math.abs(dx) < 2 && Math.abs(dy) < 2) return;
+  let ang = Math.atan2(dy, dx) * 180 / Math.PI;
+  p.angle = clamp(ang, 0, 180);
+  p.power = clamp(Math.hypot(dx, dy) / 2.2, 0, 500);
+  refreshControls();
+}
+$('wrap').addEventListener('pointerdown', () => $('wrap').focus());
+
+/* ================= CAMERA =================
+   The world is 5 screens wide; the window shows one. The camera
+   centers on the tank whose turn it is, stays where a Shift+arrow
+   pan leaves it while aiming, and chases any shot in flight all
+   the way to its destination. */
+function currentView() {
+  const z = G.zoom || 1;
+  const w = VIEW_W / z, h = GH / z;
+  let left = G.camX + VIEW_W / 2 - w / 2;
+  left = w >= GW ? (GW - w) / 2 : clamp(left, 0, GW - w);
+  return { z, w, h, left, top: GH - h };   // bottom-anchored: the ridge line stays put as the view stretches
+}
+function updateCamera(dt) {
+  // Elastic zoom: hold SHIFT + DOWN while aiming and the view stretches
+  // out toward the whole field; release and it springs back to 1x with a
+  // little overshoot. Purely the camera — positions never change.
+  // A player standing in sand or fog is blinded: no scouting zoom.
+  const cp = (G.phase === 'aim' && G.started) ? cur() : null;
+  const zoomHeld = !!(cp && cp.type === 'Human' && !weatherBlinded(cp) && (keys.ShiftLeft || keys.ShiftRight) && keys.ArrowDown);
+  const zTarget = zoomHeld ? VIEW_W / GW : 1;
+  const sub = Math.max(1, Math.ceil(dt / 0.0125)), sdt = dt / sub;
+  for (let i = 0; i < sub; i++) {
+    G.zoomV += ((zTarget - G.zoom) * 90 - G.zoomV * 15) * sdt;
+    G.zoom += G.zoomV * sdt;
+  }
+  G.zoom = clamp(G.zoom, 0.16, 1.12);
+  if (G.phase === 'flying' && G.projectiles.length) {
+    G.camX = clamp(G.projectiles[0].x - VIEW_W / 2, 0, GW - VIEW_W);
+    return;
+  }
+  if ((G.phase === 'aim' || G.phase === 'ai') && !G.camFree && G.started && cur()) {
+    const want = clamp(cur().x - VIEW_W / 2, 0, GW - VIEW_W);
+    const d = want - G.camX;
+    G.camX += d * Math.min(1, dt * 4.5);
+    if (Math.abs(d) < 0.6) G.camX = want;
+  }
+  G.camX = clamp(G.camX, 0, GW - VIEW_W);
+}
+
+/* ================= MAIN LOOP ================= */
+function frameAdvance(dt) {
+  if (G.phase === 'roundEnd') {
+    G.roundEndT -= dt;
+    if (G.roundEndT <= 0) {
+      G.phase = 'standings';
+      showStandings(() => {
+        if (G.round >= G.totalRounds) matchEnd();
+        else shopPhase(() => startRound(G.round + 1));
+      });
+    }
+  }
+  tick(dt);
+}
+let lastT = performance.now();
+function loop(now) {
+  const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
+  if (!G.paused) { applyHeldKeys(dt); frameAdvance(dt); updateCamera(dt); }
+  draw(); updateHUD();
+  requestAnimationFrame(loop);
+}
+
+/* ================= TEST HOOKS ================= */
+window.__SE = {
+  G, WEAPONS, GEAR, AI_TYPES,
+  start: (roster, opts) => startMatch(roster, opts),
+  buy: (pi, cat, id) => shopBuy(G.players[pi], cat, id),
+  shopDone: () => { if (G.phase === 'shop') $('btnShopDone').click(); },
+  standDone: () => { if ($('ovStand').classList.contains('on')) $('btnStandDone').click(); },
+  setAim: (a, pw) => { const p = cur(); if (p) { p.angle = a; p.power = pw; } },
+  selectWeapon: (id) => { const p = cur(); if (p) p.selWeapon = id; },
+  fire: () => { const p = cur(); return p ? fireShot(p, p.selWeapon) : false; },
+  surfYAt: (x) => surfY(x),
+  dirtCount: () => dirtCellCount(),
+  giveCash: (pi, n) => { G.players[pi].cash += n; },
+  setHP: (pi, n) => { G.players[pi].hp = n; },
+  aliveCount: () => alivePlayers().length,
+  sides: () => aliveSides().length,
+  cur: () => cur(),
+  camX: () => G.camX,
+  worldW: () => GW,
+  aimPath: () => { const p = cur(); return p ? computeAimPath(p) : []; },
+  storms: () => G.storms.map(s => s.type + '@' + Math.round(s.x)),
+  snowAt: (x) => snowH[clamp(Math.round(x), 0, GW - 1)],
+  zoom: () => G.zoom,
+  setPaused: (b) => { G.paused = !!b; },
+  explodeAt: (x, y, r, dmg) => explode(x, y, r, dmg, null),
+  fastRun: (maxSec) => {
+    G.paused = true;
+    let t = 0; const step = 1 / 30;
+    while (t < maxSec) {
+      frameAdvance(step); t += step;
+      if (G.phase === 'aim' || G.phase === 'shop' || G.phase === 'standings' || G.phase === 'matchEnd' || G.phase === 'setup') break;
+    }
+    G.paused = false;
+    return { phase: G.phase, simT: t, round: G.round, alive: alivePlayers().length };
+  },
+  version: 'scorched-earth-1.5-recreation',
+};
+
+/* ================= INIT ================= */
+buildSetup();
+genTerrain();
+requestAnimationFrame(loop);
+$('wrap').focus();
+</script>
+<script>
+'use strict';
+/* ================= OPENING CINEMATIC =================
+   Angeles Productions presents → SCORCHED EARTH — Blast from the
+   Past → a bomb barrage that blankets the whole screen. The full
+   sequence runs about 9.9 seconds (explosion fill: ~3.6s), and any
+   click, key, or the SKIP button ends it instantly. Explosions are
+   stamped onto a persistent "coverage" canvas aimed at a shuffled
+   grid of cells, so the screen really does end up fully covered —
+   not just busy in the middle. */
+(function () {
+  var intro = document.getElementById('intro');
+  if (!intro) return;
+  var cv = document.getElementById('introCv');
+  var cx = cv.getContext('2d');
+  var flash = document.getElementById('introFlash');
+  var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var S = reduced ? 0.22 : 1;                       // reduced-motion time scale
+  var T_CARD2 = 2100 * S;                           // title card at ~2.1s
+  var T_BOOM = 5700 * S;                            // barrage starts at ~5.7s (title card held a bit longer)
+  var T_COVERED = 9300 * S;                         // screen fully covered by ~9.3s
+  var T_END = 9900 * S;                             // fade out, game revealed
+  var W = 0, H = 0;
+  var cover = document.createElement('canvas');   // persistent stamped explosions
+  var ccx = cover.getContext('2d');
+  var cells = [], cellIdx = 0;
+  var bombs = [], bursts = [], parts = [];
+  var start = performance.now();
+  var phase = 'card1', finaleAt = 0, done = false, spawnT = 0, flashA = 0;
+  var R = Math.random;
+
+  function buildCells() {
+    cells = []; cellIdx = 0;
+    var cell = 118;
+    for (var gy = cell / 2; gy < H + cell; gy += cell)
+      for (var gx = cell / 2; gx < W + cell; gx += cell)
+        cells.push({ x: gx, y: gy });
+    for (var i = cells.length - 1; i > 0; i--) { var j = Math.floor(R() * (i + 1)); var t = cells[i]; cells[i] = cells[j]; cells[j] = t; }
+  }
+  function resize() {
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W; cv.height = H;
+    var ow = cover.width, oh = cover.height;
+    var keep = null;
+    if (ow && oh) { keep = document.createElement('canvas'); keep.width = ow; keep.height = oh; keep.getContext('2d').drawImage(cover, 0, 0); }
+    cover.width = W; cover.height = H;
+    if (keep) ccx.drawImage(keep, 0, 0, W, H);
+    if (!cells.length) buildCells();
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  function nextTarget() {
+    if (cellIdx >= cells.length) { buildCells(); }
+    var c = cells[cellIdx++];
+    return { x: c.x + (R() - 0.5) * 62, y: c.y + (R() - 0.5) * 62 };
+  }
+  function stamp(x, y, r) {
+    // lingering smoke puffs around the blast
+    for (var i = 0; i < 6; i++) {
+      ccx.beginPath();
+      ccx.fillStyle = 'rgba(22,18,16,' + (0.35 + R() * 0.3) + ')';
+      ccx.arc(x + (R() - 0.5) * r * 1.5, y + (R() - 0.5) * r * 1.5, r * (0.32 + R() * 0.4), 0, 7);
+      ccx.fill();
+    }
+    // fireball — this blob never fades, so coverage accumulates
+    var g = ccx.createRadialGradient(x, y, 0, x, y, r);
+    g.addColorStop(0, 'rgba(255,242,190,0.98)');
+    g.addColorStop(0.22, 'rgba(255,186,64,0.97)');
+    g.addColorStop(0.52, 'rgba(232,84,20,0.95)');
+    g.addColorStop(0.8, 'rgba(122,32,10,0.92)');
+    g.addColorStop(1, 'rgba(28,10,5,0)');
+    ccx.fillStyle = g;
+    ccx.beginPath(); ccx.arc(x, y, r, 0, 7); ccx.fill();
+    // flame tongues
+    ccx.strokeStyle = 'rgba(255,150,40,0.8)'; ccx.lineCap = 'round';
+    for (var k = 0; k < 7; k++) {
+      var a = R() * Math.PI * 2, len = r * (0.55 + R() * 0.6);
+      ccx.lineWidth = 2 + R() * 5;
+      ccx.beginPath(); ccx.moveTo(x, y); ccx.lineTo(x + Math.cos(a) * len, y + Math.sin(a) * len); ccx.stroke();
+    }
+    // scorched crater heart + bright core
+    ccx.beginPath(); ccx.fillStyle = 'rgba(12,6,3,0.55)';
+    ccx.arc(x + (R() - 0.5) * r * 0.3, y + (R() - 0.5) * r * 0.3, r * 0.3, 0, 7); ccx.fill();
+    ccx.beginPath(); ccx.fillStyle = 'rgba(255,250,215,0.95)';
+    ccx.arc(x, y, r * 0.16, 0, 7); ccx.fill();
+  }
+  function burst(x, y, r) {
+    bursts.push({ x: x, y: y, r: r, t: 0, life: 0.55 });
+    for (var i = 0; i < 26; i++) {
+      var a = R() * Math.PI * 2, sp = 40 + R() * 260;
+      parts.push({ x: x, y: y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 60, t: 0,
+        life: 0.4 + R() * 0.8, size: 1.5 + R() * 4,
+        color: ['#ffd75e', '#ff9a3c', '#ff5a1a', '#e8e0d0', '#5a5a5a'][Math.floor(R() * 5)] });
+    }
+    if (flashA < 0.35) flashA = 0.35;
+  }
+  function explodeAt(x, y, r) { stamp(x, y, r); burst(x, y, r); }
+  function launchBomb() {
+    var t = nextTarget();
+    bombs.push({ sx: t.x + (R() - 0.5) * 320, sy: -50, tx: t.x, ty: t.y, t: 0,
+      dur: 0.38 + R() * 0.3, r: 74 + R() * 62, spin: (R() - 0.5) * 1.4 });
+  }
+  function fullCover() {
+    ccx.fillStyle = '#180803'; ccx.fillRect(0, 0, W, H);
+    for (var i = 0; i < cells.length; i++) stamp(cells[i].x, cells[i].y, 82 + R() * 60);
+    for (var k = 0; k < 26; k++) burst(R() * W, R() * H, 60 + R() * 90);
+    flashA = 0.9;
+  }
+  function finish() {
+    if (done) return; done = true;
+    intro.classList.add('gone');
+    setTimeout(function () { intro.style.display = 'none'; }, 650);
+    var w = document.getElementById('wrap'); if (w) w.focus();
+  }
+  document.getElementById('introSkip').addEventListener('click', function (e) { e.stopPropagation(); finish(); });
+  intro.addEventListener('click', finish);
+  window.addEventListener('keydown', function (e) { if (e.code === 'Escape') finish(); });
+
+  function drawBomb(b, px, py) {
+    cx.save(); cx.translate(px, py);
+    var ang = Math.atan2(b.ty - b.sy, b.tx - b.sx) + Math.PI / 2 + b.spin * b.t;
+    cx.rotate(ang + Math.PI);   // nose down along the fall line
+    cx.fillStyle = '#23232e';
+    cx.beginPath(); cx.ellipse(0, 0, 7, 17, 0, 0, 7); cx.fill();
+    cx.fillStyle = '#3d3d4d'; cx.fillRect(-6, -10, 12, 5);
+    cx.fillStyle = '#c8c8d8';
+    cx.beginPath(); cx.moveTo(-7, 12); cx.lineTo(0, 20); cx.lineTo(7, 12); cx.fill();
+    cx.fillStyle = '#8a1010';
+    cx.beginPath(); cx.moveTo(-7, -14); cx.lineTo(-15, -22); cx.lineTo(-3, -19); cx.fill();
+    cx.beginPath(); cx.moveTo(7, -14); cx.lineTo(15, -22); cx.lineTo(3, -19); cx.fill();
+    cx.restore();
+    // exhaust flame + smoke trail
+    parts.push({ x: px + (R() - 0.5) * 6, y: py - 14, vx: (R() - 0.5) * 22, vy: -30 - R() * 30, t: 0,
+      life: 0.3 + R() * 0.35, size: 2 + R() * 3.5, color: R() < 0.45 ? '#ff9a3c' : '#6a6a72' });
+  }
+  function frame(now) {
+    if (done) return;
+    var t = now - start;
+    // --- timeline phases ---
+    if (phase === 'card1' && t >= T_CARD2) { phase = 'card2'; intro.classList.remove('on1'); intro.classList.add('on2'); }
+    if (phase === 'card2' && t >= T_BOOM) { phase = 'boom'; intro.classList.add('boom'); spawnT = 0; flashA = 0.55; explodeAt(W * 0.5, H * 0.45, Math.min(W, H) * 0.24); }
+    if (phase === 'boom' && t >= T_COVERED) { phase = 'finale'; finaleAt = now; fullCover(); }
+    if ((phase === 'finale' && t >= T_END) || t > T_END + 900) { finish(); return; }
+
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+    cx.fillStyle = '#000'; cx.fillRect(0, 0, W, H);
+    var boomT = phase === 'boom' ? Math.min(1, (t - T_BOOM) / Math.max(1, T_COVERED - T_BOOM)) : (phase === 'finale' ? 1 : 0);
+    if (phase === 'boom' || phase === 'finale') {
+      var sh = 2 + boomT * 7;
+      cx.setTransform(1, 0, 0, 1, (R() - 0.5) * sh, (R() - 0.5) * sh);
+    }
+    cx.drawImage(cover, 0, 0);
+
+    if (phase === 'boom') {
+      // escalating barrage: faster launches, more at once, plus airbursts
+      spawnT -= 16;
+      if (spawnT <= 0) {
+        var n = 1 + Math.floor(boomT * 3);
+        for (var i = 0; i < n; i++) launchBomb();
+        spawnT = 250 - boomT * 215;
+      }
+      if (R() < 0.12 + boomT * 0.5) { var tg = nextTarget(); explodeAt(tg.x, tg.y, 55 + R() * 70); }
+      // finale rush: stamp anything still uncovered
+      if (boomT > 0.82) for (var k = 0; k < 5 && cellIdx < cells.length; k++) { var c = cells[cellIdx++]; explodeAt(c.x, c.y, 84 + R() * 46); }
+    }
+    if (phase === 'finale' && R() < 0.5) burst(R() * W, R() * H, 44 + R() * 80);  // fires keep popping under the smoke
+
+    // bombs in flight
+    var keepB = [];
+    for (var bi = 0; bi < bombs.length; bi++) {
+      var b = bombs[bi]; b.t += 1 / 60 / b.dur;
+      if (b.t >= 1) { explodeAt(b.tx, b.ty, b.r); continue; }
+      var e = b.t * b.t * (3 - 2 * b.t);
+      drawBomb(b, b.sx + (b.tx - b.sx) * e, b.sy + (b.ty - b.sy) * e);
+      keepB.push(b);
+    }
+    bombs = keepB;
+    // live burst rings
+    var keepR = [];
+    for (var ri2 = 0; ri2 < bursts.length; ri2++) {
+      var u = bursts[ri2]; u.t += 1 / 60;
+      if (u.t >= u.life) continue;
+      var f = u.t / u.life;
+      cx.globalAlpha = 1 - f;
+      cx.strokeStyle = '#ffe9a8'; cx.lineWidth = 3 * (1 - f) + 0.5;
+      cx.beginPath(); cx.arc(u.x, u.y, u.r * (0.25 + f * 0.95), 0, 7); cx.stroke();
+      cx.fillStyle = '#fff3c8';
+      cx.beginPath(); cx.arc(u.x, u.y, u.r * 0.32 * (1 - f), 0, 7); cx.fill();
+      cx.globalAlpha = 1;
+      keepR.push(u);
+    }
+    bursts = keepR;
+    // sparks, embers, smoke
+    var keepP = [];
+    for (var pi = 0; pi < parts.length; pi++) {
+      var p = parts[pi]; p.t += 1 / 60;
+      if (p.t >= p.life) continue;
+      p.vy += 150 / 60; p.x += p.vx / 60; p.y += p.vy / 60;
+      cx.globalAlpha = Math.max(0, 1 - p.t / p.life);
+      cx.fillStyle = p.color;
+      cx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+      keepP.push(p);
+    }
+    parts = keepP; cx.globalAlpha = 1;
+    cx.setTransform(1, 0, 0, 1, 0, 0);
+    // impact flash
+    if (flashA > 0.01) { flash.style.opacity = flashA.toFixed(2); flashA *= 0.86; }
+    else flash.style.opacity = '0';
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
