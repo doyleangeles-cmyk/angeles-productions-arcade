@@ -1,0 +1,949 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Rigo's Space Force — Angeles Productions</title>
+<style>
+  :root{
+    --bg:#f2f0ea; --panel:#ffffff; --ink:#191922; --muted:#5c5c6a;
+    --line:#ddd8cc; --accent:#c8102e; --accent2:#0b5fa5; --gold:#b8860b;
+    --btn:#191922; --btn-ink:#fff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0b0b12; --panel:#14141f; --ink:#f0eee6; --muted:#a5a3b5;
+      --line:#2a2a3c; --accent:#ff4d5e; --accent2:#4db2ff; --gold:#e8b93c;
+      --btn:#f0eee6; --btn-ink:#14141f;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased}
+  .wrap{max-width:920px;margin:0 auto;padding:10px 12px 56px}
+  header.top{text-align:center;margin:22px 0 18px;max-width:760px}
+  header.top .presents{font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--muted)}
+  h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(40px,8vw,64px);
+    margin:2px 0 4px;letter-spacing:.14em;font-weight:700}
+  h1 .g{color:var(--accent)}
+  .tagline{color:var(--muted);margin:0;font-size:15px}
+  .stack{display:flex;flex-direction:column;align-items:center;gap:0;width:100%}
+  .cabinet{background:#05050a;border:1px solid var(--line);border-radius:10px;
+    padding:12px 12px 12px;box-shadow:0 14px 34px rgba(0,0,0,.28);
+    width:100%;max-width:586px;margin:0 auto}
+  .hud{display:flex;justify-content:space-between;gap:10px;color:#f5f3ea;
+    font-family:"Courier New",monospace;font-weight:700;font-size:13px;padding:2px 2px 8px}
+  .hud .lab{display:block;font-size:10px;letter-spacing:.18em;color:#ff5b6a;font-weight:700}
+  .hud .mid .lab{color:#ffd34d;text-align:center}
+  .hud .mid{text-align:center}
+  .hud .r{text-align:right}
+  canvas{display:block;margin:0 auto;
+    width:min(100%,calc(100vw - 50px),560px,calc((100dvh - 192px)*0.77778),calc((100svh - 192px)*0.77778));
+    height:auto;aspect-ratio:224/288;background:#000;
+    border-radius:4px;touch-action:none}
+  @media (pointer:coarse){
+    canvas{width:min(100%,calc(100vw - 50px),560px,calc((100dvh - 262px)*0.77778),calc((100svh - 262px)*0.77778))}
+  }
+  .touchrow{display:none;gap:10px;margin-top:10px}
+  .touchrow button{flex:1;padding:14px 0;font-size:18px;border-radius:8px;border:1px solid #3a3a4d;
+    background:#1b1b28;color:#f5f3ea;font-family:inherit;font-weight:700;cursor:pointer;user-select:none;-webkit-user-select:none}
+  .touchrow button:active{background:#2c2c42}
+  @media (pointer:coarse){ .touchrow{display:flex} }
+  .info{width:100%;max-width:760px;margin:0 auto}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin-bottom:16px}
+  .card h2{font-family:Georgia,serif;font-size:20px;margin:0 0 8px}
+  .card p{margin:0 0 10px;line-height:1.55;font-size:14.5px}
+  .card p:last-child{margin-bottom:0}
+  .controls-list{list-style:none;margin:0;padding:0;font-size:14.5px;line-height:1.5}
+  .controls-list li{padding:5px 0;border-bottom:1px dashed var(--line)}
+  .controls-list li:last-child{border-bottom:none}
+  kbd{background:var(--bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;
+    padding:0 6px;font-family:"Courier New",monospace;font-size:13px;font-weight:700}
+  table{border-collapse:collapse;width:100%;font-size:14px}
+  th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .btnrow{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 2px;justify-content:center}
+  button.act{background:#f5f3ea;color:#14141f;border:none;border-radius:8px;
+    padding:11px 15px;font-size:14.5px;font-weight:700;font-family:inherit;cursor:pointer;white-space:nowrap}
+  button.act.secondary{background:transparent;color:#f5f3ea;border:1.5px solid #f5f3ea}
+  button.act:active{transform:translateY(1px)}
+  .note{font-size:13px;color:var(--muted);line-height:1.55}
+  .note b{color:var(--ink)}
+  footer{margin-top:26px;text-align:center;color:var(--muted);font-size:13px;line-height:1.6}
+  footer a{color:var(--accent2)}
+  .srcs{font-size:12.5px;color:var(--muted);line-height:1.7}
+  .srcs a{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stack">
+    <div class="cabinet">
+      <div class="hud">
+        <div><span class="lab">SPACE FORCE · SCORE</span><span id="hudScore">0</span></div>
+        <div class="mid"><span class="lab">HIGH SCORE</span><span id="hudHigh">20000</span></div>
+        <div class="r"><span class="lab">STAGE</span><span id="hudStage">–</span></div>
+      </div>
+      <canvas id="game" width="448" height="576" aria-label="Rigo's Space Force game screen"></canvas>
+      <div class="touchrow">
+        <button id="btnL" aria-label="Move left">◀</button>
+        <button id="btnFire" aria-label="Fire">FIRE</button>
+        <button id="btnR" aria-label="Move right">▶</button>
+      </div>
+      <div class="btnrow">
+        <button class="act" id="btnStart">▶ Start game</button>
+        <button class="act secondary" id="btnAuto" aria-pressed="false">Auto-Fire: off</button>
+        <button class="act secondary" id="btnSound">Sound: on</button>
+        <button class="act secondary" id="btnPause">Pause</button>
+      </div>
+    </div>
+
+    <header class="top">
+      <div class="presents">Angeles Productions presents</div>
+      <h1 style="letter-spacing:.05em;font-size:clamp(28px,7.2vw,56px)">RIGO'S SPACE <span class="g">FORCE</span></h1>
+      <p class="tagline">Earth's last lone fighter squadron against the Tesla fleet of the evil Space&nbsp;X — a sister company of Skynet. (Yes, <em>that</em> Skynet. The cars learned to fly, and they brought friends.)</p>
+    </header>
+
+    <div class="info">
+      <div class="card">
+        <h2>The invasion</h2>
+        <p>You fly for <b>Rigo's Space Force</b> — one fighter, then (if you're good) two, holding the line
+        above Earth. Coming down at you is the <b>Tesla fleet</b>: forty all-electric warships sent by the
+        <b>evil Space&nbsp;X</b>, a sister company of <b>Skynet</b> — same family business of machines deciding
+        humanity is a bug to be patched, now with better batteries and a charging network. 😉</p>
+        <p>The fleet flies in three classes: <b>20 Tesla Drones</b> low, <b>16 Tesla Cruisers</b> in the middle,
+        and <b>4 Tesla Motherships</b> on top — the big two-hit captors with the tractor beam. Sleek silver hulls,
+        red accents, zero emissions, total menace. Send every last one to the scrapyard.</p>
+      </div>
+
+      <div class="card">
+        <h2>How to play</h2>
+        <ul class="controls-list">
+          <li><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd>/<kbd>D</kbd> — move (left–right only, like the cabinet)</li>
+          <li><kbd>Space</kbd> / <kbd>Z</kbd> — fire. Max <b>2 shots</b> on screen per Fighter — the limit <em>is</em> the fire rate.</li>
+          <li><kbd>F</kbd> or the <b>Auto-Fire</b> button — toggle <b>Auto-Fire</b>. When it's ON, your Space Force fighter fires continuously at the game's max rate (still capped at 2 shots on screen per Fighter, 4 for the Dual Fighter) — no holding the fire button. Default is OFF; it stays as you set it for the whole session, even across games.</li>
+          <li>On touch screens: drag on the cabinet, or use the ◀ FIRE ▶ pads. The Auto-Fire button above works by tap, too.</li>
+          <li><kbd>P</kbd> — pause. Sound starts on your first tap/key (browser rule).</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>The capture gambit</h2>
+        <p>A Tesla Mothership sometimes stops mid-screen and pours out its shimmering blue
+        <b>tractor beam</b>. Get caught and that Fighter is gone — it costs a life, and the red captive
+        flies beside its captor Mothership. Shoot the captor down <b>while it dives with the captive in tow</b> and
+        the Fighter breaks free, docks beside yours, and you fly the <b>Dual Fighter</b>: two shots per
+        volley, up to 4 on screen — but twice as wide, and a hit costs only the half that was struck.</p>
+        <p>Kill the captor Mothership in formation instead and there's no rescue — the captive dives off alone and
+        comes back next stage, bound to a new Mothership. And never shoot the captive itself: it's 500/1,000
+        points for a ship you'll never get back.</p>
+      </div>
+
+      <div class="card">
+        <h2>Scoring — the real table</h2>
+        <p class="note" style="margin-bottom:10px">The Tesla classes below fly the exact roles of the original
+        <em>Galaga</em> enemies — Drone = Zako (bee), Cruiser = Goei (butterfly), Mothership = Boss Galaga —
+        and every value is the original game's, unchanged.</p>
+        <table>
+          <tr><th>Tesla</th><th class="n">Formation</th><th class="n">Diving</th><th class="n">Hits</th></tr>
+          <tr><td>Tesla Drone</td><td class="n">50</td><td class="n">100</td><td class="n">1</td></tr>
+          <tr><td>Tesla Cruiser</td><td class="n">80</td><td class="n">160</td><td class="n">1</td></tr>
+          <tr><td>Tesla Mothership, alone</td><td class="n">150</td><td class="n">400</td><td class="n">2</td></tr>
+          <tr><td>Mothership + 1 escort, diving</td><td class="n">—</td><td class="n">800</td><td class="n">2</td></tr>
+          <tr><td>Mothership + 2 escorts, diving</td><td class="n">—</td><td class="n">1,600</td><td class="n">2</td></tr>
+          <tr><td>Captured Fighter</td><td class="n">500</td><td class="n">1,000</td><td class="n">1</td></tr>
+          <tr><td>Transform enemy</td><td class="n">—</td><td class="n">160</td><td class="n">1</td></tr>
+        </table>
+        <p class="note" style="margin-top:10px">A diving Mothership's value is locked in when its dive begins, by how many
+        Cruiser escorts launched with it — shooting the escorts first doesn't change it (that's
+        <em>Galaxian</em>'s rule, not this game's). Kill all three of a transform trio for
+        <b>1,000 / 2,000 / 3,000</b> by type. Extra Fighter at <b>20,000</b>, then <b>70,000</b>, then every
+        70,000 — the starred Midway DIP-switch default, with 3 starting Fighters.</p>
+      </div>
+
+      <div class="card">
+        <h2>Challenging Stages</h2>
+        <p>Stages <b>3, 7, 11, 15, 19, 23, 27, 31</b>, then the set repeats: 40 Teslas in 5 groups of 8
+        stream past on looping paths. They don't shoot and don't dive at you — it's a shooting gallery.
+        100 points a hit, a bonus per complete group of 8 wiped out (1,000–3,000 by stage), and
+        <b>10,000 for a Perfect 40</b>.</p>
+      </div>
+
+      <div class="card">
+        <h2>Honest gaps</h2>
+        <p class="note">This is a re-skin with new fiction on top: underneath, it's the original game.
+        Namco never published exact pixel speeds for the Fighter, bullets, bombs or dives,
+        the per-stage bomb caps, or the flight-path data — those are <b>tuned by feel at 60&nbsp;Hz</b> here,
+        and the entry/dive/challenge choreography is rebuilt from the documented pattern archetypes
+        (side processions, double rows, long strings), not extracted from the ROM. Everything else on
+        this page — counts, scores, capture rules, the Challenging cadence — is the original <em>Galaga</em>
+        spec, documented in the sources below. Transform trios appear from Stage 4 in the documented rotation
+        (Scorpions → Bosconian Ei → Galaxian Flagships), flying here as experimental Tesla prototypes.</p>
+      </div>
+
+      <div class="card">
+        <h2>Galaxian (1979), for the record</h2>
+        <p class="note">The original game's predecessor differs where it counts: <b>46</b> aliens appearing instantly in 6 rows
+        (2 Flagships, 6 Escorts, 8 Emissaries, 30 Drones — one source counts 44 + 2 Flagships), a formation
+        that simply marches side-to-side with no pulse, <b>1 shot</b> on screen, 1-hit Flagships, no capture,
+        no Dual Fighter, no Challenging Stages — and a Flagship's 800-point trick that depends on killing
+        its escorts <em>first</em>. This build follows <em>Galaga</em>'s rules — with Teslas in the alien seats.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Rigo's Space Force — a fan re-skin of Galaga © 1981 Namco / Midway, built from published documentation. Not affiliated with Tesla, SpaceX, or Skynet (fictional or otherwise).<br>
+    <span class="srcs">Sources:
+      <a href="https://en.wikipedia.org/wiki/Galaga">Wikipedia — Galaga</a> ·
+      <a href="https://www.arcade-history.com/?page=detail&id=898">Arcade-History</a> ·
+      <a href="https://namco.fandom.com/wiki/Galaga">Namco Wiki</a> ·
+      <a href="https://www.arcade-museum.com/tech-center/game-dips/galagamk">Arcade-Museum DIP chart</a>
+    </span>
+  </footer>
+</div>
+
+<script>
+"use strict";
+/* ============ RIGO'S SPACE FORCE — Galaga mechanics, Tesla fiction ============
+   The player flies for Rigo's Space Force; the enemies are the Tesla fleet
+   of the evil Space X (a sister company of Skynet). Roles map 1:1 onto the
+   original game: Drone = Zako, Cruiser = Goei, Mothership = Boss Galaga.
+   Logical field 224x288 (the arcade's vertical raster), rendered x2.
+   Documented values are used verbatim; speeds are tuned by feel
+   (never published) — see the "Honest gaps" panel. */
+var W=224, H=288, CX=112;
+var cv=document.getElementById('game'), ctx=cv.getContext('2d');
+ctx.scale(2,2);
+
+/* ---------- audio (synthesised; no samples) ---------- */
+var AC=null, soundOn=true;
+function ac(){ if(!AC){ try{ AC=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} }
+  if(AC&&AC.state==='suspended')AC.resume(); return AC; }
+function tone(f,d,type,v,delay,slide){
+  if(!soundOn) return; var a=ac(); if(!a)return;
+  var t=a.currentTime+(delay||0), o=a.createOscillator(), g=a.createGain();
+  o.type=type||'square'; o.frequency.setValueAtTime(f,t);
+  if(slide) o.frequency.exponentialRampToValueAtTime(Math.max(30,slide),t+d);
+  g.gain.setValueAtTime(v||0.06,t); g.gain.exponentialRampToValueAtTime(0.0008,t+d);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+d+0.02);
+}
+function noiseBurst(d,v,delay){
+  if(!soundOn) return; var a=ac(); if(!a)return;
+  var t=a.currentTime+(delay||0), len=Math.floor(a.sampleRate*d), buf=a.createBuffer(1,len,a.sampleRate),
+      ch=buf.getChannelData(0), i;
+  for(i=0;i<len;i++) ch[i]=(Math.random()*2-1)*(1-i/len);
+  var s=a.createBufferSource(); s.buffer=buf;
+  var g=a.createGain(); g.gain.value=v||0.16;
+  var f=a.createBiquadFilter(); f.type='lowpass'; f.frequency.value=900;
+  s.connect(f); f.connect(g); g.connect(a.destination); s.start(t);
+}
+function sndShot(){ tone(880,0.09,'square',0.035,0,220); }
+function sndPop(){ noiseBurst(0.12,0.13); tone(300,0.1,'triangle',0.07,0,70); }
+function sndBigBoom(){ noiseBurst(0.7,0.3); tone(120,0.6,'sawtooth',0.12,0,32); }
+function sndDive(){ tone(1400,0.3,'sawtooth',0.016,0,500); }
+function sndBeam(){ for(var i=0;i<6;i++) tone(520+((i%2)*260),0.14,'sine',0.05,i*0.15); }
+function jingle(kind){
+  var seqs={
+    start:[523,659,784,1046,784,1046],
+    captured:[392,370,349,311],
+    rescued:[523,659,784,1046,1318],
+    clear:[659,784,1046,1318],
+    perfect:[784,988,1175,1568,1975],
+    over:[440,415,392,370,349]
+  }, s=seqs[kind]||[], i;
+  for(i=0;i<s.length;i++) tone(s[i],0.16,'triangle',0.07,i*0.13);
+}
+
+/* ---------- helpers ---------- */
+function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+function rnd(a,b){ return a+Math.random()*(b-a); }
+function bez(p0,p1,p2,p3,t){
+  var u=1-t, a=u*u*u, b=3*u*u*t, c=3*u*t*t, d=t*t*t;
+  return { x:a*p0.x+b*p1.x+c*p2.x+d*p3.x, y:a*p0.y+b*p1.y+c*p2.y+d*p3.y };
+}
+function isChallengeStage(n){ return n>=3 && ((n-3)%4===0); }
+var CH_TYPES=[
+  {name:'Tesla Drone',   grp:1000, draw:'bee'},
+  {name:'Tesla Cruiser', grp:1000, draw:'butterfly'},
+  {name:'Tonbo',      grp:1500, draw:'tonbo'},
+  {name:'Scorpion',   grp:1500, draw:'scorpion'},
+  {name:'Momiji',     grp:2000, draw:'momiji'},
+  {name:'Ei',         grp:2000, draw:'ei'},
+  {name:'Galboss',    grp:3000, draw:'galboss'},
+  {name:'Spaceship',  grp:3000, draw:'spaceship'}
+];
+function challengeInfo(stage){ var idx=((stage-3)/4)%8; return CH_TYPES[idx]; }
+
+/* ---------- sprites (drawn, 16x16-ish, nose up) ---------- */
+function drawFighter(x,y,red,spin){
+  ctx.save(); ctx.translate(x,y); if(spin) ctx.rotate(spin);
+  ctx.fillStyle= red? '#e33' : '#f2f2f2';
+  ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(3,-2); ctx.lineTo(8,6); ctx.lineTo(8,8);
+  ctx.lineTo(3,6); ctx.lineTo(-3,6); ctx.lineTo(-8,8); ctx.lineTo(-8,6); ctx.lineTo(-3,-2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle= red? '#ffb3b3' : '#d43a2f';
+  ctx.fillRect(-1.5,-6,3,7);
+  ctx.fillStyle='#2f6fd0'; if(!red){ ctx.fillRect(-8,4,4,3); ctx.fillRect(4,4,4,3); }
+  ctx.restore();
+}
+/* Tesla fleet — sleek electric spacecraft: smooth silver/white hulls, red accents, nose down */
+function drawBee(x,y,flap){ /* Tesla Drone — small dart */
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle='#9aa3ad'; /* swept fins */
+  var w=flap?2.6:5.4;
+  ctx.beginPath(); ctx.moveTo(-2,-3); ctx.lineTo(-3-w,4); ctx.lineTo(-2,5); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2,-3); ctx.lineTo(3+w,4); ctx.lineTo(2,5); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#eef1f4'; /* silver-white hull */
+  ctx.beginPath(); ctx.moveTo(0,8); ctx.lineTo(3,2); ctx.lineTo(3,-5); ctx.quadraticCurveTo(0,-7.6,-3,-5); ctx.lineTo(-3,2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#c8102e'; ctx.fillRect(-3,0.5,6,1.8); /* red accent band */
+  ctx.fillStyle='#1c2733'; ctx.beginPath(); ctx.ellipse(0,-3.4,1.7,2.4,0,0,7); ctx.fill(); /* canopy */
+  ctx.fillStyle='#7fd0ff'; ctx.fillRect(-1.2,-7.6,2.4,1.6); /* thruster glow */
+  ctx.restore();
+}
+function drawButterfly(x,y,flap){ /* Tesla Cruiser — mid-size swept-wing craft */
+  ctx.save(); ctx.translate(x,y);
+  ctx.fillStyle='#8b95a1';
+  var w=flap?3.2:6.8;
+  ctx.beginPath(); ctx.moveTo(-2.5,-4); ctx.lineTo(-4-w,3.4); ctx.lineTo(-5,6); ctx.lineTo(-1.5,4.6); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(2.5,-4); ctx.lineTo(4+w,3.4); ctx.lineTo(5,6); ctx.lineTo(1.5,4.6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#f4f6f8';
+  ctx.beginPath(); ctx.moveTo(0,8.4); ctx.lineTo(3.4,1); ctx.lineTo(3,-5.4); ctx.quadraticCurveTo(0,-8,-3,-5.4); ctx.lineTo(-3.4,1); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#c8102e'; ctx.fillRect(-3.3,0,6.6,2); ctx.fillRect(-0.9,3.4,1.8,3.4);
+  ctx.fillStyle='#1c2733'; ctx.beginPath(); ctx.ellipse(0,-3.6,1.9,2.8,0,0,7); ctx.fill();
+  ctx.fillStyle='#7fd0ff'; ctx.fillRect(-1.4,-8,2.8,1.6);
+  ctx.restore();
+}
+function drawBoss(x,y,flap,damaged){ /* Tesla Mothership — two-hit captor saucer */
+  ctx.save(); ctx.translate(x,y);
+  var hull= damaged? '#6b7686' : '#eef1f4', rim= damaged? '#454e5c' : '#9aa3ad';
+  var w=flap?4.6:7.6;
+  ctx.fillStyle=rim; /* wide saucer wings */
+  ctx.beginPath(); ctx.ellipse(-7.4,1,w,3.6,-0.35,0,7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(7.4,1,w,3.6,0.35,0,7); ctx.fill();
+  ctx.fillStyle=hull;
+  ctx.beginPath(); ctx.ellipse(0,0,6.2,7.6,0,0,7); ctx.fill();
+  ctx.fillStyle='#c8102e'; ctx.beginPath(); ctx.ellipse(0,1.8,6.2,2.1,0,0,7); ctx.fill(); /* red ring */
+  ctx.fillStyle=hull; ctx.beginPath(); ctx.ellipse(0,1.4,4.4,1.7,0,0,7); ctx.fill();
+  ctx.fillStyle= damaged? '#8fb7d9' : '#2f6fd0'; ctx.beginPath(); ctx.ellipse(0,-2.4,3,3.6,0,0,7); ctx.fill(); /* dome */
+  ctx.fillStyle='#ffd34d'; ctx.fillRect(-1.1,-8.2,2.2,2.6); /* beacon */
+  ctx.fillStyle='#7fd0ff'; ctx.fillRect(-4.6,6.6,2.2,1.5); ctx.fillRect(2.4,6.6,2.2,1.5); /* thrusters */
+  ctx.restore();
+}
+function drawScorpion(x,y){ /* Tesla prototype — angular silver interceptor */
+  ctx.save(); ctx.translate(x,y); ctx.fillStyle='#dfe5ea';
+  ctx.beginPath(); ctx.ellipse(0,1,4,5.6,0,0,7); ctx.fill();
+  ctx.strokeStyle='#c8102e'; ctx.lineWidth=1.8;
+  ctx.beginPath(); ctx.moveTo(0,-4); ctx.quadraticCurveTo(6,-9,8,-4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-3,4); ctx.lineTo(-7,7); ctx.moveTo(3,4); ctx.lineTo(7,7); ctx.stroke();
+  ctx.fillStyle='#c8102e'; ctx.fillRect(-4,-1,8,2);
+  ctx.restore();
+}
+function drawEi(x,y){ /* Tesla prototype — silver dart ship */
+  ctx.save(); ctx.translate(x,y); ctx.fillStyle='#eef1f4';
+  ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(7,6); ctx.lineTo(0,3); ctx.lineTo(-7,6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#c8102e'; ctx.fillRect(-1.4,-5,2.8,6);
+  ctx.restore();
+}
+function drawGalboss(x,y){ /* Tesla prototype — flagship-class hull */
+  ctx.save(); ctx.translate(x,y); ctx.fillStyle='#dfe5ea';
+  ctx.beginPath(); ctx.moveTo(0,-8); ctx.lineTo(4,-2); ctx.lineTo(8,7); ctx.lineTo(2,5); ctx.lineTo(-2,5); ctx.lineTo(-8,7); ctx.lineTo(-4,-2); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#c8102e'; ctx.fillRect(-1.5,-6,3,6);
+  ctx.restore();
+}
+function drawSpecial(kind,x,y,flap){
+  if(kind==='scorpion') return drawScorpion(x,y);
+  if(kind==='ei') return drawEi(x,y);
+  if(kind==='galboss') return drawGalboss(x,y);
+  if(kind==='bee') return drawBee(x,y,flap);
+  if(kind==='butterfly') return drawButterfly(x,y,flap);
+  /* tonbo / momiji / spaceship — challenge-only guests, simple silhouettes */
+  ctx.save(); ctx.translate(x,y);
+  if(kind==='tonbo'){ ctx.fillStyle='#dfe5ea';
+    ctx.beginPath(); ctx.ellipse(0,0,2.2,7,0,0,7); ctx.fill();
+    ctx.fillStyle='rgba(200,240,255,.85)'; ctx.fillRect(-8,-3,6,1.8); ctx.fillRect(2,-3,6,1.8); ctx.fillRect(-8,1,6,1.8); ctx.fillRect(2,1,6,1.8);
+  } else if(kind==='momiji'){ ctx.fillStyle='#e07820';
+    ctx.beginPath(); for(var i=0;i<5;i++){ var a=i/5*Math.PI*2; ctx.lineTo(Math.cos(a)*7,Math.sin(a)*7); ctx.lineTo(Math.cos(a+0.31)*3,Math.sin(a+0.31)*3); } ctx.closePath(); ctx.fill();
+  } else { ctx.fillStyle='#cfd6dd';
+    ctx.beginPath(); ctx.ellipse(0,2,8,2.8,0,0,7); ctx.fill();
+    ctx.fillStyle='#8fb7d9'; ctx.beginPath(); ctx.ellipse(0,-1,3.4,2.6,0,Math.PI,0); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawEnemy(e,flap){
+  if(e.isCaptive){ drawFighter(e.x,e.y,true,e.spin||0); return; }
+  if(e.type==='bee') drawBee(e.x,e.y,flap);
+  else if(e.type==='goei') drawButterfly(e.x,e.y,flap);
+  else if(e.type==='boss') drawBoss(e.x,e.y,flap,e.hp<=1);
+  else drawSpecial(e.type,e.x,e.y,flap);
+}
+
+/* ---------- game state ---------- */
+var G=null;
+function newGame(){
+  G={ mode:'title', score:0, high:G?G.high:20000, stage:0, lives:3,
+      shotsFired:0, shotsHit:0, nextExtra:20000, extraStep:0,
+      enemies:[], bullets:[], bombs:[], parts:[], pops:[],
+      player:{x:CX,y:262,dual:false,alive:false,state:'off',t:0,spin:0},
+      time:0, diveTimer:2, ceasefire:0, banner:'', bannerT:0,
+      captive:null, pendingCaptive:false, transformUsed:false, transformGroup:null,
+      challenge:null, stars:[], msg:'', msgT:0, over:false };
+  for(var i=0;i<70;i++) G.stars.push({x:Math.random()*W,y:Math.random()*H,
+    c:['#f66','#6f6','#66f','#ff6','#c6f','#fa6'][i%6], s:Math.random()<0.25?1.6:1, v:rnd(6,20)});
+}
+function addScore(n,x,y){
+  G.score+=n; if(n>0&&x!==undefined) G.pops.push({x:x,y:y,txt:''+n,t:0});
+  if(G.score>=G.nextExtra && G.score<1000000){
+    G.lives++; G.msg='EXTRA FIGHTER'; G.msgT=1.6; tone(1046,0.14,'triangle',0.07); tone(1318,0.2,'triangle',0.07,0.13);
+    G.nextExtra = (G.extraStep===0)? 70000 : G.nextExtra+70000; G.extraStep++;
+  }
+  if(G.score>G.high) G.high=G.score;
+}
+function slotPos(e){
+  var pulse=1+0.055*Math.sin(G.time*1.4), sway=6*Math.sin(G.time*0.35);
+  return { x: CX + (e.slotX-CX)*pulse + sway, y: e.slotY + 2*Math.sin(G.time*1.4+1) };
+}
+
+/* ---------- stage setup ---------- */
+function buildConvoy(){
+  var list=[], i;
+  for(i=0;i<4;i++)  list.push({type:'boss', slotX:CX+(i-1.5)*22, slotY:52});
+  for(i=0;i<16;i++) list.push({type:'goei', slotX:CX+(i%8-3.5)*20, slotY:70+Math.floor(i/8)*18});
+  for(i=0;i<20;i++) list.push({type:'bee',  slotX:CX+(i%10-4.5)*18.5, slotY:106+Math.floor(i/10)*18});
+  return list;
+}
+function startStage(n){
+  G.stage=n; G.enemies=[]; G.bullets=[]; G.bombs=[]; G.transformUsed=false; G.transformGroup=null;
+  G.diveTimer=2.2; G.ceasefire=0;
+  if(isChallengeStage(n)){
+    G.mode='banner'; G.banner='CHALLENGING STAGE'; G.bannerT=2.2;
+    G.challenge={ info:challengeInfo(n), spawned:0, hits:0, groupsDone:[0,0,0,0,0], groupIdx:0, spawnT:0.5, finished:false };
+    jingle('clear');
+  } else {
+    G.mode='banner'; G.banner='STAGE '+n; G.bannerT=1.8;
+    var list=buildConvoy(), gi;
+    for(var k=0;k<list.length;k++){
+      var s=list[k], g=Math.floor(k/8), side=g%2===0? -1: 1;
+      var e={ type:s.type, slotX:s.slotX, slotY:s.slotY, hp:s.type==='boss'?2:1,
+        x:0,y:0, state:'wait', t:-(g*1.5)-(k%8)*0.16, dur:2.4, group:g,
+        path:null, value:0, escorts:0, hasCaptive:false, flash:0 };
+      e.path={ p0:{x: side<0? -16: W+16, y:26+g*6},
+               p1:{x: side<0? W-30: 30, y:150},
+               p2:{x: side<0? 30: W-30, y:215},
+               p3:{x:s.slotX, y:s.slotY} };
+      var p=bez(e.path.p0,e.path.p0,e.path.p0,e.path.p0,0); e.x=e.path.p0.x; e.y=e.path.p0.y;
+      G.enemies.push(e);
+    }
+    if(G.pendingCaptive){
+      var boss=G.enemies[0]; boss.hasCaptive=true;
+      G.captive={ isCaptive:true, boss:boss, x:boss.x+18, y:boss.y, state:'attached', divedThisStage:false, spin:0 };
+      G.pendingCaptive=false;
+    }
+    jingle('start');
+  }
+  if(!G.player.alive && G.lives>0) respawnPlayer();
+}
+function respawnPlayer(){
+  /* Always re-enter at the bottom launch line (y=262): the tractor beam
+     drags p.y up the screen during capture, so without this reset the
+     next Fighter would respawn at that raised altitude. */
+  G.player.alive=true; G.player.state='play'; G.player.x=CX; G.player.y=262; G.player.dual=false; G.player.spin=0;
+}
+</script>
+<script>
+"use strict";
+/* ---------- combat ---------- */
+var keys={};
+function explode(x,y,big){
+  var n=big?26:12, i;
+  for(i=0;i<n;i++){ var a=Math.random()*Math.PI*2, sp=rnd(14,big?70:44);
+    G.parts.push({x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,t:0,life:rnd(0.25,big?0.9:0.5),
+      c:['#fff','#ffd34d','#ff7847','#6fc3ff'][i%4], s:big?2:1.5}); }
+  if(big) sndBigBoom(); else sndPop();
+}
+function fireBullet(){
+  var p=G.player; if(!p.alive||p.state!=='play') return;
+  var max=p.dual?4:2;
+  if(G.bullets.length>=max) return;
+  if(p.dual){ G.bullets.push({x:p.x-10,y:p.y-10}); G.bullets.push({x:p.x+10,y:p.y-10}); G.shotsFired+=2; }
+  else { G.bullets.push({x:p.x,y:p.y-10}); G.shotsFired++; }
+  sndShot();
+}
+function startDive(e,escorts){
+  var tx=clamp(G.player.x+rnd(-24,24),14,W-14);
+  e.state='dive'; e.t=0; e.dur=clamp(2.6-G.stage*0.05,1.7,2.6);
+  e.escorts=escorts||0; e.value=[400,800,1600][e.escorts]||400;
+  e.path={ p0:{x:e.x,y:e.y}, p1:{x:e.x+(tx-e.x)*0.25,y:e.y+64},
+           p2:{x:tx+rnd(-16,16),y:205}, p3:{x:tx,y:H+18} };
+  if(e.type==='bee'){ /* two-way dive: down, then loop back up behind the Fighter */
+    e.seg=0; e.dur=1.5;
+    e.path.p3={x:tx,y:H-34};
+    e.path2={ p0:{x:tx,y:H-34}, p1:{x:tx+(tx<CX?46:-46),y:H-70},
+              p2:{x:e.slotX,y:170}, p3:{x:e.slotX,y:e.slotY} };
+  }
+  sndDive();
+  if(e.hasCaptive&&G.captive){ G.captive.state='diving'; }
+}
+function pickDivers(){
+  var inForm=G.enemies.filter(function(e){return e.state==='form';});
+  if(!inForm.length) return;
+  var remaining=G.enemies.length;
+  var frenzy = remaining<=8;
+  /* transforms: from Stage 4, one Zako per stage flashes and splits into three */
+  if(G.stage>=4 && !G.transformUsed && !frenzy && Math.random()<0.3){
+    var bees=inForm.filter(function(e){return e.type==='bee';});
+    if(bees.length){ startTransform(bees[Math.floor(Math.random()*bees.length)]); return; }
+  }
+  var bossReady=G.enemies.filter(function(e){return e.state==='form'&&e.type==='boss';});
+  var canCapture = !G.player.dual && !G.captive && Math.random()<0.30 && bossReady.length;
+  if(canCapture){ startCaptureDive(bossReady[Math.floor(Math.random()*bossReady.length)]); return; }
+  var n=frenzy?1:(Math.random()<0.4?2:1), i;
+  for(i=0;i<n;i++){
+    var pool=inForm.filter(function(e){return e.state==='form';});
+    if(!pool.length) break;
+    var e=pool[Math.floor(Math.random()*pool.length)];
+    if(e.type==='boss'){
+      var goei=G.enemies.filter(function(x){return x.state==='form'&&x.type==='goei';});
+      var esc=Math.min(goei.length, Math.random()<0.35?0:(Math.random()<0.6?1:2));
+      startDive(e,esc);
+      for(var j=0;j<esc;j++){ var ge=goei[j]; ge.state='dive'; ge.t=-j*0.14; ge.dur=e.dur;
+        ge.path={ p0:{x:ge.x,y:ge.y}, p1:{x:e.path.p1.x+(j?16:-16),y:e.path.p1.y},
+                  p2:{x:e.path.p2.x+(j?16:-16),y:e.path.p2.y}, p3:{x:e.path.p3.x+(j?16:-16),y:H+18} };
+        ge.escort=true; }
+    } else startDive(e,0);
+  }
+}
+function startTransform(zako){
+  G.transformUsed=true; zako.state='flash'; zako.flash=1.1;
+  var types=[['scorpion',1000],['ei',2000],['galboss',3000]];
+  var band = G.stage<=6?0 : (G.stage<=10?1 : (G.stage<=14?2 : (Math.floor((G.stage-15)/4)%3)));
+  G.transformGroup={ type:types[band][0], bonus:types[band][1], left:3, killed:0 };
+}
+function spawnTransform(zako){
+  var grp=G.transformGroup, i;
+  G.enemies.splice(G.enemies.indexOf(zako),1);
+  for(i=0;i<3;i++){
+    var e={ type:grp.type, slotX:zako.slotX, slotY:zako.slotY, hp:1, x:zako.x, y:zako.y,
+      state:'dive', t:-i*0.22, dur:2.6, transform:true, escorts:0, hasCaptive:false, flash:0,
+      path:{ p0:{x:zako.x,y:zako.y}, p1:{x:zako.x-40,y:zako.y+80},
+             p2:{x:W-zako.x,y:210}, p3:{x:W-zako.x,y:H+18} } };
+    G.enemies.push(e);
+  }
+}
+function startCaptureDive(boss){
+  boss.state='tohover'; boss.t=0; boss.dur=1.5;
+  var hx=clamp(G.player.x,30,W-30);
+  boss.hoverX=hx;
+  boss.path={ p0:{x:boss.x,y:boss.y}, p1:{x:boss.x+(hx-boss.x)*0.4,y:110},
+              p2:{x:hx,y:150}, p3:{x:hx,y:172} };
+}
+function bossReturn(e){
+  e.state='return'; e.t=0; e.dur=1.5;
+  e.path={ p0:{x:e.x,y:e.y<-20?-14:e.y}, p1:{x:e.x,y:60},
+           p2:{x:e.slotX,y:40}, p3:{x:e.slotX,y:e.slotY} };
+  if(e.y>H) { e.y=-14; e.path.p0={x:e.x,y:-14}; }
+}
+function killEnemy(e,idx){
+  explode(e.x,e.y,false); G.shotsHit++;
+  if(e.isCaptive){
+    addScore(e.state==='diving'?1000:500,e.x,e.y);
+    if(e.boss) e.boss.hasCaptive=false;
+    G.captive=null; G.enemies.splice(idx,1); return;
+  }
+  if(G.challenge){
+    G.challenge.hits++; G.challenge.groupsDone[e.group]++;
+    G.enemies.splice(idx,1); return;
+  }
+  var diving = e.state==='dive'||e.state==='enter'||e.state==='tohover';
+  if(e.transform){
+    addScore(160,e.x,e.y);
+    if(G.transformGroup){ G.transformGroup.killed++;
+      if(G.transformGroup.killed>=3){ addScore(G.transformGroup.bonus,e.x,e.y-10);
+        G.pops.push({x:e.x,y:e.y-22,txt:'BONUS '+G.transformGroup.bonus,t:0}); G.transformGroup=null; } }
+  }
+  else if(e.type==='bee') addScore(diving?100:50,e.x,e.y);
+  else if(e.type==='goei') addScore(diving?160:80,e.x,e.y);
+  else if(e.type==='boss'){
+    addScore(e.state==='dive'? e.value : 150, e.x, e.y);
+    if(e.state==='dive') G.ceasefire=2.0; /* mourning ceasefire */
+    if(e.hasCaptive&&G.captive){
+      if(e.state==='dive'){ /* RESCUE */
+        var c=G.captive; c.state='rescue'; c.t=0; c.boss=null; e.hasCaptive=false;
+        G.msg='FIGHTER RESCUED'; G.msgT=1.8; jingle('rescued');
+      } else { /* captor killed in formation: captive dives off alone */
+        var c2=G.captive; c2.state='solo'; c2.t=0; c2.boss=null; e.hasCaptive=false;
+        c2.path={ p0:{x:c2.x,y:c2.y}, p1:{x:c2.x,y:170}, p2:{x:c2.x+20,y:250}, p3:{x:c2.x+20,y:H+18} };
+      }
+    }
+  }
+  G.enemies.splice(idx,1);
+}
+function playerHit(hx){
+  var p=G.player;
+  if(p.dual){
+    p.dual=false; explode(hx,p.y,true);
+    p.x = (hx<p.x)? p.x+10 : p.x-10;
+    G.msg='DUAL FIGHTER — ONE DOWN'; G.msgT=1.4; return;
+  }
+  explode(p.x,p.y,true); p.alive=false; p.state='off';
+  G.lives--;
+  if(G.captive&&G.captive.state==='rescue'){ G.captive=null; }
+  if(G.lives<=0){ gameOver(); }
+  else { p.state='respawn'; p.t=1.4; }
+}
+function gameOver(){
+  G.over=true; G.mode='over'; jingle('over');
+}
+
+/* ---------- update ---------- */
+var lastTs=0;
+function update(dt){
+  G.time+=dt;
+  var i,j;
+  for(i=0;i<G.stars.length;i++){ var s=G.stars[i]; s.y+=s.v*dt*(G.mode==='beam'||G.player.state==='captured'?3:1); if(s.y>H){s.y=0;s.x=Math.random()*W;} }
+  for(i=G.parts.length-1;i>=0;i--){ var pt=G.parts[i]; pt.t+=dt; pt.x+=pt.vx*dt; pt.y+=pt.vy*dt; if(pt.t>pt.life)G.parts.splice(i,1); }
+  for(i=G.pops.length-1;i>=0;i--){ var pp=G.pops[i]; pp.t+=dt; pp.y-=14*dt; if(pp.t>0.9)G.pops.splice(i,1); }
+  if(G.msgT>0)G.msgT-=dt;
+  if(G.ceasefire>0)G.ceasefire-=dt;
+  if(G.mode==='title'||G.mode==='over'){ return; }
+  if(G.mode==='banner'){ G.bannerT-=dt; if(G.bannerT<=0){ G.mode = G.challenge? 'challenge':'play'; } return; }
+
+  var p=G.player;
+  /* player movement */
+  if(p.state==='respawn'){ p.t-=dt; if(p.t<=0) respawnPlayer(); }
+  if(p.alive&&p.state==='play'){
+    var mv=0;
+    if(keys.left)mv-=1; if(keys.right)mv+=1; if(touchMove!==0)mv=touchMove;
+    if(dragX!==null){ var dx=dragX-p.x; p.x+= clamp(dx,-170*dt,170*dt); if(Math.abs(dx)<2)mv=0; else mv=0; }
+    p.x+= mv*150*dt;
+    p.x=clamp(p.x, p.dual?19:10, p.dual?W-19:W-10);
+    if(keys.fire||autoFire) fireBullet(); /* auto-fire rides the same 2-shot cap inside fireBullet() */
+  }
+
+  /* ---- challenging stage ---- */
+  if(G.mode==='challenge'){
+    var ch=G.challenge;
+    ch.spawnT-=dt;
+    if(ch.spawned<40&&ch.spawnT<=0){
+      var gi=Math.floor(ch.spawned/8), k=ch.spawned%8, fromLeft=gi%2===0;
+      var ce={ type:(k===7?'boss':ch.info.draw), hp:1, x:0,y:0, state:'stream', t:-k*0.14, dur:3.4, group:gi,
+        slotX:0, slotY:0, hasCaptive:false, flash:0,
+        path:{ p0:{x:fromLeft?-16:W+16, y:40+gi*22},
+               p1:{x:fromLeft?70:W-70, y:150+((gi*37)%60)},
+               p2:{x:fromLeft?W-70:70, y:90+((gi*53)%70)},
+               p3:{x:fromLeft?W+16:-16, y:170+gi*14} } };
+      ce.x=ce.path.p0.x; ce.y=ce.path.p0.y;
+      G.enemies.push(ce); ch.spawned++; if(k===7) ch.spawnT=1.1; else ch.spawnT=0.02;
+    }
+    updateBullets(dt); updateEnemiesBasic(dt,true);
+    var done = ch.spawned>=40 && G.enemies.length===0;
+    if(done&&!ch.finished){
+      ch.finished=true;
+      var grpBonus=0; for(i=0;i<5;i++) if(ch.groupsDone[i]>=8) grpBonus+=ch.info.grp;
+      if(ch.hits>=40){ addScore(10000); G.msg='PERFECT!  SPECIAL BONUS 10000'; jingle('perfect'); }
+      else { addScore(ch.hits*100+grpBonus); G.msg='HITS '+ch.hits+'  ·  BONUS '+(ch.hits*100+grpBonus); jingle('clear'); }
+      G.msgT=2.6; G.challenge=null; G.mode='intermission'; G.bannerT=2.6;
+    }
+    return;
+  }
+  if(G.mode==='intermission'){ G.bannerT-=dt; if(G.bannerT<=0) startStage(G.stage+1); return; }
+
+  /* ---- normal stage ---- */
+  var anyEntering=G.enemies.some(function(e){return e.state==='enter'||e.state==='wait';});
+  G.diveTimer-=dt;
+  if(!anyEntering&&G.diveTimer<=0&&G.enemies.length){ pickDivers(); G.diveTimer= Math.max(0.55, 1.5-G.stage*0.06) * (G.enemies.length<=8?0.45:1); }
+
+  updateEnemiesBasic(dt,false);
+  updateBullets(dt);
+  updateBombs(dt);
+
+  /* captive follow */
+  if(G.captive){
+    var c=G.captive;
+    if(c.state==='attached'&&c.boss){ c.x=c.boss.x+18; c.y=c.boss.y+2; }
+    else if(c.state==='diving'&&c.boss){ c.x=c.boss.x+16; c.y=c.boss.y+4; }
+    else if(c.state==='solo'){ c.t+=dt/2.2; var pr=bez(c.path.p0,c.path.p1,c.path.p2,c.path.p3,clamp(c.t,0,1));
+      c.x=pr.x; c.y=pr.y; if(c.t>=1){ G.captive=null; G.pendingCaptive=true;
+        var ci=G.enemies.indexOf(c); if(ci>=0)G.enemies.splice(ci,1); } }
+    else if(c.state==='rescue'){ c.t+=dt/0.9; c.spin+=dt*14;
+      c.x+=(G.player.x-c.x)*Math.min(1,dt*6); c.y+=(G.player.y-c.y)*Math.min(1,dt*6);
+      if(c.t>=1){ G.player.dual=true; var ci2=G.enemies.indexOf(c); if(ci2>=0)G.enemies.splice(ci2,1); G.captive=null; } }
+  }
+
+  /* capture sequence on the player */
+  if(p.state==='captured'){
+    p.t+=dt; p.spin+=dt*10;
+    var capTargetY = beamBoss? beamBoss.y+18 : 190;
+    p.y+= (capTargetY-p.y)*Math.min(1,dt*3.2); p.x+= (beamBoss.x-p.x)*Math.min(1,dt*3.2);
+    if(p.t>1.25){
+      p.alive=false; p.state='off';
+      if(beamBoss){ beamBoss.hasCaptive=true;
+        var cap={ isCaptive:true, boss:beamBoss, x:beamBoss.x+18, y:beamBoss.y, state:'attached', spin:0 };
+        G.captive=cap; G.enemies.push(cap);
+        bossReturn(beamBoss);
+      }
+      G.lives--;
+      G.msg='FIGHTER CAPTURED'; G.msgT=2.2; jingle('captured');
+      if(G.lives<=0) gameOver(); else { p.state='respawn'; p.t=1.2; }
+    }
+  }
+
+  /* stage clear */
+  var realLeft=G.enemies.filter(function(e){return !e.isCaptive;}).length;
+  if(realLeft===0&&G.mode==='play'){
+    G.mode='intermission'; G.bannerT=2.0; G.msg=''; jingle('clear');
+    if(G.captive){ var cc=G.captive; G.pendingCaptive=true; G.enemies=[]; G.captive=null; }
+  }
+}
+var beamBoss=null;
+function updateEnemiesBasic(dt,isChallenge){
+  var i, flap=Math.floor(G.time*6)%2===0;
+  for(i=G.enemies.length-1;i>=0;i--){
+    var e=G.enemies[i]; if(e.isCaptive) continue;
+    if(e.state==='wait'){ e.t+=dt; if(e.t>=0){ e.state='enter'; e.t=0; } continue; }
+    if(e.state==='flash'){ e.flash-=dt; if(e.flash<=0){ spawnTransform(e); } continue; }
+    if(e.state==='enter'){
+      e.t+=dt/e.dur; var pr=bez(e.path.p0,e.path.p1,e.path.p2,e.path.p3,clamp(e.t,0,1));
+      e.x=pr.x; e.y=pr.y;
+      if(G.stage>=2&&G.ceasefire<=0&&Math.random()<dt*0.35&&e.y>20&&e.y<200) dropBomb(e);
+      if(e.t>=1){ e.state='form'; }
+      continue;
+    }
+    if(e.state==='form'){ var sp=slotPos(e); e.x=sp.x; e.y=sp.y; continue; }
+    if(e.state==='stream'){
+      e.t+=dt/e.dur; if(e.t<0) continue;
+      var pr2=bez(e.path.p0,e.path.p1,e.path.p2,e.path.p3,clamp(e.t,0,1));
+      e.x=pr2.x; e.y=pr2.y;
+      if(e.t>=1) G.enemies.splice(i,1);
+      continue;
+    }
+    if(e.state==='dive'){
+      if(e.t<0){ e.t+=dt; continue; }
+      e.t+=dt/e.dur;
+      var pr3=bez(e.path.p0,e.path.p1,e.path.p2,e.path.p3,clamp(e.t,0,1));
+      e.x=pr3.x; e.y=pr3.y;
+      if(e.type==='goei') e.x+=Math.sin(e.t*11)*5;         /* butterfly weave */
+      if(e.type==='bee'&&!e.seg&&e.t>=1){ e.seg=1; e.t=0; e.dur=1.4; e.path=e.path2; }
+      else if(e.t>=1){
+        if(e.hasCaptive&&G.captive){ G.captive.state='attached'; }
+        bossReturn(e);
+      }
+      if(G.ceasefire<=0&&Math.random()<dt*(0.5+G.stage*0.05)&&e.y>10&&e.y<H-40) dropBomb(e);
+      /* collision with player */
+      if(G.player.alive&&G.player.state==='play'&&Math.abs(e.x-G.player.x)<(G.player.dual?20:11)&&Math.abs(e.y-G.player.y)<11){
+        var hx=e.x<G.player.x? G.player.x-10:G.player.x+10;
+        killEnemy(e,i); if(G.player.dual||G.player.alive) playerHit(hx);
+      }
+      continue;
+    }
+    if(e.state==='tohover'){
+      e.t+=dt/e.dur; var pr4=bez(e.path.p0,e.path.p1,e.path.p2,e.path.p3,clamp(e.t,0,1));
+      e.x=pr4.x; e.y=pr4.y;
+      if(e.t>=1){ e.state='beam'; e.t=0; beamBoss=e; sndBeam(); }
+      continue;
+    }
+    if(e.state==='beam'){
+      e.t+=dt;
+      if(G.player.alive&&G.player.state==='play'&&!G.player.dual&&Math.abs(G.player.x-e.x)<14){
+        G.player.state='captured'; G.player.t=0; G.player.spin=0;
+      }
+      if(e.t>3.2||G.player.state==='captured'&&e.t>1.4){ if(G.player.state!=='captured'){ bossReturn(e); } else if(e.t>1.4){ /* boss waits for capture anim; return handled there */ if(!G.captive) { /* still rising */ } } }
+      if(G.player.state==='captured'&&G.captive&&G.captive.boss===e){ /* already returning */ }
+      if(e.t>3.2&&G.player.state!=='captured') bossReturn(e);
+      continue;
+    }
+    if(e.state==='return'){
+      e.t+=dt/e.dur; var pr5=bez(e.path.p0,e.path.p1,e.path.p2,e.path.p3,clamp(e.t,0,1));
+      e.x=pr5.x; e.y=pr5.y;
+      if(e.t>=1) e.state='form';
+      continue;
+    }
+  }
+}
+function dropBomb(e){
+  var cap=Math.min(3+G.stage,10);
+  if(G.bombs.length>=cap) return;
+  G.bombs.push({x:e.x,y:e.y+8,vy:105+G.stage*4});
+}
+function updateBombs(dt){
+  var i;
+  for(i=G.bombs.length-1;i>=0;i--){
+    var b=G.bombs[i]; b.y+=b.vy*dt;
+    if(b.y>H){ G.bombs.splice(i,1); continue; }
+    var p=G.player;
+    if(p.alive&&p.state==='play'&&Math.abs(b.x-p.x)<(p.dual?19:8)&&Math.abs(b.y-p.y)<9){
+      var hx=b.x<p.x? p.x-10:p.x+10;
+      G.bombs.splice(i,1); playerHit(hx);
+    }
+  }
+}
+function updateBullets(dt){
+  var i,j;
+  for(i=G.bullets.length-1;i>=0;i--){
+    var b=G.bullets[i]; b.y-=265*dt;
+    if(b.y<-6){ G.bullets.splice(i,1); continue; }
+    for(j=G.enemies.length-1;j>=0;j--){
+      var e=G.enemies[j];
+      if(e.state==='wait'||e.state==='flash') continue;
+      if(Math.abs(e.x-b.x)<8&&Math.abs(e.y-b.y)<8){
+        G.bullets.splice(i,1);
+        if(e.isCaptive){ killEnemy(e,j); }
+        else if(e.hp>1){ e.hp--; G.shotsHit++; explode(e.x,e.y,false); }
+        else killEnemy(e,j);
+        break;
+      }
+    }
+  }
+}
+
+/* ---------- render ---------- */
+function render(){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,W,H);
+  var i;
+  for(i=0;i<G.stars.length;i++){ var s=G.stars[i];
+    ctx.globalAlpha=0.45+0.4*Math.sin(G.time*3+i); ctx.fillStyle=s.c; ctx.fillRect(s.x,s.y,s.s,s.s); }
+  ctx.globalAlpha=1;
+  var flap=Math.floor(G.time*6)%2===0;
+
+  /* tractor beam */
+  for(i=0;i<G.enemies.length;i++){ var be=G.enemies[i];
+    if(be.state==='beam'&&!be.isCaptive){
+      var grd=ctx.createLinearGradient(0,be.y,0,H);
+      grd.addColorStop(0,'rgba(90,170,255,0.55)'); grd.addColorStop(1,'rgba(90,170,255,0.12)');
+      ctx.fillStyle=grd; ctx.beginPath();
+      ctx.moveTo(be.x-4,be.y+8); ctx.lineTo(be.x+4,be.y+8);
+      ctx.lineTo(be.x+17,H); ctx.lineTo(be.x-17,H); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(170,220,255,'+(0.4+0.3*Math.sin(G.time*22))+')'; ctx.lineWidth=1;
+      for(var r=0;r<3;r++){ var yy=be.y+14+((G.time*60+r*38)%(H-be.y-20));
+        ctx.beginPath(); ctx.moveTo(be.x-4-(yy-be.y)*0.09,yy); ctx.lineTo(be.x+4+(yy-be.y)*0.09,yy); ctx.stroke(); }
+    }
+  }
+  for(i=0;i<G.enemies.length;i++) drawEnemy(G.enemies[i], G.enemies[i].flash>0? (Math.floor(G.time*14)%2===0? flap:!flap):flap);
+  if(G.captive&&(G.captive.state==='attached'||G.captive.state==='diving'||G.captive.state==='solo'||G.captive.state==='rescue')
+     &&G.enemies.indexOf(G.captive)<0) drawEnemy(G.captive,flap);
+
+  /* player */
+  var p=G.player;
+  if(p.alive){
+    if(p.state==='captured') drawFighter(p.x,p.y,false,p.spin);
+    else if(p.dual){ drawFighter(p.x-10,p.y,false,0); drawFighter(p.x+10,p.y,false,0); }
+    else drawFighter(p.x,p.y,false,0);
+  }
+  /* bullets & bombs */
+  ctx.fillStyle='#ffd34d'; for(i=0;i<G.bullets.length;i++) ctx.fillRect(G.bullets[i].x-1,G.bullets[i].y-4,2,6);
+  ctx.fillStyle='#ff5b6a'; for(i=0;i<G.bombs.length;i++){ ctx.fillRect(G.bombs[i].x-1,G.bombs[i].y-3,2,5); }
+  /* particles & popups */
+  for(i=0;i<G.parts.length;i++){ var pt=G.parts[i]; ctx.globalAlpha=1-pt.t/pt.life; ctx.fillStyle=pt.c; ctx.fillRect(pt.x-1,pt.y-1,pt.s,pt.s); }
+  ctx.globalAlpha=1; ctx.fillStyle='#fff'; ctx.font='700 7px "Courier New",monospace'; ctx.textAlign='center';
+  for(i=0;i<G.pops.length;i++) ctx.fillText(G.pops[i].txt,G.pops[i].x,G.pops[i].y);
+
+  /* reserves + stage emblems */
+  if(G.mode!=='title'){
+    for(i=0;i<Math.min(G.lives-1,7);i++) drawFighter(12+i*15,H-8,false,0);
+    ctx.fillStyle='#ffd34d';
+    var flags=Math.min(G.stage,10);
+    for(i=0;i<flags;i++){ var fx=W-10-i*9; ctx.fillRect(fx-2.5,H-13,5,7); ctx.fillStyle= i%2? '#ffd34d':'#ff7847'; }
+    ctx.fillStyle='#ffd34d';
+    if(autoFire){ ctx.fillStyle='#ffd34d'; ctx.font='700 7px "Courier New",monospace'; ctx.textAlign='center';
+      ctx.fillText('AUTO-FIRE ON',CX,H-3); }
+  }
+  /* centre messages */
+  ctx.textAlign='center';
+  if(G.mode==='title'){
+    ctx.fillStyle='#ff5b6a'; ctx.font='700 15px Georgia,serif'; ctx.fillText("RIGO'S SPACE FORCE",CX,96);
+    ctx.fillStyle='#f5f3ea'; ctx.font='700 9px "Courier New",monospace';
+    ctx.fillText('DESTROY THE TESLA FLEET',CX,122);
+    ctx.fillText('OF THE EVIL SPACE X',CX,136);
+    ctx.fillText('RESCUE THE CAPTURED FIGHTER',CX,150);
+    ctx.fillText('FOR THE DUAL FIGHTER',CX,164);
+    ctx.fillStyle='#ffd34d'; ctx.font='700 11px "Courier New",monospace';
+    if(Math.floor(G.time*2)%2===0) ctx.fillText('PRESS START',CX,196);
+  }
+  if(G.mode==='banner'){
+    ctx.fillStyle='#f5f3ea'; ctx.font='700 14px "Courier New",monospace';
+    ctx.fillText(G.banner,CX,150);
+  }
+  if(G.msgT>0&&G.msg){
+    ctx.fillStyle='#ffd34d'; ctx.font='700 10px "Courier New",monospace';
+    ctx.fillText(G.msg,CX,196);
+  }
+  if(G.mode==='over'){
+    ctx.fillStyle='#ff5b6a'; ctx.font='700 16px "Courier New",monospace'; ctx.fillText('GAME OVER',CX,110);
+    ctx.fillStyle='#f5f3ea'; ctx.font='700 10px "Courier New",monospace';
+    ctx.fillText('SCORE  '+G.score,CX,140);
+    ctx.fillText('SHOTS FIRED  '+G.shotsFired,CX,158);
+    ctx.fillText('HITS  '+G.shotsHit,CX,174);
+    var ratio=G.shotsFired? Math.round(G.shotsHit/G.shotsFired*100):0;
+    ctx.fillText('HIT-MISS RATIO  '+ratio+'%',CX,190);
+    ctx.fillStyle='#ffd34d';
+    if(Math.floor(G.time*2)%2===0) ctx.fillText('PRESS START TO PLAY AGAIN',CX,224);
+  }
+  document.getElementById('hudScore').textContent=G.score;
+  document.getElementById('hudHigh').textContent=G.high;
+  document.getElementById('hudStage').textContent=G.stage||'–';
+}
+function loop(ts){
+  var dt=Math.min(0.05,(ts-lastTs)/1000||0.016); lastTs=ts;
+  if(!paused) update(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+/* ---------- input ---------- */
+var paused=false, touchMove=0, dragX=null;
+var autoFire=false; /* session-only setting: lives outside G, so Start/newGame never resets it */
+function syncAuto(){
+  var b=document.getElementById('btnAuto');
+  b.textContent='Auto-Fire: '+(autoFire?'on':'off');
+  b.setAttribute('aria-pressed', autoFire?'true':'false');
+}
+function toggleAuto(){ autoFire=!autoFire; syncAuto(); }
+document.addEventListener('keydown',function(ev){
+  ac();
+  if(ev.code==='ArrowLeft'||ev.code==='KeyA'){ keys.left=true; ev.preventDefault(); }
+  if(ev.code==='ArrowRight'||ev.code==='KeyD'){ keys.right=true; ev.preventDefault(); }
+  if(ev.code==='Space'||ev.code==='KeyZ'){ keys.fire=true; ev.preventDefault(); }
+  if(ev.code==='KeyF'&&!ev.repeat){ toggleAuto(); }
+  if(ev.code==='KeyP'){ paused=!paused; syncPause(); }
+  if(ev.code==='Enter'){ startGame(); }
+});
+document.addEventListener('keyup',function(ev){
+  if(ev.code==='ArrowLeft'||ev.code==='KeyA')keys.left=false;
+  if(ev.code==='ArrowRight'||ev.code==='KeyD')keys.right=false;
+  if(ev.code==='Space'||ev.code==='KeyZ')keys.fire=false;
+});
+function hold(btn,down,up){
+  btn.addEventListener('pointerdown',function(e){ e.preventDefault(); ac(); down(); });
+  ['pointerup','pointerleave','pointercancel'].forEach(function(t){ btn.addEventListener(t,up); });
+}
+hold(document.getElementById('btnL'),function(){touchMove=-1;},function(){if(touchMove<0)touchMove=0;});
+hold(document.getElementById('btnR'),function(){touchMove=1;},function(){if(touchMove>0)touchMove=0;});
+hold(document.getElementById('btnFire'),function(){keys.fire=true;},function(){keys.fire=false;});
+function canvasPos(e){ var r=cv.getBoundingClientRect(); return (e.clientX-r.left)/r.width*W; }
+cv.addEventListener('pointerdown',function(e){ ac(); dragX=canvasPos(e); keys.fire=true; });
+cv.addEventListener('pointermove',function(e){ if(dragX!==null) dragX=canvasPos(e); });
+['pointerup','pointercancel','pointerleave'].forEach(function(t){ cv.addEventListener(t,function(){ dragX=null; keys.fire=false; }); });
+
+function startGame(){
+  ac();
+  var high=G?G.high:20000;
+  newGame(); G.high=high;
+  G.player.alive=true; G.player.state='play';
+  startStage(1);
+}
+function syncPause(){ document.getElementById('btnPause').textContent= paused? 'Resume':'Pause'; }
+document.getElementById('btnStart').addEventListener('click',startGame);
+document.getElementById('btnAuto').addEventListener('click',function(){ ac(); toggleAuto(); });
+document.getElementById('btnPause').addEventListener('click',function(){ paused=!paused; syncPause(); });
+document.getElementById('btnSound').addEventListener('click',function(){
+  soundOn=!soundOn; this.textContent='Sound: '+(soundOn?'on':'off'); if(soundOn)ac();
+});
+
+newGame();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
