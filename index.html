@@ -192,15 +192,15 @@
   <div class="marquee" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
 
   <header class="studio">
-    <p class="presents">Angeles Productions Presents</p>
     <h1 class="studio-name">ANGELES <span>PRODUCTIONS</span></h1>
+    <p class="presents">Presents</p>
     <div class="rule" aria-hidden="true"><b>★</b></div>
-    <p class="arcade-line"><strong>The Arcade.</strong> Pick a game, hit <strong>PLAY</strong>, and it opens ready to go. KM Security, both chess wars, Scorched Earth, Kaboom! and BurgerTime — all in one place.</p>
+    <p class="arcade-line"><strong>The Arcade.</strong> Pick a game, hit <strong>PLAY</strong>, and it opens ready to go. KM Security, both chess wars, Scorched Earth, Kaboom! and BurgerTime and Rigo's Space Force — all in one place.</p>
     <div class="stats" aria-label="Library summary">
-      <span class="pill"><b>6</b> games live</span>
+      <span class="pill"><b>7</b> games live</span>
       <span class="pill"><b>1</b> flagship — KM Security</span>
       <span class="pill"><b>2</b> chess battles</span>
-      <span class="pill"><b>2</b> arcade classics</span>
+      <span class="pill"><b>3</b> arcade classics</span>
     </div>
   </header>
 
@@ -310,10 +310,33 @@
       meta: ["6 Boards", "Pepper x5", "Extra Chef 20,000", "Keys • WASD • Touch"],
       url: "burgertime.html",
       art: "burger"
+    },
+    {
+      id: "rigos-space-force",
+      category: "action",
+      tag: "Arcade • Space Shooter",
+      badge: "Live",
+      kicker: "Rigo's Space Force",
+      kickerClass: "c-red",
+      title: "Rigo's Space Force",
+      subtitle: "Down With The Teslas",
+      desc: "The Tesla fleet of the evil Space X — a sister company of Skynet — is coming in formation. One Space Force fighter, a tractor beam to dodge, and a rescue to fly: blast the Drones, Cruisers and Motherships, and bring your wingman home for Dual Fighter firepower. Auto-fire included.",
+      meta: ["40-Ship Convoy", "Capture & Rescue", "Challenging Stages", "Auto-Fire Option"],
+      url: "rigos-space-force.html",
+      art: "space"
     }
   ];
 
   function artSVG(kind){
+        if(kind === "space"){
+      return '<svg viewBox="0 0 400 168" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
+        + '<rect width="400" height="168" fill="#04060f"/>'
+        + '<circle cx="40" cy="26" r="2" fill="#cfe6ff"/><circle cx="120" cy="60" r="1.6" fill="#ffffff"/><circle cx="210" cy="22" r="2" fill="#ffe9a8"/><circle cx="300" cy="52" r="1.6" fill="#ffffff"/><circle cx="362" cy="24" r="2" fill="#cfe6ff"/><circle cx="70" cy="96" r="1.4" fill="#ffffff"/><circle cx="336" cy="104" r="1.4" fill="#ffe9a8"/>'
+        + '<path d="M200 118 l10 22 h-6 l-4 -6 l-4 6 h-6 z" fill="#f2f2f2"/><rect x="197" y="104" width="6" height="16" fill="#d33"/><path d="M200 96 l5 10 h-10 z" fill="#f2f2f2"/>'
+        + '<g fill="#e8ecf2" stroke="#c22" stroke-width="1.5"><path d="M96 36 q10 -10 20 0 q-10 6 -20 0"/><path d="M178 30 q11 -11 22 0 q-11 7 -22 0"/><path d="M262 36 q10 -10 20 0 q-10 6 -20 0"/></g>'
+        + '<path d="M188 44 l4 34 M212 44 l-4 34" stroke="#57b6ff" stroke-width="3" opacity="0.55"/>'
+        + '</svg>';
+    }
     if(kind === "burger"){
       return '<svg viewBox="0 0 400 168" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
         + '<rect width="400" height="168" fill="#12060a"/>'
