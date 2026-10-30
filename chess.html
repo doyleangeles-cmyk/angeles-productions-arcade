@@ -363,6 +363,9 @@
       .seg { display:flex; background:var(--accent-soft); border-radius:9px; padding:3px; gap:3px; }
       .seg button { flex:1; border:0; background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:13.5px; font-weight:700; padding:7px 4px; border-radius:7px; }
       .seg button.on { background:var(--seg-on); color:var(--seg-on-ink); }
+      .seg.diff { flex-wrap:wrap; }
+      .seg.diff button { flex:1 1 30%; font-size:12.5px; padding:7px 3px; line-height:1.25; }
+      #diffDesc { margin-top:8px; }
       .btnrow { display:flex; flex-wrap:wrap; gap:8px; }
       .btn { font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; border:1.5px solid var(--btn-border); background:var(--btn); color:var(--ink); padding:9px 13px; border-radius:9px; }
       .btn:hover { border-color: var(--accent); } .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
@@ -383,6 +386,100 @@
       .roster .g { font-size:24px; line-height:1; } .roster .n { display:block; font-size:11px; font-weight:800; margin-top:3px; } .roster .d { display:block; font-size:11px; color:var(--ink-soft); margin-top:2px; line-height:1.25; }
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+      }
+
+      /* ================================================================
+         TEN-PASS ART & ANIMATION POLISH
+         Keyframes redefined below override the earlier definitions
+         (last @keyframes of a name wins); rig hooks live in figSVG.
+         ================================================================ */
+
+      /* PASS 1 — Bones & proportions: one consistent scale language.
+         Troopers stand a touch shorter, the droid and the Lord loom. */
+      .fig { transform-origin: 50% 100%; }
+      .fig-p { transform: scale(.93); }
+      .fig-n { transform: scale(.99); }
+      .fig-b { transform: scale(.98); }
+      .fig-r { transform: scale(1.03); }
+      .fig-q { transform: scale(1.01); }
+      .fig-k { transform: scale(1.045); }
+
+      /* PASS 2 — Idle life: real breathing (rise + chest swell), a wider
+         saber-hum sway in the weapon arm, capes that breathe with the
+         fighter, and a droid head that servo-twitches instead of swaying. */
+      @keyframes idleBob { 0% { transform: translateY(0) scale(1,1) } 100% { transform: translateY(-1.9px) scale(1.005,1.016) } }
+      @keyframes idleSway { 0% { transform: rotate(-1.3deg) translateX(-.3px) } 100% { transform: rotate(1.3deg) translateX(.3px) } }
+      @keyframes idleWeapon { 0% { transform: rotate(-3.6deg) } 100% { transform: rotate(4.6deg) } }
+      .cape-cloth { transform-box: fill-box; transform-origin: 50% 0%; animation: capeSway 3.8s ease-in-out infinite alternate; }
+      @keyframes capeSway { from { transform: skewX(-1.7deg) } to { transform: skewX(2.1deg) } }
+      .fig-r .head-g { animation: servoTwitch 4.6s ease-in-out infinite; }
+      @keyframes servoTwitch { 0%, 86%, 100% { transform: rotate(0deg) } 89% { transform: rotate(2.6deg) } 93% { transform: rotate(-1.8deg) } 96% { transform: rotate(.9deg) } }
+
+      /* PASS 3 — Gait: deeper weight dips on each footfall, wider thigh
+         swing, knees that lift harder through the swing-through, and a
+         tighter contact shadow so feet read as planted, not floating. */
+      @keyframes gaitBob { 0% { transform: translateY(1px) } 22% { transform: translateY(-3.2px) } 50% { transform: translateY(1.2px) } 72% { transform: translateY(-3.2px) } 100% { transform: translateY(1px) } }
+      @keyframes gaitThigh { 0% { transform: rotate(29deg) } 50% { transform: rotate(-27deg) } 100% { transform: rotate(29deg) } }
+      @keyframes gaitShin { 0% { transform: rotate(-3deg) } 18% { transform: rotate(6deg) } 42% { transform: rotate(38deg) } 62% { transform: rotate(17deg) } 82% { transform: rotate(1deg) } 100% { transform: rotate(-3deg) } }
+      .board-fighter.walking .fig { filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+      .board-fighter.walking .cape-cloth { animation: gaitCape .72s ease-in-out infinite; }
+
+      /* PASS 4 — View consistency: badges and name tags sit crisper and
+         read identically from front, back, and profile. */
+      .piece-badge { box-shadow: 0 1px 4px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.65), 0 0 0 1px rgba(0,0,0,.18); }
+      .piece-tag { box-shadow: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.14); }
+
+      /* PASS 5 — Weapons: saber glow breathes like a hum (the two armies
+         pulse out of phase), the electrostaff orb throbs, the blaster's
+         power cell glows steady-hot, and ignition pops the blade arm. */
+      .saber-glow { animation: saberPulse 1.15s ease-in-out infinite; }
+      .fig-b .saber-glow { animation-delay: .55s; }
+      @keyframes saberPulse { 0%, 100% { opacity:.36 } 50% { opacity:.64 } }
+      .staff-orb { transform-box: fill-box; transform-origin: 50% 50%; animation: staffPulse 1.7s ease-in-out infinite; }
+      @keyframes staffPulse { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.22) } }
+      .blaster-tip { animation: tipGlow 2.3s ease-in-out infinite; }
+      @keyframes tipGlow { 0%, 100% { opacity:.75 } 50% { opacity:1 } }
+      .board-fighter.ignite .arm-weapon { animation: ignitePop .32s ease-out both; }
+      @keyframes ignitePop { 0% { transform: rotate(0deg) scale(1) } 45% { transform: rotate(-13deg) scale(1.1) } 100% { transform: rotate(0deg) scale(1) } }
+
+      /* PASS 6 — Duel choreography: deeper anticipation crouch, a wider
+         committed swing arc, a backhand that truly reverses, and a lunge
+         with follow-through overshoot before the settle. */
+      @keyframes windupCrouch { 0% { transform: translateX(0) scale(1,1) } 100% { transform: translateX(var(--backstep,-5px)) translateY(3px) scale(1.06,.90) rotate(var(--windrot,-3.5deg)) } }
+      @keyframes weaponSwing { 0% { transform: rotate(14deg) } 32% { transform: rotate(-94deg) } 58% { transform: rotate(60deg) } 78% { transform: rotate(40deg) } 100% { transform: rotate(0deg) } }
+      @keyframes weaponSwingBack { 0% { transform: rotate(-14deg) } 32% { transform: rotate(84deg) } 58% { transform: rotate(-56deg) } 78% { transform: rotate(-36deg) } 100% { transform: rotate(0deg) } }
+      @keyframes fightLunge { 0% { transform: translateX(var(--backstep,-5px)) scale(1.06,.90) } 36% { transform: translateX(var(--lunge,16px)) scale(1.03,.99) } 58% { transform: translateX(calc(var(--lunge,16px) * 1.07)) scale(1.01,1) } 78% { transform: translateX(calc(var(--lunge,16px) * .78)) } 100% { transform: translateX(0) } }
+
+      /* PASS 7 — Reactions & deaths: a hotter hit-flash, fatter sparks,
+         and a stagger that dips as the knees give before the fall. */
+      .board-fighter.flash .fig { filter: brightness(2.5) saturate(.35) drop-shadow(0 0 11px rgba(255,80,60,.95)); }
+      .spark { width:6px; height:6px; }
+      @keyframes staggerAnim { 0% { transform: translateX(0) rotate(0) } 22% { transform: translateX(var(--recoil,7px)) translateY(2px) rotate(-8deg) } 48% { transform: translateX(calc(var(--recoil,7px) * .5)) translateY(3.5px) rotate(4deg) } 74% { transform: translateX(calc(var(--recoil,7px) * .72)) translateY(2px) rotate(-3deg) } 100% { transform: translateX(calc(var(--recoil,7px) * .55)) translateY(1px) rotate(-1deg) } }
+
+      /* PASS 8 — Board & staging: the holotable rim breathes, squares
+         answer the pointer, the selected fighter's square glows in
+         time with his saber, and a duel square throbs like a warning. */
+      .board-frame { animation: holoPulse 4.6s ease-in-out infinite alternate; }
+      @keyframes holoPulse { from { box-shadow: var(--shadow), inset 0 0 0 2px rgba(56,182,255,.26), inset 0 0 0 6px rgba(0,0,0,.35), inset 0 0 20px rgba(56,182,255,.05) } to { box-shadow: var(--shadow), inset 0 0 0 2px rgba(56,182,255,.48), inset 0 0 0 6px rgba(0,0,0,.35), inset 0 0 36px rgba(56,182,255,.13) } }
+      .sq:hover { filter: brightness(1.07); }
+      .sq.selected { animation: selGlow .95s ease-in-out infinite alternate; }
+      @keyframes selGlow { from { box-shadow: inset 0 0 0 4px var(--sel), inset 0 0 14px rgba(255,210,63,.55) } to { box-shadow: inset 0 0 0 4px var(--sel), inset 0 0 24px rgba(255,210,63,.85) } }
+      .sq.fight-square { animation: fightPulse .5s ease-in-out infinite alternate; }
+      @keyframes fightPulse { from { box-shadow: inset 0 0 0 4px #d7263d, inset 0 0 18px rgba(215,38,61,.6) } to { box-shadow: inset 0 0 0 4px #ff5040, inset 0 0 30px rgba(215,38,61,.9) } }
+
+      /* PASS 9 — Roster & UI art: live portraits in the force roster,
+         drawn by the board's own rig; cards lift a breath on hover. */
+      .roster-fig { display:block; width:48px; height:48px; margin:0 auto 1px; }
+      .roster-fig .fig-wrap { width:100%; height:100%; }
+      .roster div { border:1px solid var(--panel-border); transition: transform .18s ease, border-color .18s ease; }
+      .roster div:hover { transform: translateY(-2px); border-color: var(--accent); }
+      .war-badge { box-shadow: 0 0 0 1px rgba(193,39,45,.12), 0 2px 8px rgba(0,0,0,.14); }
+
+      /* PASS 10 — Performance & calm: GPU-friendly fighters, and every
+         ambient loop fully still when the user asks for reduced motion. */
+      .board-fighter, .ghost { will-change: left, top; }
+      @media (prefers-reduced-motion: reduce) {
+        .board-frame, .sq.selected, .sq.fight-square, .cape-cloth, .saber-glow, .staff-orb, .blaster-tip { animation: none !important; }
       }
     </style>
   </head>
@@ -416,12 +513,12 @@
         <div class="card">
           <p class="grouplabel">The forces</p>
           <div class="roster">
-            <div><span class="g">♟</span><span class="n">Trooper</span><span class="d">Blaster rifle, plastoid trooper helmet &amp; armour</span></div>
-            <div><span class="g">♞</span><span class="n">Lightsaber Knight</span><span class="d">Glowing lightsaber, hooded battle robe &amp; armour</span></div>
-            <div><span class="g">♝</span><span class="n">Force Sage</span><span class="d">Lightsaber staff, deep hood, kyber-crystal pendant</span></div>
-            <div><span class="g">♜</span><span class="n">Destroyer Droid</span><span class="d">Electrostaff &amp; heavy fists, armoured droid chassis</span></div>
-            <div><span class="g">♛</span><span class="n">Force Champion</span><span class="d">Lightsaber, royal headdress, light battle armour</span></div>
-            <div><span class="g">♚</span><span class="n">Force Lord</span><span class="d">Long lightsaber, cloak, heaviest armour — hood or dark mask</span></div>
+            <div><span class="roster-fig" data-t="p"></span><span class="n">♟ Trooper</span><span class="d">Blaster rifle, plastoid trooper helmet &amp; armour</span></div>
+            <div><span class="roster-fig" data-t="n"></span><span class="n">♞ Lightsaber Knight</span><span class="d">Glowing lightsaber, hooded battle robe &amp; armour</span></div>
+            <div><span class="roster-fig" data-t="b"></span><span class="n">♝ Force Sage</span><span class="d">Lightsaber staff, deep hood, kyber-crystal pendant</span></div>
+            <div><span class="roster-fig" data-t="r"></span><span class="n">♜ Destroyer Droid</span><span class="d">Electrostaff &amp; heavy fists, armoured droid chassis</span></div>
+            <div><span class="roster-fig" data-t="q"></span><span class="n">♛ Force Champion</span><span class="d">Lightsaber, royal headdress, light battle armour</span></div>
+            <div><span class="roster-fig" data-t="k"></span><span class="n">♚ Force Lord</span><span class="d">Long lightsaber, cloak, heaviest armour — hood or dark mask</span></div>
           </div>
         </div>
 
@@ -440,8 +537,9 @@
           <div id="aiOptions">
             <div style="height:12px"></div><p class="grouplabel">You command</p>
             <div class="seg" id="colorSeg"><button data-color="w" class="on">Light Side</button><button data-color="b">Dark Side</button></div>
-            <div style="height:12px"></div><p class="grouplabel">Enemy strength</p>
-            <div class="seg" id="diffSeg"><button data-diff="1">Easy</button><button data-diff="2" class="on">Medium</button><button data-diff="3">Hard</button></div>
+            <div style="height:12px"></div><p class="grouplabel">Enemy rank</p>
+            <div class="seg diff" id="diffSeg"><button data-diff="1">Youngling</button><button data-diff="2">Padawan</button><button data-diff="3" class="on">Jedi Knight</button><button data-diff="4">Jedi Master</button><button data-diff="5">Sith Lord</button></div>
+            <p class="fineprint" id="diffDesc">A proven duelist. Solid, tactical chess, two moves deep — with only the odd slip.</p>
           </div>
         </div>
 
@@ -503,8 +601,20 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
     function orderMoves(s,moves){ moves.forEach(function(m){ var cap=s.board[m.tr][m.tc]; m._s=(cap?10*VAL[cap.t]-VAL[s.board[m.fr][m.fc].t]/10:0)+(m.promo?900:0)+(m.ep?100:0); }); moves.sort(function(a,b){return b._s-a._s;}); }
     function search(s,depth,alpha,beta){ if(depth===0) return evaluate(s); var moves=legalMoves(s,s.turn); if(moves.length===0){ if(inCheck(s.board,s.turn)) return -100000-depth; return 0; } if(s.half>=100||insufficientMaterial(s.board)) return 0; orderMoves(s,moves); var best=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-beta,-alpha); if(sc>best) best=sc; if(best>alpha) alpha=best; if(alpha>=beta) break; } return best; }
     function aiBestMove(s,depth){ var moves=legalMoves(s,s.turn); if(!moves.length) return null; orderMoves(s,moves); var best=-Infinity,bestMoves=[],alpha=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-Infinity,-alpha===-Infinity?Infinity:-alpha); if(sc>best+0.001){ best=sc; bestMoves=[moves[i]]; } else if(Math.abs(sc-best)<=0.001) bestMoves.push(moves[i]); if(sc>alpha) alpha=sc; } return bestMoves[Math.floor(Math.random()*bestMoves.length)]; }
+    /* ---- The five ranks of enemy: each step up searches deeper, blunders
+       less often, and judges moves with a steadier hand (less random noise
+       stirred into the scores before choosing). ---- */
+    var DIFF_LEVELS = [ null,
+      { name:"Youngling",   depth:1, random:0.30, noise:250, desc:"Just picked up a lightsaber. Plays casually, one move at a time, and blunders often — perfect for a first duel." },
+      { name:"Padawan",     depth:2, random:0.12, noise:90,  desc:"Trained but green. Looks two moves deep, yet still drops a fighter now and then." },
+      { name:"Jedi Knight", depth:2, random:0,    noise:30,  desc:"A proven duelist. Solid, tactical chess, two moves deep — with only the odd slip." },
+      { name:"Jedi Master", depth:3, random:0,    noise:0,   desc:"Deep in the Force. Searches three moves deep and plays the best move it finds. Rarely errs." },
+      { name:"Sith Lord",   depth:4, random:0,    noise:0,   desc:"The Dark Side at full power. The engine's deepest search — its best chess, no mercy." }
+    ];
+    function aiScoredMoves(s,depth){ var moves=legalMoves(s,s.turn); orderMoves(s,moves); var out=[]; for(var i=0;i<moves.length;i++){ out.push({ m:moves[i], sc:-search(applyTo(s,moves[i]).state,depth-1,-Infinity,Infinity) }); } return out; }
+    function aiChooseMove(s){ var cfg=DIFF_LEVELS[difficulty]||DIFF_LEVELS[3]; var moves=legalMoves(s,s.turn); if(!moves.length) return null; if(cfg.random>0 && Math.random()<cfg.random) return moves[Math.floor(Math.random()*moves.length)]; if(cfg.noise>0){ var scored=aiScoredMoves(s,cfg.depth); var best=null,bestVal=-Infinity; scored.forEach(function(x){ var v=x.sc-Math.random()*cfg.noise; if(v>bestVal){ bestVal=v; best=x.m; } }); return best; } return aiBestMove(s,cfg.depth); }
 
-    var state=startState(); var undoStack=[]; var sanList=[]; var posCounts={}; var selected=null; var currentLegal=[]; var legalFromSel=[]; var lastMove=null; var gameOver=null; var flipped=false; var mode="ai"; var playerColor="w"; var difficulty=2; var aiTimer=null; var pendingPromo=null; var battleBusy=false; var duelsOn=true; var marchingOn=true; var battleLogEntries=[];
+    var state=startState(); var undoStack=[]; var sanList=[]; var posCounts={}; var selected=null; var currentLegal=[]; var legalFromSel=[]; var lastMove=null; var gameOver=null; var flipped=false; var mode="ai"; var playerColor="w"; var difficulty=3; var aiTimer=null; var pendingPromo=null; var battleBusy=false; var duelsOn=true; var marchingOn=true; var battleLogEntries=[];
     var boardEl=document.getElementById("board"); var boardFrame=document.getElementById("boardFrame"); var statusEl=document.getElementById("statusText"); var subEl=document.getElementById("subStatus"); var turnDot=document.getElementById("turnDot"); var overlay=document.getElementById("overlay"); var overlayCard=document.getElementById("overlayCard"); var arena=document.getElementById("battleArena");
     var audioCtx=null;
     function sound(kind){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); var notes = kind==="capture" ? [180,90,420] : kind==="check" ? [660,660] : kind==="end" ? [330,220,165] : [440]; notes.forEach(function(f,idx){ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); var t=audioCtx.currentTime+idx*0.09; o.frequency.value=f; o.type= kind==="capture" ? "sawtooth" : "sine"; g.gain.setValueAtTime(0.07,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.14); o.start(t); o.stop(t+0.15); }); }catch(e){} }
@@ -529,7 +639,7 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
       var SABER = tp==="b" ? (W ? "#3dff7a" : "#ff2a2a") : tp==="q" ? (W ? "#c07dff" : "#ff2a6b") : (W ? "#38b6ff" : "#ff2a2a");
       var ST = W ? "#c7ccd6" : "#4a4e59";   /* droid metal (rook) */
       var SD = W ? "#79828f" : "#22242b";   /* droid metal dark */
-      var bulk = tp==="r" ? 1.32 : (tp==="k" ? 1.12 : (tp==="n" ? 1.08 : (tp==="q" ? 1.02 : 1)));
+      var bulk = tp==="r" ? 1.36 : (tp==="k" ? 1.14 : (tp==="n" ? 1.08 : (tp==="q" ? 1.05 : 1)));
       var hipL = 50 - 6*bulk, hipR = 50 + 6*bulk, tw = 26*bulk, tx = 50 - tw/2;
       var pauld = tp==="k" ? 11.5 : tp==="r" ? 12.5 : tp==="n" ? 9.5 : tp==="q" ? 7.5 : tp==="b" ? 5 : 4.2;
       if(view==="side"){
@@ -541,7 +651,7 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
         else if(tp==="r") sHead = '<path d="M 40 27 v -13 l 4 -3 v -4 h 4 v 3 h 4 v -3 h 4 v 4 l 4 3 v 13 q -10 3.6 -20 0 Z" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.1"/><circle cx="55" cy="18.5" r="1.9" fill="#ffb02e"/>';
         else if(tp==="q") sHead += '<path d="M 43 17 q -4 9 -1 14 l 5 0 q -2 -8 -1 -13 Z" fill="'+(W?"#8a5a1e":"#d8d8d8")+'"/><path d="M 41 14 L 44 5 L 47.5 11 L 50 3.5 L 52.5 11 L 56 5 L 59 14 q -9 2.8 -18 0 Z" fill="'+TR+'" stroke="#8a6414" stroke-width="0.7"/>';
         else if(tp==="k") sHead += W ? '<path d="M 40 21 q -1.5 -12.5 10 -13 q 11 0.5 10 13 l -3 1 q 1 -8.5 -7 -9 q -8 0.5 -7 9 Z" fill="'+CL+'"/><path d="M 41 10 L 40 2 L 46 6 L 50 0.5 L 54 6 L 59 2 L 58 10 q -8.5 2.4 -17 0 Z" fill="#e8b923" stroke="#8a6414" stroke-width="0.8"/><path d="M 52 24 q 5 2 4 6 l -6 1 q 0 -4 2 -7 Z" fill="#e8e2d2"/>' : '<path d="M 40.5 20 a 9.5 10.5 0 0 1 19 0 v 4.5 h -19 Z" fill="#17181c" stroke="#000" stroke-width="0.9"/><path d="M 41 11 L 40 3 L 46 7 L 50 1.5 L 54 7 L 59 3 L 58 11 q -8.5 2.2 -17 0 Z" fill="#23252c" stroke="#ff3b30" stroke-width="0.9"/><path d="M 51 16.5 h 7 l -1.4 3.2 h -5.6 Z" fill="#3c4048"/><path d="M 52 22 l 3 5.5 h -5.5 Z" fill="#26282e"/>';
-        var sCape = (tp==="k"||tp==="q") ? '<path d="M 42 31 q -11 20 -8 40 l 10 -1 q -2 -22 1 -37 Z" fill="'+CL+'" opacity="0.92"/>' : '';
+        var sCape = (tp==="k"||tp==="q") ? '<path class="cape-cloth" d="M 42 31 q -11 20 -8 40 l 10 -1 q -2 -22 1 -37 Z" fill="'+CL+'" opacity="0.92"/>' : '';
         var sShield = (tp==="p"||tp==="n"||tp==="k") ? '<g transform="translate(64,47) scale(0.82)">'+''+'</g>' : '';
         var sideSVG = '<svg class="fig fig-'+tp+' fig-'+col+' fig-side" viewBox="0 0 100 100" aria-hidden="true">'
           + '<ellipse cx="50" cy="92.5" rx="21" ry="4" fill="rgba(0,0,0,.30)"/>'
@@ -570,18 +680,18 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
       }
       function sword(len){
         /* a lightsaber: coloured glow around a white-hot core, metal hilt */
-        return '<rect x="-3.4" y="-'+len+'" width="6.8" height="'+len+'" rx="3.4" fill="'+SABER+'" opacity="0.45"/>'
+        return '<rect class="saber-glow" x="-3.4" y="-'+len+'" width="6.8" height="'+len+'" rx="3.4" fill="'+SABER+'" opacity="0.45"/>'
           + '<rect x="-1.5" y="-'+len+'" width="3" height="'+len+'" rx="1.5" fill="'+BL+'"/>'
           + '<rect x="-2" y="-2" width="4" height="8" rx="1.6" fill="#3a3f47" stroke="#14161a" stroke-width="0.6"/><rect x="-2" y="-0.5" width="4" height="1.6" fill="'+SABER+'"/>';
       }
       function weapon(){
-        if(tp==="p") return '<g transform="rotate(16)"><rect x="-2.1" y="-25" width="4.4" height="19" rx="1.6" fill="#26282e"/><rect x="-1.2" y="-32" width="2.4" height="8" fill="#26282e"/><rect x="-3.4" y="-12" width="7" height="4.2" rx="1.4" fill="#454a54"/><rect x="-1" y="-30.5" width="2" height="3" fill="'+TR+'"/><rect x="-1.5" y="-6" width="3" height="7" rx="1.4" fill="#454a54"/></g>';
+        if(tp==="p") return '<g transform="rotate(16)"><rect x="-2.1" y="-25" width="4.4" height="19" rx="1.6" fill="#26282e"/><rect x="-1.2" y="-32" width="2.4" height="8" fill="#26282e"/><rect x="-3.4" y="-12" width="7" height="4.2" rx="1.4" fill="#454a54"/><rect class="blaster-tip" x="-1" y="-30.5" width="2" height="3" fill="'+TR+'"/><rect x="-1.5" y="-6" width="3" height="7" rx="1.4" fill="#454a54"/></g>';
         if(tp==="n") return '<g transform="translate(0,1)">'+sword(34)+'</g>';
         if(tp==="k") return '<g transform="translate(0,1)">'+sword(40)+'</g>';
-        if(tp==="b") return '<rect x="-1.7" y="-28" width="3.4" height="32" rx="1.6" fill="#3a3f47" stroke="#14161a" stroke-width="0.5"/><rect x="-3" y="-52" width="6" height="24" rx="3" fill="'+SABER+'" opacity="0.45"/><rect x="-1.3" y="-52" width="2.6" height="24" rx="1.3" fill="'+BL+'"/>';
+        if(tp==="b") return '<rect x="-1.7" y="-28" width="3.4" height="32" rx="1.6" fill="#3a3f47" stroke="#14161a" stroke-width="0.5"/><rect class="saber-glow" x="-3" y="-52" width="6" height="24" rx="3" fill="'+SABER+'" opacity="0.45"/><rect x="-1.3" y="-52" width="2.6" height="24" rx="1.3" fill="'+BL+'"/>';
         if(tp==="q") return '<g transform="translate(0,1)">'+sword(36)+'</g>';
         /* rook electrostaff */
-        return '<rect x="-3" y="-32" width="6" height="28" rx="2.6" fill="#3a3f47" stroke="'+SD+'" stroke-width="0.7"/><circle cx="0" cy="-35" r="4.8" fill="'+SABER+'"/><circle cx="0" cy="-35" r="2" fill="#fff"/><rect x="-4.6" y="-16" width="9.2" height="4" rx="2" fill="'+SD+'"/>';
+        return '<rect x="-3" y="-32" width="6" height="28" rx="2.6" fill="#3a3f47" stroke="'+SD+'" stroke-width="0.7"/><circle class="staff-orb" cx="0" cy="-35" r="4.8" fill="'+SABER+'"/><circle cx="0" cy="-35" r="2" fill="#fff"/><rect x="-4.6" y="-16" width="9.2" height="4" rx="2" fill="'+SD+'"/>';
       }
       function offHand(){
         if(tp==="r") return '<circle cx="-2" cy="2" r="7.6" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.4"/><path d="M -8 -2 q 6 3 12 0" stroke="'+SD+'" stroke-width="1.4" fill="none"/>';
@@ -617,7 +727,7 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
         else if(tp==="k"){ if(W){ h += '<path d="M 39.5 22 q -1.5 -13 10.5 -13.5 q 12 0.5 10.5 13.5 l -3.4 1 q 1 -9 -7.1 -9.4 q -8.1 0.4 -7.1 9.4 Z" fill="'+CL+'"/><path d="M 40 11 L 38.5 1 L 45.5 6 L 50 -0.5 L 54.5 6 L 61.5 1 L 60 11 q -10 2.8 -20 0 Z" fill="#e8b923" stroke="#8a6414" stroke-width="0.9"/><circle cx="50" cy="7" r="2" fill="'+SABER+'"/><path d="M 43.5 26.5 q 6.5 3 13 0 l -1.8 6 q -4.7 2.2 -9.4 0 Z" fill="#e8e2d2"/>'; } else { h = '<path d="M 40.5 21 a 9.5 10.5 0 0 1 19 0 v 4 h -19 Z" fill="#17181c" stroke="#000" stroke-width="0.9"/><path d="M 44 18 h 12 l -2 3.4 h -8 Z" fill="#3c4048"/><path d="M 50 22 l 3.4 6.5 h -6.8 Z" fill="#26282e" stroke="#000" stroke-width="0.6"/><path d="M 47 24.5 v 3 M 50 25.5 v 3 M 53 24.5 v 3" stroke="#0a0a0c" stroke-width="1"/><path d="M 40 11 L 38 2 L 45.5 6.5 L 50 0 L 54.5 6.5 L 62 2 L 60 11 q -10 2.6 -20 0 Z" fill="#23252c" stroke="'+RD+'" stroke-width="1"/>'; } }
         return '<g class="seg head-g">'+h+'</g>';
       }
-      var cape = (tp==="k"||tp==="q") ? '<path d="M '+(tx+2)+' 31 q -8 22 -4 40 l 9 -1 q -3 -22 -1 -37 Z M '+(tx+tw-2)+' 31 q 8 22 4 40 l -9 -1 q 3 -22 1 -37 Z" fill="'+CL+'" opacity="0.9"/>' : '';
+      var cape = (tp==="k"||tp==="q") ? '<path class="cape-cloth" d="M '+(tx+2)+' 31 q -8 22 -4 40 l 9 -1 q -3 -22 -1 -37 Z M '+(tx+tw-2)+' 31 q 8 22 4 40 l -9 -1 q 3 -22 1 -37 Z" fill="'+CL+'" opacity="0.9"/>' : '';
       var torsoFill = tp==="r" ? ST : A;
       var s = '<svg class="fig fig-'+tp+' fig-'+col+'" viewBox="0 0 100 100" aria-hidden="true">'
         + '<ellipse cx="50" cy="92.5" rx="23" ry="4" fill="rgba(0,0,0,.30)"/>'
@@ -672,11 +782,11 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
       return { view:"front", facing:1 };
     }
     function stepMsFor(piece){ /* weight tells: the droid lumbers, the champion glides, troopers double-time */
-      if(piece.t==="r") return 470;
-      if(piece.t==="k") return 415;
-      if(piece.t==="q") return 345;
-      if(piece.t==="p") return 330;
-      return 365;
+      if(piece.t==="r") return 495;
+      if(piece.t==="k") return 425;
+      if(piece.t==="q") return 330;
+      if(piece.t==="p") return 315;
+      return 360;
     }
     function setFighterView(el,piece,view,facing){ var key=view+"/"+facing; if(el.getAttribute("data-view")===key) return; el.setAttribute("data-view",key); el.innerHTML='<span class="bf-inner"><span class="fig-wrap">'+figSVG(piece.t,piece.c,view,facing)+'</span>'+badgeHTML(piece)+'</span>'; }
     function positionFighter(el,disp,offFX,offFY){ if(!animGeom) animGeom=geomNow(); el.style.left=(animGeom.ox+disp.dc*animGeom.sq+(offFX||0)*animGeom.sq)+"px"; el.style.top=(animGeom.oy+disp.dr*animGeom.sq+(offFY||0)*animGeom.sq)+"px"; }
@@ -804,7 +914,7 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
       if(ended){ sound("end"); showGameOver(); } else if(san.indexOf("+")>=0) sound("check"); else if(wasCapture) sound("capture"); else sound("move");
       maybeAI();
     }
-    function maybeAI(){ if(gameOver||mode!=="ai") return; if(state.turn===playerColor) return; subEl.textContent="Enemy is plotting…"; render(); aiTimer=setTimeout(function(){ aiTimer=null; var m; if(difficulty===1&&Math.random()<0.25&&currentLegal.length>1){ m=currentLegal[Math.floor(Math.random()*currentLegal.length)]; } else { m=aiBestMove(state,difficulty); } if(m) doMove(m); },420); }
+    function maybeAI(){ if(gameOver||mode!=="ai") return; if(state.turn===playerColor) return; subEl.textContent="Enemy is plotting…"; render(); aiTimer=setTimeout(function(){ aiTimer=null; var m=aiChooseMove(state); if(m) doMove(m); },420); }
     function undo(){ if(battleBusy) return; if(aiTimer){clearTimeout(aiTimer); aiTimer=null;} if(!undoStack.length) return; var steps=(mode==="ai"&&undoStack.length>=2&&state.turn===playerColor)?2:1; steps=Math.min(steps,undoStack.length); var key=posKey(state); for(var i=0;i<steps;i++){ var snap=undoStack.pop(); if(posCounts[key]) posCounts[key]--; state=snap.state; lastMove=snap.lastMove; sanList.length=snap.san; battleLogEntries.length=snap.logLen||0; key=posKey(state); } gameOver=null; selected=null; legalFromSel=[]; pendingPromo=null; hideOverlay(); refreshLegal(); render(); maybeAI(); }
 
     function render(){
@@ -848,7 +958,7 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
     function segWire(id,attr,fn){ var seg=document.getElementById(id); seg.addEventListener("click",function(e){ var btn=e.target.closest("button"); if(!btn) return; seg.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); btn.classList.add("on"); fn(btn.getAttribute(attr)); }); }
     segWire("modeSeg","data-mode",function(v){ mode=v; document.getElementById("aiOptions").style.display=mode==="ai"?"":"none"; startGame(startState()); });
     segWire("colorSeg","data-color",function(v){ playerColor=v; startGame(startState()); });
-    segWire("diffSeg","data-diff",function(v){ difficulty=parseInt(v,10); });
+    segWire("diffSeg","data-diff",function(v){ difficulty=parseInt(v,10); var cfg=DIFF_LEVELS[difficulty]; if(cfg) document.getElementById("diffDesc").textContent=cfg.desc; });
     document.getElementById("battleToggle").addEventListener("click",function(){ duelsOn=!duelsOn; this.textContent="Duels: "+(duelsOn?"ON":"OFF"); this.classList.toggle("on-toggle",duelsOn); });
     document.getElementById("walkToggle").addEventListener("click",function(){ marchingOn=!marchingOn; this.textContent="Marching: "+(marchingOn?"ON":"OFF"); this.classList.toggle("on-toggle",marchingOn); });
     document.getElementById("walkToggle").classList.add("on-toggle");
@@ -856,6 +966,9 @@ function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8
 document.getElementById("undoBtn").addEventListener("click",undo);
     document.getElementById("flipBtn").addEventListener("click",function(){ flipped=!flipped; render(); });
     document.getElementById("pgnBtn").addEventListener("click",function(){ var pgn=""; for(var i=0;i<sanList.length;i+=2){ pgn+=(Math.floor(i/2)+1)+". "+sanList[i]+(sanList[i+1]?" "+sanList[i+1]+" ":" "); } if(gameOver){ if(gameOver.title.indexOf("Checkmate")===0) pgn+=state.turn==="w"?"0-1":"1-0"; else pgn+="1/2-1/2"; } else pgn+="*"; var blob=new Blob([pgn],{type:"text/plain"}); var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="chess-game.pgn"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },400); });
+    /* Roster portraits are drawn by the very same fighter rig as the board —
+       the panel and the battlefield can never drift apart in style. */
+    document.querySelectorAll(".roster-fig").forEach(function(el){ el.innerHTML='<span class="fig-wrap">'+figSVG(el.getAttribute("data-t"),"w","front")+'</span>'; });
     startGame(startState());
     </script>
   </body>
