@@ -1,0 +1,1002 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
+    <title>Star Wars Chess</title>
+    <style>
+      :root {
+        --bg: #b9c7dc;
+        --bg2: #8499ba;
+        --panel: #eef3fa;
+        --panel-border: #7d90ad;
+        --ink: #0d1522;
+        --ink-soft: #44536b;
+        --accent: #1663b8;
+        --accent-2: #c1272d;
+        --accent-ink: #ffffff;
+        --accent-soft: #d7e4f5;
+        --light-sq: #dde7f2;
+        --dark-sq: #2e4a73;
+        --light-sq2: #c3d2e6;
+        --dark-sq2: #22385c;
+        --sel: #ffe81f;
+        --last: rgba(255, 232, 31, 0.45);
+        --hint-dot: rgba(13,21,34,0.32);
+        --check: #ff3b30;
+        --btn: #f7fafd;
+        --btn-border: #7d90ad;
+        --seg-on: #1663b8;
+        --seg-on-ink: #ffffff;
+        --shadow: 0 14px 34px rgba(10, 20, 40, 0.35);
+        --arena-bg: #05070d;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #04060c;
+          --bg2: #0a1120;
+          --panel: #101827;
+          --panel-border: #2c3d5c;
+          --ink: #eaf2ff;
+          --ink-soft: #9db1cf;
+          --accent: #2f9be8;
+          --accent-2: #ff5040;
+          --accent-ink: #ffffff;
+          --accent-soft: #1a2740;
+          --light-sq: #9fb4d0;
+          --dark-sq: #1c2c47;
+          --light-sq2: #87a0c2;
+          --dark-sq2: #142136;
+          --btn: #16233a;
+          --btn-border: #2c3d5c;
+          --seg-on: #2f9be8;
+          --seg-on-ink: #ffffff;
+          --shadow: 0 14px 34px rgba(0,0,0,0.65);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; padding: 0; }
+      body {
+        background: radial-gradient(900px 500px at 20% -10%, rgba(56,182,255,.28), transparent 60%), radial-gradient(700px 420px at 90% 110%, rgba(255,59,48,.14), transparent 60%), linear-gradient(180deg, var(--bg), var(--bg2));
+        color: var(--ink);
+        font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        -webkit-tap-highlight-color: transparent;
+      }
+      body::before {
+        content:""; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.4;
+        background-image: radial-gradient(1.5px 1.5px at 12% 22%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 32% 68%, #fff 50%, transparent 51%), radial-gradient(1.8px 1.8px at 54% 14%, #cfe6ff 50%, transparent 51%), radial-gradient(1px 1px at 71% 42%, #fff 50%, transparent 51%), radial-gradient(1.4px 1.4px at 86% 76%, #ffe9a8 50%, transparent 51%), radial-gradient(1px 1px at 93% 18%, #fff 50%, transparent 51%), radial-gradient(1.2px 1.2px at 6% 84%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 44% 88%, #fff 50%, transparent 51%), radial-gradient(1.6px 1.6px at 64% 92%, #cfe6ff 50%, transparent 51%), radial-gradient(1px 1px at 22% 48%, #fff 50%, transparent 51%);
+        background-size: 340px 340px;
+      }
+      @media (prefers-color-scheme: dark) { body::before { opacity:.9; } }
+      h1,h2,.serif { font-family: Georgia, "Times New Roman", serif; }
+      .app {
+        position: relative; z-index: 1;
+        max-width: 1060px;
+        margin: 0 auto;
+        padding: 14px 14px 36px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 20px;
+        align-items: start;
+      }
+
+      .intro { grid-column: 1 / -1; display:flex; flex-wrap:wrap; gap:14px; align-items:end; justify-content:space-between; }
+      .intro h1 { margin:0; font-size: clamp(26px, 4.5vw, 40px); line-height:1; letter-spacing:.05em; font-family:"Orbitron", Georgia, serif; font-weight:900; text-transform:uppercase; color:#ffe81f; -webkit-text-stroke: 1.2px rgba(8,12,20,.9); paint-order: stroke fill; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+      .intro h1 span { color: #ffe81f; }
+      .intro p { margin:6px 0 0; color: var(--ink-soft); max-width: 620px; font-size: 15px; line-height:1.45; }
+      .war-badge { border:1.5px solid var(--accent-2); color: var(--ink); background: var(--panel); padding:8px 11px; border-radius: 999px; font-size:12.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; white-space:nowrap; }
+
+      /* ---------- Board / Battlefield ---------- */
+      /* Board first, sized to the largest the window allows: capped by the
+         column width and by viewport height, so the whole battlefield is on
+         screen the moment the page opens — no scrolling to reach the game. */
+      .board-shell { position: relative; width: min(100%, 940px, max(320px, calc(100dvh - 190px))); margin: 0 auto; }
+      .board-frame {
+        background: linear-gradient(145deg, #3d4656, #12161f 55%, #4a5468);
+        padding: 12px;
+        border-radius: 14px;
+        box-shadow: var(--shadow), inset 0 0 0 2px rgba(56,182,255,.35), inset 0 0 0 6px rgba(0,0,0,.35);
+        position: relative;
+      }
+      .board-frame::before, .board-frame::after {
+        content:""; position:absolute; width:14px; height:14px; border-radius:50%;
+        top: 2px;
+        animation: flicker 1.6s ease-in-out infinite alternate;
+      }
+      .board-frame::before { background: radial-gradient(circle, #dff2ff 0 28%, #38b6ff 46%, rgba(56,182,255,0) 74%); filter: drop-shadow(0 0 10px rgba(56,182,255,.95)); }
+      .board-frame::after { background: radial-gradient(circle, #ffe3e0 0 28%, #ff3b30 46%, rgba(255,59,48,0) 74%); filter: drop-shadow(0 0 10px rgba(255,59,48,.95)); }
+      .board-frame::before { left: 10px; } .board-frame::after { right: 10px; animation-delay:.5s; }
+      @keyframes flicker { from { transform: scale(.9); opacity:.75 } to { transform: scale(1.12); opacity:1 } }
+      .board {
+        display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr);
+        aspect-ratio: 1 / 1; width: 100%; border-radius: 6px; overflow: hidden; user-select: none; touch-action: manipulation;
+        position: relative; box-shadow: inset 0 0 0 2px rgba(0,0,0,.35);
+      }
+      .sq { position: relative; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; overflow:hidden; }
+      .sq.light { background: linear-gradient(145deg, var(--light-sq), var(--light-sq2)); }
+      .sq.dark { background: linear-gradient(145deg, var(--dark-sq), var(--dark-sq2)); }
+      .sq::before { content:""; position:absolute; inset:0; opacity:.16; background: repeating-linear-gradient(0deg, transparent 0 6px, rgba(0,0,0,.18) 7px), radial-gradient(circle at 30% 20%, rgba(255,255,255,.35), transparent 42%); pointer-events:none; }
+      .sq.lastmove::after { content:""; position:absolute; inset:0; background: var(--last); pointer-events:none; }
+      .sq.selected { box-shadow: inset 0 0 0 4px var(--sel), inset 0 0 18px rgba(255,210,63,.7); }
+      .sq.incheck { background: radial-gradient(circle at center, #e05252 0%, #8c1f28 58%, rgba(140,31,40,0) 82%); }
+      .sq .hint { position:absolute; width:30%; height:30%; border-radius:50%; background: var(--hint-dot); pointer-events:none; z-index:2; }
+      .sq .hint.capture { width:88%; height:88%; background:transparent; border: calc(var(--sqsize, 40px) * 0.09) solid rgba(140,31,40,.75); border-radius:50%; box-shadow: inset 0 0 12px rgba(140,31,40,.35); }
+      .sq .coord { position:absolute; font-size: clamp(8px, 1.6vw, 11px); font-weight:800; pointer-events:none; z-index:2; opacity:.9; }
+      .sq .coord.file { right:3px; bottom:2px; } .sq .coord.rank { left:3px; top:2px; }
+      .sq.light .coord { color: var(--dark-sq); } .sq.dark .coord { color: var(--light-sq); }
+
+      .piece-wrap { position:relative; z-index:3; width:96%; height:96%; display:flex; align-items:flex-end; justify-content:center; pointer-events:none; }
+      /* ---- Instant identity: classic glyph badge + short name tag on every fighter ---- */
+      .piece-wrap .fig-wrap, .board-fighter .fig-wrap { height: calc(100% - 13px); flex:none; align-self:flex-start; }
+      .piece-badge {
+        position:absolute; right:0; bottom:13px; z-index:6; width:19px; height:19px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center; font-size:13px; line-height:1; font-weight:900;
+        box-shadow: 0 1px 4px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.6);
+      }
+      .piece-badge.w { background:#fffdf2; color:#0d1522; border:2px solid #1663b8; }
+      .piece-badge.b { background:#12100e; color:#fff3d6; border:2px solid #ff3b30; }
+      .piece-tag {
+        position:absolute; left:50%; transform:translateX(-50%); bottom:0; z-index:6;
+        font-size:8px; font-weight:900; letter-spacing:.03em; line-height:1; white-space:nowrap;
+        padding:2.5px 6px 3px; border-radius:999px; box-shadow:0 1px 3px rgba(0,0,0,.45);
+        font-family: ui-sans-system, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+      @media (max-width:520px){ .piece-tag{ font-size:6.5px; padding:2px 4px 2.5px; } .piece-badge{ width:16px; height:16px; font-size:11px; bottom:11px; } }
+      .piece-tag.w { background:rgba(255,255,255,.96); color:#10233f; border:1.5px solid #1663b8; }
+      .piece-tag.b { background:rgba(8,8,12,.94); color:#ffeec2; border:1.5px solid #ff5040; }
+      .sq.light .piece-tag.b { background:rgba(8,8,12,.96); }
+      .board-fighter .bf-inner { position:relative; }
+      .board-fighter.fight-atk .piece-badge, .board-fighter.fight-def .piece-badge,
+      .board-fighter.fight-atk .piece-tag, .board-fighter.fight-def .piece-tag { opacity:.92; }
+      /* ---- Articulated fighters: legs/knees, arms/elbows, torso, weapons, armour ---- */
+      .fig-wrap { width:100%; height:100%; display:flex; align-items:flex-end; justify-content:center; filter: drop-shadow(0 3px 3px rgba(0,0,0,.45)); }
+      .fig { width:100%; height:100%; overflow:visible; display:block; }
+      .fig .seg { transform-box: fill-box; }
+      .fig .fig-body { transform-box: fill-box; transform-origin: 50% 100%; animation: idleBob 2.6s ease-in-out infinite alternate; }
+      .fig .torso-g { transform-box: fill-box; transform-origin: 50% 90%; animation: idleSway 3.2s ease-in-out infinite alternate; }
+      .fig .arm-weapon { transform-box: fill-box; transform-origin: 50% 8%; animation: idleWeapon 2.8s ease-in-out infinite alternate; }
+      .fig .arm-off { transform-box: fill-box; transform-origin: 50% 8%; animation: idleOff 3s ease-in-out infinite alternate; }
+      .fig .head-g { transform-box: fill-box; transform-origin: 50% 90%; animation: idleHead 3.4s ease-in-out infinite alternate; }
+      @keyframes idleBob { from { transform: translateY(0) } to { transform: translateY(-1.6px) } }
+      @keyframes idleSway { from { transform: rotate(-1.2deg) } to { transform: rotate(1.2deg) } }
+      @keyframes idleWeapon { from { transform: rotate(-3deg) } to { transform: rotate(4deg) } }
+      @keyframes idleOff { from { transform: rotate(3deg) } to { transform: rotate(-3deg) } }
+      @keyframes idleHead { from { transform: rotate(-2deg) } to { transform: rotate(2deg) } }
+      /* Walking: thighs swing, knees bend, arms swing opposite */
+      .walking .fig-body, .ghost.walk .fig-body { animation: walkBounce .18s ease-in-out infinite alternate; }
+      .walking .leg-l .thigh, .ghost.walk .leg-l .thigh { transform-origin: 50% 0%; animation: thighSwing .34s ease-in-out infinite alternate; }
+      .walking .leg-r .thigh, .ghost.walk .leg-r .thigh { transform-origin: 50% 0%; animation: thighSwing .34s ease-in-out infinite alternate-reverse; }
+      .walking .leg-l .shin, .ghost.walk .leg-l .shin { transform-origin: 50% 0%; animation: shinBend .34s ease-in-out infinite alternate; }
+      .walking .leg-r .shin, .ghost.walk .leg-r .shin { transform-origin: 50% 0%; animation: shinBend .34s ease-in-out infinite alternate-reverse; }
+      .walking .arm-weapon, .ghost.walk .arm-weapon { animation: armSwing .34s ease-in-out infinite alternate-reverse; }
+      .walking .arm-off, .ghost.walk .arm-off { animation: armSwing .34s ease-in-out infinite alternate; }
+      @keyframes walkBounce { from { transform: translateY(0) } to { transform: translateY(-3px) } }
+      @keyframes thighSwing { from { transform: rotate(24deg) } to { transform: rotate(-24deg) } }
+      @keyframes shinBend { 0% { transform: rotate(4deg) } 55% { transform: rotate(28deg) } 100% { transform: rotate(2deg) } }
+      @keyframes armSwing { from { transform: rotate(18deg) } to { transform: rotate(-18deg) } }
+      /* ---- Refined gait: a true two-beat stride. The body dips on each footfall
+         and lifts through the pass, hips roll against the shoulders, the head
+         counter-bobs, knees lift only while the leg is swinging through, and
+         the weapon arm stays steadier than the free arm (you don't flail a saber). ---- */
+      @keyframes gaitBob { 0% { transform: translateY(0.6px) } 22% { transform: translateY(-2.8px) } 50% { transform: translateY(0.8px) } 72% { transform: translateY(-2.8px) } 100% { transform: translateY(0.6px) } }
+      @keyframes gaitTorso { 0% { transform: rotate(-2.4deg) translateX(-0.6px) } 50% { transform: rotate(2.4deg) translateX(0.6px) } 100% { transform: rotate(-2.4deg) translateX(-0.6px) } }
+      @keyframes gaitHead { 0% { transform: rotate(2.6deg) translateY(0) } 25% { transform: rotate(0deg) translateY(0.7px) } 50% { transform: rotate(-2.6deg) translateY(0) } 75% { transform: rotate(0deg) translateY(0.7px) } 100% { transform: rotate(2.6deg) translateY(0) } }
+      @keyframes gaitThigh { 0% { transform: rotate(27deg) } 50% { transform: rotate(-25deg) } 100% { transform: rotate(27deg) } }
+      @keyframes gaitShin { 0% { transform: rotate(-3deg) } 18% { transform: rotate(5deg) } 42% { transform: rotate(34deg) } 62% { transform: rotate(16deg) } 82% { transform: rotate(1deg) } 100% { transform: rotate(-3deg) } }
+      @keyframes gaitFore { 0% { transform: rotate(-14deg) } 50% { transform: rotate(10deg) } 100% { transform: rotate(-14deg) } }
+      @keyframes gaitArmFree { 0% { transform: rotate(21deg) } 50% { transform: rotate(-21deg) } 100% { transform: rotate(21deg) } }
+      @keyframes gaitArmWeapon { 0% { transform: rotate(9deg) } 50% { transform: rotate(-9deg) } 100% { transform: rotate(9deg) } }
+      @keyframes gaitCape { 0% { transform: skewX(-2deg) } 50% { transform: skewX(2.5deg) } 100% { transform: skewX(-2deg) } }
+      /* Arena attack + fall driven off .hit on the arena */
+      .battle-arena.hit .fighter.atk .arm-weapon { animation: weaponSwing .55s cubic-bezier(.2,.7,.3,1) .10s both; transform-origin: 50% 8%; }
+      .battle-arena.hit .fighter.atk .fig-body { animation: atkStep .55s ease .10s both; }
+      .battle-arena.hit .fighter.def .fig-body { animation: defFall 1s ease .48s both; transform-origin: 50% 100%; }
+      .battle-arena.hit .fighter.def .arm-weapon, .battle-arena.hit .fighter.def .arm-off { animation: armsFlail .5s ease .48s both; }
+      @keyframes weaponSwing { 0% { transform: rotate(8deg) } 35% { transform: rotate(-78deg) } 65% { transform: rotate(52deg) } 100% { transform: rotate(0deg) } }
+      @keyframes atkStep { 0% { transform: translateX(0) } 45% { transform: translateX(6px) } 100% { transform: translateX(0) } }
+      @keyframes defFall { 0% { transform: translateY(0) rotate(0); opacity:1 } 30% { transform: translateX(4px) rotate(-7deg); opacity:1 } 100% { transform: translateY(14px) rotate(76deg); opacity:.15 } }
+      @keyframes armsFlail { from { transform: rotate(0deg) } to { transform: rotate(-58deg) } }
+
+      .piece-medal {
+        width: 88%; height: 88%; border-radius: 50%; display:flex; align-items:center; justify-content:center; position:relative;
+        box-shadow: 0 4px 8px rgba(0,0,0,.38), inset 0 1px 0 rgba(255,255,255,.55), inset 0 -5px 10px rgba(0,0,0,.22);
+      }
+      .piece-medal.w { background: radial-gradient(circle at 35% 28%, #fffdf2, #e9dcc0 58%, #bfae86); border:2px solid #7a6538; }
+      .piece-medal.b { background: radial-gradient(circle at 35% 28%, #5a5148, #241d18 60%, #090706); border:2px solid #0a0806; }
+      .piece { font-size: clamp(24px, 7.6vw, 48px); line-height:1; position:relative; top:-1px; }
+      @media (min-width: 861px) { .piece { font-size: clamp(28px, 4.2vw, 50px); } }
+      .piece.w { color:#faf7ef; text-shadow: 0 0 2px #3a2a16, 0 0 3px #3a2a16, 1px 1px 2px rgba(0,0,0,.7), -1px -1px 1px rgba(0,0,0,.45); }
+      .piece.b { color:#0f0c09; text-shadow: 0 0 2px rgba(255,230,170,.45), 1px 1px 2px rgba(0,0,0,.7); }
+      .piece-medal.b .piece { color:#e8ddc2; text-shadow: 0 1px 2px #000, 0 0 6px rgba(193,39,45,.65); }
+      .piece-role { position:absolute; left:50%; transform:translateX(-50%); bottom:3px; font-size:7.5px; font-weight:900; letter-spacing:.07em; text-transform:uppercase; white-space:nowrap; }
+      .piece-medal.w .piece-role { color:#6b551f; } .piece-medal.b .piece-role { color:#e6c87a; }
+      .sq.selected .piece-wrap { animation: readyBounce .55s ease-in-out infinite alternate; } .sq.selected .fig { filter: drop-shadow(0 0 6px rgba(255,210,63,.95)); }
+      @keyframes readyBounce { from { transform: translateY(0) } to { transform: translateY(-4px) } }
+
+      /* walking ghost */
+      .ghost {
+        position:absolute; z-index: 30; display:flex; align-items:center; justify-content:center; pointer-events:none;
+        filter: drop-shadow(0 10px 10px rgba(0,0,0,.45));
+        will-change: left, top;
+      }
+      /* ---- On-board fighters, stepping, and in-place fights ---- */
+      .board-fighter {
+        position:absolute; z-index:32; display:flex; align-items:center; justify-content:center; pointer-events:none;
+        filter: drop-shadow(0 8px 8px rgba(0,0,0,.5)); will-change: left, top;
+      }
+      .board-fighter .bf-inner { width:100%; height:100%; display:block; }
+      .board-fighter.walking .fig-body { animation: gaitBob .72s linear infinite; }
+      .board-fighter.walking .torso-g { animation: gaitTorso .72s ease-in-out infinite; }
+      .board-fighter.walking .head-g { animation: gaitHead .72s ease-in-out infinite; }
+      .board-fighter.walking .leg-l .thigh { transform-origin:50% 0%; animation: gaitThigh .72s ease-in-out infinite; }
+      .board-fighter.walking .leg-r .thigh { transform-origin:50% 0%; animation: gaitThigh .72s ease-in-out -0.36s infinite; }
+      .board-fighter.walking .leg-l .shin { transform-origin:50% 0%; animation: gaitShin .72s ease-in-out -0.07s infinite; }
+      .board-fighter.walking .leg-r .shin { transform-origin:50% 0%; animation: gaitShin .72s ease-in-out -0.43s infinite; }
+      .board-fighter.walking .leg-l .fore, .board-fighter.walking .leg-r .fore { transform-origin:50% 0%; }
+      .board-fighter.walking .arm-weapon { transform-origin:50% 8%; animation: gaitArmWeapon .72s ease-in-out infinite; }
+      .board-fighter.walking .arm-off { transform-origin:50% 8%; animation: gaitArmFree .72s ease-in-out -0.36s infinite; }
+      .board-fighter.walking .arm-weapon .fore { transform-origin:50% 0%; animation: gaitFore .72s ease-in-out -0.05s infinite; }
+      .board-fighter.walking .arm-off .fore { transform-origin:50% 0%; animation: gaitFore .72s ease-in-out -0.41s infinite; }
+      /* travel lean + landing squash, driven from JS per step */
+      .board-fighter .bf-inner { transform-origin:50% 100%; }
+      .board-fighter.lean-fwd .bf-inner { transform: rotate(0deg) scale(1.015,0.995); }
+      .board-fighter.land .bf-inner { animation: landSquash .18s ease-out both; }
+      @keyframes landSquash { 0% { transform: scale(1,1) } 35% { transform: scale(1.05,0.93) translateY(1px) } 100% { transform: scale(1,1) } }
+      .board-fighter.hop .bf-inner { animation: knightHop .36s cubic-bezier(.3,.6,.4,1) both; }
+      @keyframes knightHop { 0% { transform: translateY(0) } 45% { transform: translateY(-13px) rotate(-2deg) } 100% { transform: translateY(0) } }
+      .board-fighter.settle .bf-inner { animation: settleBounce .3s ease-out both; }
+      @keyframes settleBounce { 0% { transform: translateY(-2px) scale(1.03,0.96) } 55% { transform: translateY(0) scale(0.99,1.01) } 100% { transform: translateY(0) scale(1,1) } }
+      .step-dust {
+        position:absolute; z-index:29; width:26px; height:10px; border-radius:50%; pointer-events:none;
+        background: radial-gradient(ellipse at center, rgba(216,190,140,.85), rgba(216,190,140,0) 70%);
+        transform: translate(-50%,-50%) scale(.5); animation: dustPuff .5s ease-out both;
+      }
+      @keyframes dustPuff { 0% { opacity:0; transform:translate(-50%,-50%) scale(.4) } 25% { opacity:.9 } 100% { opacity:0; transform:translate(-50%,-70%) scale(1.5) } }
+      .sq.fight-square { box-shadow: inset 0 0 0 4px #d7263d, inset 0 0 22px rgba(215,38,61,.75); }
+      .fight-slash {
+        position:absolute; z-index:38; height:7px; border-radius:999px; pointer-events:none; opacity:0;
+        background:#fff; box-shadow:0 0 16px #7cc7ff, 0 0 30px #ff3b30, 0 0 44px rgba(56,182,255,.8);
+        transform: translate(-50%,-50%) rotate(-28deg) scaleX(0);
+      }
+      .fight-slash.go { animation: slashAnim .45s ease both; }
+      .fight-hp {
+        position:absolute; z-index:38; height:8px; border-radius:999px; overflow:hidden; pointer-events:none;
+        background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.65);
+      }
+      .fight-hp i { display:block; height:100%; width:100%; background:linear-gradient(90deg,#d7263d,#ff9f1c); transition: width .7s ease .1s; }
+      .fight-hp.drain i { width:0%; }
+      .fight-caption {
+        position:absolute; z-index:38; transform:translate(-50%,-100%); pointer-events:none; white-space:nowrap;
+        font-family:Georgia,serif; font-weight:700; font-size:clamp(11px,2.4vw,15px); color:#fff3d6;
+        text-shadow:0 1px 3px #000, 0 0 10px rgba(0,0,0,.8); animation: captionRise 1.7s ease both;
+      }
+      @keyframes captionRise { 0% { opacity:0; margin-top:6px } 15% { opacity:1 } 80% { opacity:1 } 100% { opacity:0; margin-top:-4px } }
+      .board-fighter.fight-atk .bf-inner, .board-fighter.fight-def .bf-inner { transform-origin:50% 100%; }
+      /* anticipation: a fighter telegraphs before he strikes */
+      .board-fighter.windup .bf-inner { animation: windupCrouch .28s ease-out both; }
+      @keyframes windupCrouch { 0% { transform: translateX(0) scale(1,1) } 100% { transform: translateX(var(--backstep,-5px)) translateY(2px) scale(1.04,0.94) rotate(var(--windrot,-3deg)) } }
+      .board-fighter.fight-atk.swing .bf-inner, .board-fighter.fight-def.swing .bf-inner, .board-fighter.fight-def.swing2 .bf-inner { animation: fightLunge .52s cubic-bezier(.2,.8,.3,1) both; }
+      .board-fighter.fight-atk.swing .arm-weapon, .board-fighter.fight-def.swing .arm-weapon { animation: weaponSwing .48s cubic-bezier(.2,.7,.3,1) .05s both; transform-origin:50% 8%; }
+      .board-fighter.fight-atk.swing2 .arm-weapon, .board-fighter.fight-def.swing2 .arm-weapon { animation: weaponSwingBack .48s cubic-bezier(.2,.7,.3,1) .05s both; transform-origin:50% 8%; }
+      @keyframes weaponSwingBack { 0% { transform: rotate(-10deg) } 35% { transform: rotate(72deg) } 65% { transform: rotate(-48deg) } 100% { transform: rotate(0deg) } }
+      @keyframes fightLunge { 0% { transform: translateX(var(--backstep,-5px)) scale(1.04,0.94) } 38% { transform: translateX(var(--lunge,16px)) scale(1.02,1) } 62% { transform: translateX(calc(var(--lunge,16px) * 0.82)) } 100% { transform: translateX(0) } }
+      /* guard: defender raises his weapon across his body and absorbs the blow */
+      .board-fighter.block .arm-weapon { animation: blockRaise .34s ease-out both; transform-origin:50% 8%; }
+      @keyframes blockRaise { 0% { transform: rotate(0deg) } 45% { transform: rotate(-64deg) translateX(2px) } 100% { transform: rotate(-52deg) } }
+      .board-fighter.block .bf-inner { animation: blockBrace .4s ease-out both; }
+      @keyframes blockBrace { 0% { transform: translateX(0) } 40% { transform: translateX(var(--recoil,5px)) rotate(2deg) } 100% { transform: translateX(calc(var(--recoil,5px) * 0.4)) } }
+      .board-fighter.flash .fig { filter: brightness(2.1) saturate(0.4) drop-shadow(0 0 9px rgba(255,80,60,.95)); }
+      .board-fighter.stagger .bf-inner { animation: staggerAnim .55s ease-out both; }
+      @keyframes staggerAnim { 0% { transform: translateX(0) rotate(0) } 22% { transform: translateX(var(--recoil,7px)) rotate(-7deg) } 48% { transform: translateX(calc(var(--recoil,7px) * 0.5)) rotate(4deg) translateY(1px) } 74% { transform: translateX(calc(var(--recoil,7px) * 0.7)) rotate(-3deg) } 100% { transform: translateX(calc(var(--recoil,7px) * 0.55)) rotate(-1deg) } }
+      .board-fighter.fight-def.hit .bf-inner { animation: defFallBoard 1.15s cubic-bezier(.25,.6,.35,1) .05s both; }
+      .board-fighter.fight-def.hit .arm-weapon, .board-fighter.fight-def.hit .arm-off { animation: armsFlail .55s ease both; }
+      @keyframes defFallBoard { 0% { transform: translateY(0) rotate(0); opacity:1 } 16% { transform: translateX(var(--recoil,6px)) translateY(-2px) rotate(-9deg); opacity:1 } 34% { transform: translateX(calc(var(--recoil,6px) * 1.4)) translateY(3px) rotate(-22deg); opacity:1 } 58% { transform: translateX(calc(var(--recoil,6px) * 1.7)) translateY(10px) rotate(-58deg); opacity:.92 } 78% { transform: translateX(calc(var(--recoil,6px) * 1.8)) translateY(13px) rotate(-84deg); opacity:.55 } 88% { transform: translateX(calc(var(--recoil,6px) * 1.8)) translateY(11px) rotate(-79deg); opacity:.4 } 100% { transform: translateX(calc(var(--recoil,6px) * 1.8)) translateY(13px) rotate(-82deg); opacity:.1 } }
+      /* saber ignition flare + clash sparks + board tremor */
+      .board-fighter.ignite .fig { filter: drop-shadow(0 0 10px rgba(140,200,255,.95)) brightness(1.25); }
+      .fight-slash.s2 { transform: translate(-50%,-50%) rotate(26deg) scaleX(0); }
+      .fight-slash.s2.go { animation-name: slashAnim2; }
+      @keyframes slashAnim2 { 0% { transform: translate(-50%,-50%) rotate(26deg) scaleX(0); opacity:0 } 35% { opacity:1 } 100% { transform: translate(-50%,-50%) rotate(26deg) scaleX(1); opacity:0 } }
+      .fight-slash.final { height:10px; }
+      .spark { position:absolute; z-index:39; width:5px; height:5px; border-radius:50%; pointer-events:none; background:#fff6c9; box-shadow:0 0 7px #ffd23f, 0 0 12px rgba(255,120,40,.9); animation: sparkFly .48s ease-out both; }
+      @keyframes sparkFly { 0% { transform: translate(-50%,-50%) scale(1); opacity:1 } 100% { transform: translate(calc(-50% + var(--dx,10px)), calc(-50% + var(--dy,-10px))) scale(0.25); opacity:0 } }
+      .board-frame.shake { animation: boardShake .32s linear both; }
+      @keyframes boardShake { 0%,100% { transform: translate(0,0) } 20% { transform: translate(2px,-1px) } 45% { transform: translate(-2px,1px) } 70% { transform: translate(1px,1px) } }
+      .fight-hp i { transition: width .38s cubic-bezier(.3,.7,.3,1); }
+      .battle-arena { display:none !important; }
+      .ghost .piece-medal { width:100%; height:100%; } .ghost .fig-wrap { width:100%; height:100%; }
+      .ghost.walk .piece-wrap-inner { animation: bob .16s ease-in-out infinite alternate; width:100%; height:100%; }
+      @keyframes bob { from { transform: translateY(0) rotate(-2deg) } to { transform: translateY(-5px) rotate(2deg) } }
+
+      .board-overlay { position:absolute; inset:12px; display:none; align-items:center; justify-content:center; background: rgba(18,10,4,.62); border-radius:6px; z-index:40; padding:16px; }
+      .board-overlay.show { display:flex; }
+      .overlay-card { background: var(--panel); color: var(--ink); border-radius:12px; padding:20px 22px; text-align:center; max-width:340px; width:100%; box-shadow: var(--shadow); border:1px solid var(--panel-border); }
+      .overlay-card h2 { margin:0 0 6px; font-size:24px; } .overlay-card p { margin:0 0 14px; color:var(--ink-soft); font-size:14px; line-height:1.45; }
+      .promo-row { display:flex; gap:8px; justify-content:center; }
+      .promo-btn { font-size:40px; width:64px; height:64px; border-radius:10px; cursor:pointer; border:1.5px solid var(--btn-border); background:var(--btn); color:var(--ink); display:flex; align-items:center; justify-content:center; line-height:1; }
+      .promo-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+      /* Battle arena */
+      .battle-arena { position:absolute; inset:12px; z-index:35; display:none; border-radius:6px; overflow:hidden; background: radial-gradient(ellipse at 50% 120%, #6b3418 0, #2a160a 48%, #120b06 78%); color:#fff3d6; box-shadow: inset 0 0 0 2px rgba(224,168,58,.4); }
+      .battle-arena.show { display:flex; flex-direction:column; }
+      .arena-top { text-align:center; padding:14px 10px 0; }
+      .arena-kicker { font-size:11px; font-weight:900; letter-spacing:.18em; text-transform:uppercase; color:#eec25e; }
+      .arena-title { font-family: Georgia, serif; font-size: clamp(20px, 4vw, 30px); margin:3px 0 0; }
+      .arena-sub { color:#d9c8a3; font-size:13px; margin-top:3px; }
+      .arena-stage { flex:1; display:grid; grid-template-columns: 1fr auto 1fr; align-items:center; gap:6px; padding: 8px 14px 4px; position:relative; }
+      .fighter { text-align:center; position:relative; }
+      .fighter .fig-wrap { width: clamp(110px, 24vw, 168px); height: clamp(130px, 28vw, 196px); margin:0 auto; } .fighter .piece-medal { width: clamp(84px, 18vw, 132px); height: clamp(84px, 18vw, 132px); margin:0 auto; }
+      .fighter .piece { font-size: clamp(52px, 11vw, 82px); }
+      .fighter .piece-role { font-size:10px; bottom:9px; }
+      .fighter-name { font-family:Georgia, serif; font-weight:700; font-size: clamp(15px, 3vw, 20px); margin-top:8px; }
+      .fighter-side { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#d9c8a3; font-weight:800; }
+      .hp { height:10px; background:rgba(255,255,255,.16); border:1px solid rgba(255,255,255,.28); border-radius:999px; overflow:hidden; margin:8px auto 0; max-width:150px; }
+      .hp i { display:block; height:100%; width:100%; background: linear-gradient(90deg, #d7263d, #ff9f1c); transition: width .75s ease .45s; }
+      .battle-arena.hit .fighter.def .hp i { width:0%; }
+      .vs { font-family:Georgia, serif; font-size:28px; font-weight:900; color:#eec25e; text-shadow:0 2px 0 #000; position:relative; z-index:3; }
+      .slash { position:absolute; left:50%; top:42%; width:92px; height:8px; background:#fff; transform: translate(-50%,-50%) rotate(-28deg) scaleX(0); border-radius:999px; box-shadow:0 0 18px #ffd23f, 0 0 34px #c1272d; z-index:4; opacity:0; }
+      .battle-arena.hit .slash { animation: slashAnim .45s ease .32s both; }
+      @keyframes slashAnim { 0% { transform: translate(-50%,-50%) rotate(-28deg) scaleX(0); opacity:0 } 35% { opacity:1 } 100% { transform: translate(-50%,-50%) rotate(-28deg) scaleX(1); opacity:0 } }
+      .battle-arena.hit .fighter.atk { animation: lunge .55s ease .12s both; }
+      .battle-arena.hit .fighter.def .fig-wrap { animation: shakeFall 1s ease .45s both; }
+      @keyframes lunge { 0% { transform: translateX(0) } 45% { transform: translateX(var(--lunge, 22px)) scale(1.05) } 100% { transform: translateX(0) } }
+      .fighter.def { --lunge: -22px; }
+      @keyframes shakeFall { 0% { transform: translateX(0) rotate(0); opacity:1 } 25% { transform: translateX(7px) rotate(5deg) } 50% { transform: translateX(-6px) rotate(-6deg); opacity:1 } 100% { transform: translateY(16px) rotate(72deg); opacity:.18 } }
+      .arena-caption { text-align:center; padding: 4px 16px 16px; font-size:14px; color:#fff3d6; min-height:42px; }
+      .arena-caption strong { color:#ffd23f; }
+
+      /* ---------- Panel ---------- */
+      .panel { display:flex; flex-direction:column; gap:14px; min-width:0; }
+      .card { background: var(--panel); border:1px solid var(--panel-border); border-radius:12px; padding:14px 16px; box-shadow: 0 3px 10px rgba(60,35,8,.08); }
+      .status-line { display:flex; align-items:center; gap:10px; }
+      .turn-dot { width:18px; height:18px; border-radius:50%; flex:none; border:2px solid rgba(0,0,0,.35); }
+      .turn-dot.w { background:#faf7ef; } .turn-dot.b { background:#191410; }
+      #statusText { font-family:Georgia, serif; font-size:19px; font-weight:700; }
+      #subStatus { color:var(--ink-soft); font-size:13.5px; margin-top:4px; min-height:18px; line-height:1.4; }
+      .captured-row { display:flex; align-items:center; gap:6px; min-height:26px; flex-wrap:wrap; }
+      .captured-row .who { font-size:10.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; color:var(--ink-soft); width:76px; flex:none; white-space:nowrap; }
+      .captured-row .glyphs { font-size:20px; line-height:1; letter-spacing:1px; }
+      .captured-row .diff { font-size:13px; font-weight:800; color:var(--accent); margin-left:2px; }
+      .grouplabel { font-size:11px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); margin:0 0 7px; }
+      .seg { display:flex; background:var(--accent-soft); border-radius:9px; padding:3px; gap:3px; }
+      .seg button { flex:1; border:0; background:transparent; color:var(--ink); cursor:pointer; font:inherit; font-size:13.5px; font-weight:700; padding:7px 4px; border-radius:7px; }
+      .seg button.on { background:var(--seg-on); color:var(--seg-on-ink); }
+      .seg.diff { flex-wrap:wrap; }
+      .seg.diff button { flex:1 1 30%; font-size:12.5px; padding:7px 3px; line-height:1.25; }
+      #diffDesc { margin-top:8px; }
+      .btnrow { display:flex; flex-wrap:wrap; gap:8px; }
+      .btn { font:inherit; font-size:13.5px; font-weight:700; cursor:pointer; border:1.5px solid var(--btn-border); background:var(--btn); color:var(--ink); padding:9px 13px; border-radius:9px; }
+      .btn:hover { border-color: var(--accent); } .btn.primary { background:var(--accent); border-color:var(--accent); color:var(--accent-ink); }
+      .btn.primary:hover { filter:brightness(1.08); } .btn:disabled { opacity:.45; cursor:default; } .btn.wide { width:100%; }
+      .btn.on-toggle { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+      .moves-card { padding-bottom:10px; } .moves-scroll { max-height:230px; overflow-y:auto; }
+      table.moves { width:100%; border-collapse:collapse; font-size:14px; } table.moves td { padding:3px 6px; vertical-align:top; }
+      table.moves td.num { color:var(--ink-soft); width:34px; text-align:right; font-variant-numeric:tabular-nums; }
+      table.moves td.mv { width:44%; font-weight:700; border-radius:4px; } table.moves tr.current td.mv.lastplayed { background:var(--accent-soft); }
+      .empty-note { color:var(--ink-soft); font-size:13.5px; margin:2px 0 6px; }
+      .fineprint { font-size:12.5px; color:var(--ink-soft); line-height:1.5; margin:0; }
+      .battle-log { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px; }
+      .battle-log li { font-size:13.5px; line-height:1.4; border-top:1px dashed var(--panel-border); padding-top:8px; }
+      .battle-log li:first-child { border-top:0; padding-top:0; }
+      .battle-log strong { color: var(--accent); }
+      .roster { display:grid; grid-template-columns: repeat(3, 1fr); gap:8px; }
+      .roster div { background: var(--accent-soft); border-radius:8px; padding:8px; text-align:center; }
+      .roster .g { font-size:24px; line-height:1; } .roster .n { display:block; font-size:11px; font-weight:800; margin-top:3px; } .roster .d { display:block; font-size:11px; color:var(--ink-soft); margin-top:2px; line-height:1.25; }
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration:.01ms !important; transition-duration:.01ms !important; }
+      }
+
+      /* ================================================================
+         TEN-PASS ART & ANIMATION POLISH
+         Keyframes redefined below override the earlier definitions
+         (last @keyframes of a name wins); rig hooks live in figSVG.
+         ================================================================ */
+
+      /* PASS 1 — Bones & proportions: one consistent scale language.
+         Troopers stand a touch shorter, the droid and the Lord loom. */
+      .fig { transform-origin: 50% 100%; }
+      .fig-p { transform: scale(.93); }
+      .fig-n { transform: scale(.99); }
+      .fig-b { transform: scale(.98); }
+      .fig-r { transform: scale(1.03); }
+      .fig-q { transform: scale(1.01); }
+      .fig-k { transform: scale(1.045); }
+
+      /* PASS 2 — Idle life: real breathing (rise + chest swell), a wider
+         saber-hum sway in the weapon arm, capes that breathe with the
+         fighter, and a droid head that servo-twitches instead of swaying. */
+      @keyframes idleBob { 0% { transform: translateY(0) scale(1,1) } 100% { transform: translateY(-1.9px) scale(1.005,1.016) } }
+      @keyframes idleSway { 0% { transform: rotate(-1.3deg) translateX(-.3px) } 100% { transform: rotate(1.3deg) translateX(.3px) } }
+      @keyframes idleWeapon { 0% { transform: rotate(-3.6deg) } 100% { transform: rotate(4.6deg) } }
+      .cape-cloth { transform-box: fill-box; transform-origin: 50% 0%; animation: capeSway 3.8s ease-in-out infinite alternate; }
+      @keyframes capeSway { from { transform: skewX(-1.7deg) } to { transform: skewX(2.1deg) } }
+      .fig-r .head-g { animation: servoTwitch 4.6s ease-in-out infinite; }
+      @keyframes servoTwitch { 0%, 86%, 100% { transform: rotate(0deg) } 89% { transform: rotate(2.6deg) } 93% { transform: rotate(-1.8deg) } 96% { transform: rotate(.9deg) } }
+
+      /* PASS 3 — Gait: deeper weight dips on each footfall, wider thigh
+         swing, knees that lift harder through the swing-through, and a
+         tighter contact shadow so feet read as planted, not floating. */
+      @keyframes gaitBob { 0% { transform: translateY(1px) } 22% { transform: translateY(-3.2px) } 50% { transform: translateY(1.2px) } 72% { transform: translateY(-3.2px) } 100% { transform: translateY(1px) } }
+      @keyframes gaitThigh { 0% { transform: rotate(29deg) } 50% { transform: rotate(-27deg) } 100% { transform: rotate(29deg) } }
+      @keyframes gaitShin { 0% { transform: rotate(-3deg) } 18% { transform: rotate(6deg) } 42% { transform: rotate(38deg) } 62% { transform: rotate(17deg) } 82% { transform: rotate(1deg) } 100% { transform: rotate(-3deg) } }
+      .board-fighter.walking .fig { filter: drop-shadow(0 2px 2px rgba(0,0,0,.55)); }
+      .board-fighter.walking .cape-cloth { animation: gaitCape .72s ease-in-out infinite; }
+
+      /* PASS 4 — View consistency: badges and name tags sit crisper and
+         read identically from front, back, and profile. */
+      .piece-badge { box-shadow: 0 1px 4px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.65), 0 0 0 1px rgba(0,0,0,.18); }
+      .piece-tag { box-shadow: 0 1px 3px rgba(0,0,0,.5), 0 0 0 1px rgba(0,0,0,.14); }
+
+      /* PASS 5 — Weapons: saber glow breathes like a hum (the two armies
+         pulse out of phase), the electrostaff orb throbs, the blaster's
+         power cell glows steady-hot, and ignition pops the blade arm. */
+      .saber-glow { animation: saberPulse 1.15s ease-in-out infinite; }
+      .fig-b .saber-glow { animation-delay: .55s; }
+      @keyframes saberPulse { 0%, 100% { opacity:.36 } 50% { opacity:.64 } }
+      .staff-orb { transform-box: fill-box; transform-origin: 50% 50%; animation: staffPulse 1.7s ease-in-out infinite; }
+      @keyframes staffPulse { 0%, 100% { transform: scale(1) } 50% { transform: scale(1.22) } }
+      .blaster-tip { animation: tipGlow 2.3s ease-in-out infinite; }
+      @keyframes tipGlow { 0%, 100% { opacity:.75 } 50% { opacity:1 } }
+      .board-fighter.ignite .arm-weapon { animation: ignitePop .32s ease-out both; }
+      @keyframes ignitePop { 0% { transform: rotate(0deg) scale(1) } 45% { transform: rotate(-13deg) scale(1.1) } 100% { transform: rotate(0deg) scale(1) } }
+
+      /* PASS 6 — Duel choreography: deeper anticipation crouch, a wider
+         committed swing arc, a backhand that truly reverses, and a lunge
+         with follow-through overshoot before the settle. */
+      @keyframes windupCrouch { 0% { transform: translateX(0) scale(1,1) } 100% { transform: translateX(var(--backstep,-5px)) translateY(3px) scale(1.06,.90) rotate(var(--windrot,-3.5deg)) } }
+      @keyframes weaponSwing { 0% { transform: rotate(14deg) } 32% { transform: rotate(-94deg) } 58% { transform: rotate(60deg) } 78% { transform: rotate(40deg) } 100% { transform: rotate(0deg) } }
+      @keyframes weaponSwingBack { 0% { transform: rotate(-14deg) } 32% { transform: rotate(84deg) } 58% { transform: rotate(-56deg) } 78% { transform: rotate(-36deg) } 100% { transform: rotate(0deg) } }
+      @keyframes fightLunge { 0% { transform: translateX(var(--backstep,-5px)) scale(1.06,.90) } 36% { transform: translateX(var(--lunge,16px)) scale(1.03,.99) } 58% { transform: translateX(calc(var(--lunge,16px) * 1.07)) scale(1.01,1) } 78% { transform: translateX(calc(var(--lunge,16px) * .78)) } 100% { transform: translateX(0) } }
+
+      /* PASS 7 — Reactions & deaths: a hotter hit-flash, fatter sparks,
+         and a stagger that dips as the knees give before the fall. */
+      .board-fighter.flash .fig { filter: brightness(2.5) saturate(.35) drop-shadow(0 0 11px rgba(255,80,60,.95)); }
+      .spark { width:6px; height:6px; }
+      @keyframes staggerAnim { 0% { transform: translateX(0) rotate(0) } 22% { transform: translateX(var(--recoil,7px)) translateY(2px) rotate(-8deg) } 48% { transform: translateX(calc(var(--recoil,7px) * .5)) translateY(3.5px) rotate(4deg) } 74% { transform: translateX(calc(var(--recoil,7px) * .72)) translateY(2px) rotate(-3deg) } 100% { transform: translateX(calc(var(--recoil,7px) * .55)) translateY(1px) rotate(-1deg) } }
+
+      /* PASS 8 — Board & staging: the holotable rim breathes, squares
+         answer the pointer, the selected fighter's square glows in
+         time with his saber, and a duel square throbs like a warning. */
+      .board-frame { animation: holoPulse 4.6s ease-in-out infinite alternate; }
+      @keyframes holoPulse { from { box-shadow: var(--shadow), inset 0 0 0 2px rgba(56,182,255,.26), inset 0 0 0 6px rgba(0,0,0,.35), inset 0 0 20px rgba(56,182,255,.05) } to { box-shadow: var(--shadow), inset 0 0 0 2px rgba(56,182,255,.48), inset 0 0 0 6px rgba(0,0,0,.35), inset 0 0 36px rgba(56,182,255,.13) } }
+      .sq:hover { filter: brightness(1.07); }
+      .sq.selected { animation: selGlow .95s ease-in-out infinite alternate; }
+      @keyframes selGlow { from { box-shadow: inset 0 0 0 4px var(--sel), inset 0 0 14px rgba(255,210,63,.55) } to { box-shadow: inset 0 0 0 4px var(--sel), inset 0 0 24px rgba(255,210,63,.85) } }
+      .sq.fight-square { animation: fightPulse .5s ease-in-out infinite alternate; }
+      @keyframes fightPulse { from { box-shadow: inset 0 0 0 4px #d7263d, inset 0 0 18px rgba(215,38,61,.6) } to { box-shadow: inset 0 0 0 4px #ff5040, inset 0 0 30px rgba(215,38,61,.9) } }
+
+      /* PASS 9 — Roster & UI art: live portraits in the force roster,
+         drawn by the board's own rig; cards lift a breath on hover. */
+      .roster-fig { display:block; width:48px; height:48px; margin:0 auto 1px; }
+      .roster-fig .fig-wrap { width:100%; height:100%; }
+      .roster div { border:1px solid var(--panel-border); transition: transform .18s ease, border-color .18s ease; }
+      .roster div:hover { transform: translateY(-2px); border-color: var(--accent); }
+      .war-badge { box-shadow: 0 0 0 1px rgba(193,39,45,.12), 0 2px 8px rgba(0,0,0,.14); }
+
+      /* PASS 10 — Performance & calm: GPU-friendly fighters, and every
+         ambient loop fully still when the user asks for reduced motion. */
+      .board-fighter, .ghost { will-change: left, top; }
+      @media (prefers-reduced-motion: reduce) {
+        .board-frame, .sq.selected, .sq.fight-square, .cape-cloth, .saber-glow, .staff-orb, .blaster-tip { animation: none !important; }
+      }
+
+      /* ================================================================
+         STACKED LAYOUT — game first at max window area, controls in the
+         cabinet strip directly under the screen, ALL info below.
+         ================================================================ */
+      .cabinet-controls {
+        margin-top: 12px; background: var(--panel); border:1px solid var(--panel-border);
+        border-radius: 12px; padding: 12px 14px 14px; box-shadow: 0 3px 10px rgba(60,35,8,.08);
+        display:flex; flex-direction:column; gap:12px;
+      }
+      .ctl-grid { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1.45fr); gap: 4px 22px; align-items:start; }
+      @media (max-width: 640px) { .ctl-grid { grid-template-columns: minmax(0,1fr); } }
+      .panel { width: 100%; }
+      @media (min-width: 861px) {
+        .panel { display:grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); align-items:start; }
+        .panel .card:first-child, .panel .moves-card { grid-column: 1 / -1; }
+        .moves-scroll { max-height: 320px; }
+      }
+      @media (max-width: 480px) { .roster { grid-template-columns: repeat(2, 1fr); } }
+      .intro { margin-top: 4px; }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      
+
+      <div class="board-shell">
+        <div class="board-frame" id="boardFrame">
+          <div class="board" id="board" role="grid" aria-label="Chess battlefield"></div>
+          <div class="battle-arena" id="battleArena" aria-live="polite"></div>
+          <div class="board-overlay" id="overlay"><div class="overlay-card" id="overlayCard"></div></div>
+        </div>
+        <div class="cabinet-controls" aria-label="Game controls">
+          <div class="btnrow">
+            <button class="btn primary" id="newBtn">New battle</button>
+            <button class="btn" id="undoBtn">Undo</button>
+            <button class="btn" id="flipBtn">Flip board</button>
+            <button class="btn" id="pgnBtn">Download PGN</button>
+          </div>
+          <div class="ctl-grid">
+            <div class="ctl-block">
+              <p class="grouplabel">Play against</p>
+              <div class="seg" id="modeSeg"><button data-mode="ai" class="on">Computer</button><button data-mode="2p">A friend (same screen)</button></div>
+              <div style="height:12px"></div>
+              <p class="grouplabel">Battle presentation</p>
+              <div class="btnrow">
+            <button class="btn on-toggle" id="battleToggle">Duels: ON</button>
+            <button class="btn" id="walkToggle">Marching: ON</button>
+          </div>
+            </div>
+            <div id="aiOptions">
+            <div style="height:12px"></div><p class="grouplabel">You command</p>
+            <div class="seg" id="colorSeg"><button data-color="w" class="on">Light Side</button><button data-color="b">Dark Side</button></div>
+            <div style="height:12px"></div><p class="grouplabel">Enemy rank</p>
+            <div class="seg diff" id="diffSeg"><button data-diff="1">Youngling</button><button data-diff="2">Padawan</button><button data-diff="3" class="on">Jedi Knight</button><button data-diff="4">Jedi Master</button><button data-diff="5">Sith Lord</button></div>
+            <p class="fineprint" id="diffDesc">A proven duelist. Solid, tactical chess, two moves deep — with only the odd slip.</p>
+          </div>
+          </div>
+        </div>
+        
+      </div>
+
+      <aside class="panel">
+        <div class="card">
+          <div class="status-line"><span class="turn-dot w" id="turnDot"></span><span id="statusText">White to move</span></div>
+          <div id="subStatus">Tap a fighter, then tap where it marches.</div>
+          <div style="height:10px"></div>
+          <div class="captured-row"><span class="who">You felled</span><span class="glyphs" id="capByPlayer"></span><span class="diff" id="diffPlayer"></span></div>
+          <div class="captured-row"><span class="who">You lost</span><span class="glyphs" id="capLost"></span><span class="diff" id="diffOpp"></span></div>
+        </div>
+
+        <div class="card">
+          <p class="grouplabel">The forces</p>
+          <div class="roster">
+            <div><span class="roster-fig" data-t="p"></span><span class="n">♟ Trooper</span><span class="d">Blaster rifle, plastoid trooper helmet &amp; armour</span></div>
+            <div><span class="roster-fig" data-t="n"></span><span class="n">♞ Lightsaber Knight</span><span class="d">Glowing lightsaber, hooded battle robe &amp; armour</span></div>
+            <div><span class="roster-fig" data-t="b"></span><span class="n">♝ Force Sage</span><span class="d">Lightsaber staff, deep hood, kyber-crystal pendant</span></div>
+            <div><span class="roster-fig" data-t="r"></span><span class="n">♜ Destroyer Droid</span><span class="d">Electrostaff &amp; heavy fists, armoured droid chassis</span></div>
+            <div><span class="roster-fig" data-t="q"></span><span class="n">♛ Force Champion</span><span class="d">Lightsaber, royal headdress, light battle armour</span></div>
+            <div><span class="roster-fig" data-t="k"></span><span class="n">♚ Force Lord</span><span class="d">Long lightsaber, cloak, heaviest armour — hood or dark mask</span></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="grouplabel">How the battles play</p>
+          <p class="fineprint" style="margin-top:8px">Fighters march with a true stride — knees lifting as each leg swings through, hips and shoulders counter-rolling, heavier fighters lumbering slower — and duels play out in three exchanges right on the capture square: strike, parry, riposte, then the killing blow, sparks flying while both forces watch. Turn duels off if you want captures to resolve instantly.</p>
+        </div>
+
+        <div class="card">
+          <p class="grouplabel">Battle log</p>
+          <ul class="battle-log" id="battleLog"><li>No duels yet. The first capture ignites the first lightsaber.</li></ul>
+        </div>
+
+        <div class="card moves-card">
+          <p class="grouplabel">Moves</p>
+          <div class="moves-scroll" id="movesScroll">
+            <p class="empty-note" id="movesEmpty">No moves yet.</p>
+            <table class="moves" id="movesTable" style="display:none"><tbody id="movesBody"></tbody></table>
+          </div>
+        </div>
+      </aside>
+
+      <header class="intro">
+        <div>
+          <h1>Star Wars <span>Chess</span></h1>
+          <p>A long time ago on a chessboard far, far away… the same real chess underneath, but every piece is now a living fighter from the galaxy: jointed legs with knees, arms with elbows, armoured bodies, and a glowing lightsaber — or a blaster — in hand. Light Side in white and blue against the Dark Side in black and red. They march one square at a time — backs to you as they walk away up the board — and when they reach an enemy, they turn, ignite, and duel right there on his square until he falls. <strong>Reading the board:</strong> every fighter wears a classic chess badge (♟ ♞ ♝ ♜ ♛ ♚) at its base and a name tag underneath — Trooper, Knight, Sage, Droid, Champion, Lord — so its chess job is clear at a glance, front, back, or sideways.</p>
+        </div>
+        <div class="war-badge">Captures become lightsaber duels</div>
+      </header>
+    </div>
+
+    <script>
+    "use strict";
+    var VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 20000 };
+    var GLYPH = { k: "♚", q: "♛", r: "♜", b: "♝", n: "♞", p: "♟" };
+    var CHAR = { k: "Force Lord", q: "Force Champion", r: "Destroyer Droid", b: "Force Sage", n: "Lightsaber Knight", p: "Trooper" };
+    var TAGNAME = { k: "Lord", q: "Champion", r: "Droid", b: "Sage", n: "Knight", p: "Trooper" };
+    var VERB = { p: "blasts down", n: "duels down", b: "Force-strikes", r: "crushes", q: "overwhelms", k: "strikes down" };
+    var FILES = "abcdefgh";
+    var PST = {
+      p: [[0,0,0,0,0,0,0,0],[50,50,50,50,50,50,50,50],[10,10,20,30,30,20,10,10],[5,5,10,25,25,10,5,5],[0,0,0,20,20,0,0,0],[5,-5,-10,0,0,-10,-5,5],[5,10,10,-20,-20,10,10,5],[0,0,0,0,0,0,0,0]],
+      n: [[-50,-40,-30,-30,-30,-30,-40,-50],[-40,-20,0,0,0,0,-20,-40],[-30,0,10,15,15,10,0,-30],[-30,5,15,20,20,15,5,-30],[-30,0,15,20,20,15,0,-30],[-30,5,10,15,15,10,5,-30],[-40,-20,0,5,5,0,-20,-40],[-50,-40,-30,-30,-30,-30,-40,-50]],
+      b: [[-20,-10,-10,-10,-10,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,10,10,5,0,-10],[-10,5,5,10,10,5,5,-10],[-10,0,10,10,10,10,0,-10],[-10,10,10,10,10,10,10,-10],[-10,5,0,0,0,0,5,-10],[-20,-10,-10,-10,-10,-10,-10,-20]],
+      r: [[0,0,0,0,0,0,0,0],[5,10,10,10,10,10,10,5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[-5,0,0,0,0,0,0,-5],[0,0,0,5,5,0,0,0]],
+      q: [[-20,-10,-10,-5,-5,-10,-10,-20],[-10,0,0,0,0,0,0,-10],[-10,0,5,5,5,5,0,-10],[-5,0,5,5,5,5,0,-5],[0,0,5,5,5,5,0,-5],[-10,5,5,5,5,5,0,-10],[-10,0,5,0,0,0,0,-10],[-20,-10,-10,-5,-5,-10,-10,-20]],
+      k: [[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-30,-40,-40,-50,-50,-40,-40,-30],[-20,-30,-30,-40,-40,-30,-30,-20],[-10,-20,-20,-20,-20,-20,-20,-10],[20,20,0,0,0,0,20,20],[20,30,10,0,0,10,30,20]]
+    };
+    function emptyBoard() { var b=[]; for (var r=0;r<8;r++) b.push([null,null,null,null,null,null,null,null]); return b; }
+    function P(type,color){ return {t:type,c:color}; }
+    function startState(){ var b=emptyBoard(); var back=["r","n","b","q","k","b","n","r"]; for(var c=0;c<8;c++){ b[0][c]=P(back[c],"b"); b[1][c]=P("p","b"); b[6][c]=P("p","w"); b[7][c]=P(back[c],"w"); } return {board:b,turn:"w",castle:{wK:true,wQ:true,bK:true,bQ:true},ep:null,half:0,full:1}; }
+function cloneState(s){ var b=emptyBoard(); for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=s.board[r][c]; b[r][c]=p?{t:p.t,c:p.c}:null; } return {board:b,turn:s.turn,castle:{wK:s.castle.wK,wQ:s.castle.wQ,bK:s.castle.bK,bQ:s.castle.bQ},ep:s.ep?{r:s.ep.r,c:s.ep.c}:null,half:s.half,full:s.full}; }
+    function inB(r,c){ return r>=0&&r<8&&c>=0&&c<8; }
+    function findKing(b,color){ for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=b[r][c]; if(p&&p.t==="k"&&p.c===color) return {r:r,c:c}; } return null; }
+    function attacked(b,r,c,by){ var pr=by==="w"?r+1:r-1,dc; for(dc=-1;dc<=1;dc+=2){ if(inB(pr,c+dc)){ var pp=b[pr][c+dc]; if(pp&&pp.t==="p"&&pp.c===by) return true; } } var kn=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]],i,rr,cc,q; for(i=0;i<8;i++){ rr=r+kn[i][0]; cc=c+kn[i][1]; if(inB(rr,cc)){ q=b[rr][cc]; if(q&&q.t==="n"&&q.c===by) return true; } } for(var dr=-1;dr<=1;dr++) for(var dc2=-1;dc2<=1;dc2++){ if(!dr&&!dc2) continue; if(inB(r+dr,c+dc2)){ q=b[r+dr][c+dc2]; if(q&&q.t==="k"&&q.c===by) return true; } } var dirs=[[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]]; for(i=0;i<8;i++){ rr=r; cc=c; while(true){ rr+=dirs[i][0]; cc+=dirs[i][1]; if(!inB(rr,cc)) break; q=b[rr][cc]; if(q){ if(q.c===by){ var diag=i>=4; if(q.t==="q"||(diag&&q.t==="b")||(!diag&&q.t==="r")) return true; } break; } } } return false; }
+    function inCheck(b,color){ var k=findKing(b,color); return k?attacked(b,k.r,k.c,color==="w"?"b":"w"):false; }
+    function pseudoMoves(s,color){ var b=s.board,moves=[]; function add(fr,fc,tr,tc,extra){ var m={fr:fr,fc:fc,tr:tr,tc:tc,promo:null,castle:null,ep:false}; if(extra) for(var k in extra) m[k]=extra[k]; moves.push(m); } for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=b[r][c]; if(!p||p.c!==color) continue; var i,rr,cc,q; if(p.t==="p"){ var dir=color==="w"?-1:1; var startRow=color==="w"?6:1; var promoRow=color==="w"?0:7; function pawnAdd(tr,tc){ if(tr===promoRow){ ["q","r","b","n"].forEach(function(pr){ add(r,c,tr,tc,{promo:pr}); }); } else add(r,c,tr,tc); } if(inB(r+dir,c)&&!b[r+dir][c]){ pawnAdd(r+dir,c); if(r===startRow&&!b[r+2*dir][c]) add(r,c,r+2*dir,c,{dbl:true}); } for(var dc=-1;dc<=1;dc+=2){ rr=r+dir; cc=c+dc; if(!inB(rr,cc)) continue; q=b[rr][cc]; if(q&&q.c!==color) pawnAdd(rr,cc); else if(!q&&s.ep&&s.ep.r===rr&&s.ep.c===cc) add(r,c,rr,cc,{ep:true}); } } else if(p.t==="n"){ var kn=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]]; for(i=0;i<8;i++){ rr=r+kn[i][0]; cc=c+kn[i][1]; if(inB(rr,cc)&&(!b[rr][cc]||b[rr][cc].c!==color)) add(r,c,rr,cc); } } else if(p.t==="k"){ for(var dr=-1;dr<=1;dr++) for(var dc3=-1;dc3<=1;dc3++){ if(!dr&&!dc3) continue; rr=r+dr; cc=c+dc3; if(inB(rr,cc)&&(!b[rr][cc]||b[rr][cc].c!==color)) add(r,c,rr,cc); } var home=color==="w"?7:0, opp=color==="w"?"b":"w"; if(r===home&&c===4&&!attacked(b,home,4,opp)){ if(s.castle[color+"K"]&&!b[home][5]&&!b[home][6]&&b[home][7]&&b[home][7].t==="r"&&b[home][7].c===color&&!attacked(b,home,5,opp)&&!attacked(b,home,6,opp)) add(r,c,home,6,{castle:"K"}); if(s.castle[color+"Q"]&&!b[home][3]&&!b[home][2]&&!b[home][1]&&b[home][0]&&b[home][0].t==="r"&&b[home][0].c===color&&!attacked(b,home,3,opp)&&!attacked(b,home,2,opp)) add(r,c,home,2,{castle:"Q"}); } } else { var dirs=[]; if(p.t==="b"||p.t==="q") dirs=dirs.concat([[-1,-1],[-1,1],[1,-1],[1,1]]); if(p.t==="r"||p.t==="q") dirs=dirs.concat([[-1,0],[1,0],[0,-1],[0,1]]); for(i=0;i<dirs.length;i++){ rr=r; cc=c; while(true){ rr+=dirs[i][0]; cc+=dirs[i][1]; if(!inB(rr,cc)) break; q=b[rr][cc]; if(!q) add(r,c,rr,cc); else { if(q.c!==color) add(r,c,rr,cc); break; } } } } } return moves; }
+    function applyTo(s,m){ var ns=cloneState(s),b=ns.board; var p=b[m.fr][m.fc]; var captured=b[m.tr][m.tc]; if(m.ep){ captured=b[m.fr][m.tc]; b[m.fr][m.tc]=null; } b[m.tr][m.tc]=m.promo?{t:m.promo,c:p.c}:p; b[m.fr][m.fc]=null; if(m.castle==="K"){ b[m.fr][5]=b[m.fr][7]; b[m.fr][7]=null; } if(m.castle==="Q"){ b[m.fr][3]=b[m.fr][0]; b[m.fr][0]=null; } if(p.t==="k"){ ns.castle[p.c+"K"]=false; ns.castle[p.c+"Q"]=false; } if(p.t==="r"){ if(m.fr===7&&m.fc===0) ns.castle.wQ=false; if(m.fr===7&&m.fc===7) ns.castle.wK=false; if(m.fr===0&&m.fc===0) ns.castle.bQ=false; if(m.fr===0&&m.fc===7) ns.castle.bK=false; } if(captured&&captured.t==="r"){ if(m.tr===7&&m.tc===0) ns.castle.wQ=false; if(m.tr===7&&m.tc===7) ns.castle.wK=false; if(m.tr===0&&m.tc===0) ns.castle.bQ=false; if(m.tr===0&&m.tc===7) ns.castle.bK=false; } ns.ep=m.dbl?{r:(m.fr+m.tr)/2,c:m.fc}:null; ns.half=(p.t==="p"||captured)?0:s.half+1; if(s.turn==="b") ns.full=s.full+1; ns.turn=s.turn==="w"?"b":"w"; return {state:ns,captured:captured}; }
+    function legalMoves(s,color){ return pseudoMoves(s,color).filter(function(m){ var res=applyTo(s,m); return !inCheck(res.state.board,color); }); }
+    function posKey(s){ var str=s.turn; for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=s.board[r][c]; str+=p?(p.c+p.t):".."; } return str+(s.castle.wK?"K":"")+(s.castle.wQ?"Q":"")+(s.castle.bK?"k":"")+(s.castle.bQ?"q":"")+(s.ep?s.ep.r+","+s.ep.c:"-"); }
+    function insufficientMaterial(b){ var rest=[]; for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=b[r][c]; if(p&&p.t!=="k") rest.push({t:p.t,c:p.c,sq:(r+c)%2}); } if(rest.length===0) return true; if(rest.length===1) return rest[0].t==="b"||rest[0].t==="n"; if(rest.every(function(x){return x.t==="b";})) return rest.every(function(x){return x.sq===rest[0].sq;}); return false; }
+    function toSAN(s,m,legal){ var p=s.board[m.fr][m.fc]; var isCap=!!s.board[m.tr][m.tc]||m.ep; var san; if(m.castle==="K") san="O-O"; else if(m.castle==="Q") san="O-O-O"; else if(p.t==="p"){ san=isCap?FILES[m.fc]+"x":""; san+=FILES[m.tc]+(8-m.tr); if(m.promo) san+="="+m.promo.toUpperCase(); } else { san=p.t.toUpperCase(); if(p.t==="n") san="N"; var others=legal.filter(function(x){ return x.tr===m.tr&&x.tc===m.tc&&!(x.fr===m.fr&&x.fc===m.fc)&&s.board[x.fr][x.fc]&&s.board[x.fr][x.fc].t===p.t; }); if(others.length){ var sameFile=others.some(function(x){return x.fc===m.fc;}); var sameRank=others.some(function(x){return x.fr===m.fr;}); if(!sameFile) san+=FILES[m.fc]; else if(!sameRank) san+=(8-m.fr); else san+=FILES[m.fc]+(8-m.fr); } if(isCap) san+="x"; san+=FILES[m.tc]+(8-m.tr); } var after=applyTo(s,m).state; var oppMoves=legalMoves(after,after.turn); if(inCheck(after.board,after.turn)) san+=oppMoves.length===0?"#":"+"; return san; }
+    function evaluate(s){ var score=0; for(var r=0;r<8;r++) for(var c=0;c<8;c++){ var p=s.board[r][c]; if(!p) continue; var pst=PST[p.t][p.c==="w"?r:7-r][c]; var v=VAL[p.t]+pst; score+=p.c==="w"?v:-v; } return s.turn==="w"?score:-score; }
+    function orderMoves(s,moves){ moves.forEach(function(m){ var cap=s.board[m.tr][m.tc]; m._s=(cap?10*VAL[cap.t]-VAL[s.board[m.fr][m.fc].t]/10:0)+(m.promo?900:0)+(m.ep?100:0); }); moves.sort(function(a,b){return b._s-a._s;}); }
+    function search(s,depth,alpha,beta){ if(depth===0) return evaluate(s); var moves=legalMoves(s,s.turn); if(moves.length===0){ if(inCheck(s.board,s.turn)) return -100000-depth; return 0; } if(s.half>=100||insufficientMaterial(s.board)) return 0; orderMoves(s,moves); var best=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-beta,-alpha); if(sc>best) best=sc; if(best>alpha) alpha=best; if(alpha>=beta) break; } return best; }
+    function aiBestMove(s,depth){ var moves=legalMoves(s,s.turn); if(!moves.length) return null; orderMoves(s,moves); var best=-Infinity,bestMoves=[],alpha=-Infinity; for(var i=0;i<moves.length;i++){ var sc=-search(applyTo(s,moves[i]).state,depth-1,-Infinity,-alpha===-Infinity?Infinity:-alpha); if(sc>best+0.001){ best=sc; bestMoves=[moves[i]]; } else if(Math.abs(sc-best)<=0.001) bestMoves.push(moves[i]); if(sc>alpha) alpha=sc; } return bestMoves[Math.floor(Math.random()*bestMoves.length)]; }
+    /* ---- The five ranks of enemy: each step up searches deeper, blunders
+       less often, and judges moves with a steadier hand (less random noise
+       stirred into the scores before choosing). ---- */
+    var DIFF_LEVELS = [ null,
+      { name:"Youngling",   depth:1, random:0.30, noise:250, desc:"Just picked up a lightsaber. Plays casually, one move at a time, and blunders often — perfect for a first duel." },
+      { name:"Padawan",     depth:2, random:0.12, noise:90,  desc:"Trained but green. Looks two moves deep, yet still drops a fighter now and then." },
+      { name:"Jedi Knight", depth:2, random:0,    noise:30,  desc:"A proven duelist. Solid, tactical chess, two moves deep — with only the odd slip." },
+      { name:"Jedi Master", depth:3, random:0,    noise:0,   desc:"Deep in the Force. Searches three moves deep and plays the best move it finds. Rarely errs." },
+      { name:"Sith Lord",   depth:4, random:0,    noise:0,   desc:"The Dark Side at full power. The engine's deepest search — its best chess, no mercy." }
+    ];
+    function aiScoredMoves(s,depth){ var moves=legalMoves(s,s.turn); orderMoves(s,moves); var out=[]; for(var i=0;i<moves.length;i++){ out.push({ m:moves[i], sc:-search(applyTo(s,moves[i]).state,depth-1,-Infinity,Infinity) }); } return out; }
+    function aiChooseMove(s){ var cfg=DIFF_LEVELS[difficulty]||DIFF_LEVELS[3]; var moves=legalMoves(s,s.turn); if(!moves.length) return null; if(cfg.random>0 && Math.random()<cfg.random) return moves[Math.floor(Math.random()*moves.length)]; if(cfg.noise>0){ var scored=aiScoredMoves(s,cfg.depth); var best=null,bestVal=-Infinity; scored.forEach(function(x){ var v=x.sc-Math.random()*cfg.noise; if(v>bestVal){ bestVal=v; best=x.m; } }); return best; } return aiBestMove(s,cfg.depth); }
+
+    var state=startState(); var undoStack=[]; var sanList=[]; var posCounts={}; var selected=null; var currentLegal=[]; var legalFromSel=[]; var lastMove=null; var gameOver=null; var flipped=false; var mode="ai"; var playerColor="w"; var difficulty=3; var aiTimer=null; var pendingPromo=null; var battleBusy=false; var duelsOn=true; var marchingOn=true; var battleLogEntries=[];
+    var boardEl=document.getElementById("board"); var boardFrame=document.getElementById("boardFrame"); var statusEl=document.getElementById("statusText"); var subEl=document.getElementById("subStatus"); var turnDot=document.getElementById("turnDot"); var overlay=document.getElementById("overlay"); var overlayCard=document.getElementById("overlayCard"); var arena=document.getElementById("battleArena");
+    var audioCtx=null;
+    function sound(kind){ try{ if(!audioCtx) audioCtx=new (window.AudioContext||window.webkitAudioContext)(); if(audioCtx.state==="suspended") audioCtx.resume(); var notes = kind==="capture" ? [180,90,420] : kind==="check" ? [660,660] : kind==="end" ? [330,220,165] : [440]; notes.forEach(function(f,idx){ var o=audioCtx.createOscillator(),g=audioCtx.createGain(); o.connect(g); g.connect(audioCtx.destination); var t=audioCtx.currentTime+idx*0.09; o.frequency.value=f; o.type= kind==="capture" ? "sawtooth" : "sine"; g.gain.setValueAtTime(0.07,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.14); o.start(t); o.stop(t+0.15); }); }catch(e){} }
+    function refreshLegal(){ currentLegal=gameOver?[]:legalMoves(state,state.turn); }
+    function startGame(st,sanPrefix,note){ if(aiTimer){clearTimeout(aiTimer); aiTimer=null;} battleBusy=false; arena.classList.remove("show","hit"); state=st||startState(); undoStack=[]; sanList=(sanPrefix||[]).slice(); posCounts={}; posCounts[posKey(state)]=1; selected=null; lastMove=null; gameOver=null; pendingPromo=null; battleLogEntries=[]; flipped=(mode==="ai"&&playerColor==="b"); refreshLegal(); checkEnd(); render(); if(note) subEl.textContent=note; maybeAI(); }
+    function checkEnd(){ if(gameOver) return true; var moves=legalMoves(state,state.turn); if(moves.length===0){ if(inCheck(state.board,state.turn)){ var winner=state.turn==="w"?"The Dark Side":"The Light Side"; gameOver={title:"Checkmate — the Force Lord has fallen",detail:winner+" wins the galaxy."}; } else { gameOver={title:"Stalemate",detail:"No legal moves — the battle ends in a draw."}; } return true; } if(insufficientMaterial(state.board)){ gameOver={title:"Draw",detail:"Not enough fighters left to checkmate."}; return true; } if(state.half>=100){ gameOver={title:"Draw",detail:"Fifty moves without a pawn move or capture."}; return true; } if((posCounts[posKey(state)]||0)>=3){ gameOver={title:"Draw",detail:"Same position three times."}; return true; } return false; }
+
+    function displayPos(r,c){ return { dr: flipped?7-r:r, dc: flipped?7-c:c }; }
+
+    /* ---------- Articulated fighter rig: jointed legs (knee), arms (elbow), torso, weapon, armour ---------- */
+    function figSVG(tp, col, view, facing){
+      view = view || "front"; facing = facing || 1;
+      var W = col==="w";
+      var A  = W ? "#eef1f6" : "#2b2e36";   /* armour: white plastoid / black plate */
+      var AD = W ? "#7c8798" : "#0b0b0e";   /* armour dark / joints */
+      var TR = W ? "#38b6ff" : "#ff3b30";   /* trim: lightsaber blue / Sith red */
+      var RD = "#ff3b30";
+      var CL = W ? "#a98a5e" : "#5e1220";   /* robe / cloak cloth */
+      var CD = W ? "#5f4c30" : "#191b21";   /* cloth dark (thighs) */
+      var SK = W ? "#eebd93" : "#d9a075";   /* skin */
+      var BL = "#ffffff";                    /* lightsaber core */
+      var SABER = tp==="b" ? (W ? "#3dff7a" : "#ff2a2a") : tp==="q" ? (W ? "#c07dff" : "#ff2a6b") : (W ? "#38b6ff" : "#ff2a2a");
+      var ST = W ? "#c7ccd6" : "#4a4e59";   /* droid metal (rook) */
+      var SD = W ? "#79828f" : "#22242b";   /* droid metal dark */
+      var bulk = tp==="r" ? 1.36 : (tp==="k" ? 1.14 : (tp==="n" ? 1.08 : (tp==="q" ? 1.05 : 1)));
+      var hipL = 50 - 6*bulk, hipR = 50 + 6*bulk, tw = 26*bulk, tx = 50 - tw/2;
+      var pauld = tp==="k" ? 11.5 : tp==="r" ? 12.5 : tp==="n" ? 9.5 : tp==="q" ? 7.5 : tp==="b" ? 5 : 4.2;
+      if(view==="side"){
+        var sFlip = facing<0 ? '<g transform="translate(100,0) scale(-1,1)">' : '<g>';
+        var sHead = '<circle cx="50" cy="19" r="9" fill="'+SK+'"/>';
+        if(tp==="p") sHead += '<path d="M 40.5 19 a 9.5 9.5 0 0 1 19 0 l 0 2.6 h -19 Z" fill="'+A+'" stroke="'+AD+'" stroke-width="0.8"/><path d="M 51 16.5 h 7 l -1.4 3.2 h -5.6 Z" fill="#14161a"/>';
+        else if(tp==="n") sHead += '<path d="M 40 21 q -1.5 -12.5 10 -13 q 11 0.5 10 13 l -3 1 q 1 -8.5 -7 -9 q -8 0.5 -7 9 Z" fill="'+CL+'"/><path d="M 50 8 L 61 1 L 58 10.5 q -4 -1.6 -8 -2.5 Z" fill="'+CL+'"/>';
+        else if(tp==="b") sHead += '<path d="M 41 21 L 50 2.5 L 59 21 q -9 3.4 -18 0 Z" fill="'+CL+'" stroke="'+TR+'" stroke-width="1.3"/><circle cx="50" cy="13" r="2" fill="'+TR+'"/>';
+        else if(tp==="r") sHead = '<path d="M 40 27 v -13 l 4 -3 v -4 h 4 v 3 h 4 v -3 h 4 v 4 l 4 3 v 13 q -10 3.6 -20 0 Z" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.1"/><circle cx="55" cy="18.5" r="1.9" fill="#ffb02e"/>';
+        else if(tp==="q") sHead += '<path d="M 43 17 q -4 9 -1 14 l 5 0 q -2 -8 -1 -13 Z" fill="'+(W?"#8a5a1e":"#d8d8d8")+'"/><path d="M 41 14 L 44 5 L 47.5 11 L 50 3.5 L 52.5 11 L 56 5 L 59 14 q -9 2.8 -18 0 Z" fill="'+TR+'" stroke="#8a6414" stroke-width="0.7"/>';
+        else if(tp==="k") sHead += W ? '<path d="M 40 21 q -1.5 -12.5 10 -13 q 11 0.5 10 13 l -3 1 q 1 -8.5 -7 -9 q -8 0.5 -7 9 Z" fill="'+CL+'"/><path d="M 41 10 L 40 2 L 46 6 L 50 0.5 L 54 6 L 59 2 L 58 10 q -8.5 2.4 -17 0 Z" fill="#e8b923" stroke="#8a6414" stroke-width="0.8"/><path d="M 52 24 q 5 2 4 6 l -6 1 q 0 -4 2 -7 Z" fill="#e8e2d2"/>' : '<path d="M 40.5 20 a 9.5 10.5 0 0 1 19 0 v 4.5 h -19 Z" fill="#17181c" stroke="#000" stroke-width="0.9"/><path d="M 41 11 L 40 3 L 46 7 L 50 1.5 L 54 7 L 59 3 L 58 11 q -8.5 2.2 -17 0 Z" fill="#23252c" stroke="#ff3b30" stroke-width="0.9"/><path d="M 51 16.5 h 7 l -1.4 3.2 h -5.6 Z" fill="#3c4048"/><path d="M 52 22 l 3 5.5 h -5.5 Z" fill="#26282e"/>';
+        var sCape = (tp==="k"||tp==="q") ? '<path class="cape-cloth" d="M 42 31 q -11 20 -8 40 l 10 -1 q -2 -22 1 -37 Z" fill="'+CL+'" opacity="0.92"/>' : '';
+        var sShield = (tp==="p"||tp==="n"||tp==="k") ? '<g transform="translate(64,47) scale(0.82)">'+''+'</g>' : '';
+        var sideSVG = '<svg class="fig fig-'+tp+' fig-'+col+' fig-side" viewBox="0 0 100 100" aria-hidden="true">'
+          + '<ellipse cx="50" cy="92.5" rx="21" ry="4" fill="rgba(0,0,0,.30)"/>'
+          + sFlip + '<g class="fig-body">' + sCape
+          + leg(56, "leg-r", true) + leg(43, "leg-l", false)
+          + '<g class="seg torso-g">'
+          + '<path d="M 39 30 q 0 -3.4 4 -3.4 h 14 q 4 0 4 3.4 l 1.4 22 q 0 5 -5 5 h -14 q -5 0 -5 -5 Z" fill="'+(tp==="r"?ST:A)+'" stroke="'+AD+'" stroke-width="0.9"/>'
+          + '<path d="M 50 28 v 27" stroke="'+AD+'" stroke-width="1" opacity="0.6"/>'
+          + '<rect x="38" y="51.5" width="24" height="4.4" fill="'+AD+'"/><rect x="47.4" y="51.2" width="5.2" height="5" fill="'+TR+'"/>'
+          + '<circle cx="59" cy="31" r="'+pauld+'" fill="'+(tp==="r"?ST:A)+'" stroke="'+AD+'" stroke-width="0.9"/>'
+          + '<g class="seg arm arm-off"><rect x="38" y="31" width="6" height="13" rx="3" fill="'+AD+'"/><circle cx="41" cy="47" r="3.2" fill="'+SK+'"/></g>'
+          + (sShield)
+          + '<g class="seg arm arm-weapon"><rect x="56" y="31" width="6.2" height="14" rx="3" fill="'+(tp==="r"?ST:A)+'" stroke="'+AD+'" stroke-width="0.6" transform="rotate(-38 59 32)"/><g class="seg fore"><circle cx="70" cy="43" r="3.3" fill="'+SK+'"/><g transform="translate(70,43) rotate(52)">'+''+'</g></g></g>'
+          + '<g class="seg head-g">'+sHead+'</g>'
+          + '</g></g>' + (facing<0 ? '</g>' : '</g>') + '</svg>';
+        /* Attach the real weapon + shield at the profile hand positions */
+        sideSVG = sideSVG.replace('<g transform="translate(70,43) rotate(52)"></g>', '<g transform="translate(70,43) rotate(52)">'+weapon()+'</g>');
+        sideSVG = sideSVG.replace('<g transform="translate(64,47) scale(0.82)"></g>', '<g transform="translate(64,47) scale(0.82)">'+offHand()+'</g>');
+        return sideSVG;
+      }
+      function leg(hip, cls, dark){
+        var th = dark ? CD : CD, gv = dark ? AD : A;
+        return '<g class="seg leg '+cls+'"><g class="seg thigh"><rect x="'+(hip-3.6)+'" y="57" width="7.2" height="17" rx="3.4" fill="'+th+'"/>'
+          + '<g class="seg shin"><rect x="'+(hip-3.2)+'" y="72.5" width="6.4" height="14.5" rx="2.6" fill="'+gv+'" stroke="'+AD+'" stroke-width="0.7"/>'
+          + '<path d="M '+(hip-4.4)+' 87.5 h 11.5 v 3.4 h -11.5 z" fill="'+AD+'"/></g></g></g>';
+      }
+      function sword(len){
+        /* a lightsaber: coloured glow around a white-hot core, metal hilt */
+        return '<rect class="saber-glow" x="-3.4" y="-'+len+'" width="6.8" height="'+len+'" rx="3.4" fill="'+SABER+'" opacity="0.45"/>'
+          + '<rect x="-1.5" y="-'+len+'" width="3" height="'+len+'" rx="1.5" fill="'+BL+'"/>'
+          + '<rect x="-2" y="-2" width="4" height="8" rx="1.6" fill="#3a3f47" stroke="#14161a" stroke-width="0.6"/><rect x="-2" y="-0.5" width="4" height="1.6" fill="'+SABER+'"/>';
+      }
+      function weapon(){
+        if(tp==="p") return '<g transform="rotate(16)"><rect x="-2.1" y="-25" width="4.4" height="19" rx="1.6" fill="#26282e"/><rect x="-1.2" y="-32" width="2.4" height="8" fill="#26282e"/><rect x="-3.4" y="-12" width="7" height="4.2" rx="1.4" fill="#454a54"/><rect class="blaster-tip" x="-1" y="-30.5" width="2" height="3" fill="'+TR+'"/><rect x="-1.5" y="-6" width="3" height="7" rx="1.4" fill="#454a54"/></g>';
+        if(tp==="n") return '<g transform="translate(0,1)">'+sword(34)+'</g>';
+        if(tp==="k") return '<g transform="translate(0,1)">'+sword(40)+'</g>';
+        if(tp==="b") return '<rect x="-1.7" y="-28" width="3.4" height="32" rx="1.6" fill="#3a3f47" stroke="#14161a" stroke-width="0.5"/><rect class="saber-glow" x="-3" y="-52" width="6" height="24" rx="3" fill="'+SABER+'" opacity="0.45"/><rect x="-1.3" y="-52" width="2.6" height="24" rx="1.3" fill="'+BL+'"/>';
+        if(tp==="q") return '<g transform="translate(0,1)">'+sword(36)+'</g>';
+        /* rook electrostaff */
+        return '<rect x="-3" y="-32" width="6" height="28" rx="2.6" fill="#3a3f47" stroke="'+SD+'" stroke-width="0.7"/><circle class="staff-orb" cx="0" cy="-35" r="4.8" fill="'+SABER+'"/><circle cx="0" cy="-35" r="2" fill="#fff"/><rect x="-4.6" y="-16" width="9.2" height="4" rx="2" fill="'+SD+'"/>';
+      }
+      function offHand(){
+        if(tp==="r") return '<circle cx="-2" cy="2" r="7.6" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.4"/><path d="M -8 -2 q 6 3 12 0" stroke="'+SD+'" stroke-width="1.4" fill="none"/>';
+        if(tp==="p") return '<circle cx="-1" cy="2" r="3.4" fill="'+AD+'"/>';
+        return '<circle cx="-1" cy="2" r="3.4" fill="'+SK+'"/>';
+      }
+      function arm(cls, isWeapon){
+        var sx = cls==="arm-off" ? (tx+1) : (tx+tw-1);
+        var dir = cls==="arm-off" ? -1 : 1;
+        var hx = sx + dir*3.5, hy = 57;
+        var fist = tp==="r" ? '<circle cx="'+hx+'" cy="'+hy+'" r="6.8" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.2"/>' : '<circle cx="'+hx+'" cy="'+hy+'" r="3.3" fill="'+SK+'"/>';
+        var held = isWeapon ? '<g transform="translate('+hx+','+hy+')">'+weapon()+'</g>' : '<g transform="translate('+hx+','+hy+')">'+offHand()+'</g>';
+        return '<g class="seg arm '+cls+'"><rect x="'+(sx-3.1)+'" y="30" width="6.2" height="14" rx="3" fill="'+(tp==="r"?ST:A)+'" stroke="'+AD+'" stroke-width="0.6"/>'
+          + '<g class="seg fore"><rect x="'+(sx+dir*0.5-2.7)+'" y="42.5" width="5.4" height="13" rx="2.6" fill="'+AD+'"/>'+fist+held+'</g></g>';
+      }
+      function head(){
+        if(view==="back"){
+          var hb;
+          if(tp==="r"){ hb = '<path d="M 40 27 v -13 l 4 -3 v -4 h 4 v 3 h 4 v -3 h 4 v 4 l 4 3 v 13 q -10 3.6 -20 0 Z" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.1"/><path d="M 44 21 h 12" stroke="'+SD+'" stroke-width="1.8"/>'; }
+          else if(tp==="b"){ hb = '<path d="M 41 22 L 50 2.5 L 59 22 q -9 3.4 -18 0 Z" fill="'+CL+'" stroke="'+TR+'" stroke-width="1.3"/><circle cx="50" cy="12.5" r="2.2" fill="'+TR+'"/>'; }
+          else if(tp==="q"){ hb = '<path d="M 41.5 13 q -3 14 2 19 l 13 0 q 5 -5 2 -19 q -8.5 3 -17 0 Z" fill="'+(W?"#8a5a1e":"#cfcfcf")+'"/><path d="M 39.5 14 L 38.5 3 L 45 8.5 L 50 0.5 L 55 8.5 L 61.5 3 L 60.5 14 q -10.5 3 -21 0 Z" fill="'+TR+'" stroke="#8a6414" stroke-width="0.8"/>'; }
+          else if(tp==="k"){ hb = W ? '<path d="M 40 23 q -1 -14 10 -14.5 q 11 0.5 10 14.5 l -2 2 q -8 -2.4 -16 0 Z" fill="'+CL+'" stroke="'+AD+'" stroke-width="0.8"/><path d="M 40 11 L 38.5 1 L 45.5 6 L 50 -0.5 L 54.5 6 L 61.5 1 L 60 11 q -10 2.8 -20 0 Z" fill="#e8b923" stroke="#8a6414" stroke-width="0.9"/>' : '<path d="M 40.5 21 a 9.5 10.5 0 0 1 19 0 v 5 h -19 Z" fill="#17181c" stroke="#000" stroke-width="0.9"/><path d="M 44 20 h 12" stroke="#3c4048" stroke-width="1.8"/><path d="M 40 11 L 38 2 L 45.5 6.5 L 50 0 L 54.5 6.5 L 62 2 L 60 11 q -10 2.6 -20 0 Z" fill="#23252c" stroke="#ff3b30" stroke-width="1"/>'; }
+          else if(tp==="n"){ hb = '<path d="M 40 23 q -1 -14 10 -14.5 q 11 0.5 10 14.5 l -2 2 q -8 -2.4 -16 0 Z" fill="'+CL+'" stroke="'+AD+'" stroke-width="0.8"/><path d="M 50 8.5 L 62 0.5 L 58.5 11 q -4.2 -1.8 -8.5 -2.5 Z" fill="'+CL+'" stroke="'+AD+'" stroke-width="0.8"/>'; }
+          else { hb = '<path d="M 40.5 20 a 9.5 9.5 0 0 1 19 0 l 0 3 h -19 Z" fill="'+A+'" stroke="'+AD+'" stroke-width="0.8"/><rect x="48.7" y="13" width="2.6" height="10" fill="'+AD+'"/>'; }
+          return '<g class="seg head-g">'+hb+'</g>';
+        }
+        var h = '<circle cx="50" cy="19" r="9.2" fill="'+SK+'"/>';
+        if(tp==="p"){ h = '<path d="M 40.5 21 a 9.5 10 0 0 1 19 0 v 3.5 h -19 Z" fill="'+A+'" stroke="'+AD+'" stroke-width="0.9"/><path d="M 43.5 18 h 13 l -1.8 3.6 h -3.4 v 3.2 h -2.6 v -3.2 h -3.4 Z" fill="#14161a"/><rect x="45" y="25.5" width="10" height="1.8" fill="'+AD+'"/><rect x="38.5" y="20.8" width="23" height="2.4" rx="1" fill="'+AD+'"/><rect x="48.6" y="10" width="2.8" height="6.5" fill="'+TR+'"/>'; }
+        else if(tp==="n"){ h += '<path d="M 39.5 22 q -1.5 -13 10.5 -13.5 q 12 0.5 10.5 13.5 l -3.4 1 q 1 -9 -7.1 -9.4 q -8.1 0.4 -7.1 9.4 Z" fill="'+CL+'" stroke="'+AD+'" stroke-width="0.7"/><path d="M 50 8.5 L 62 0.5 L 58.5 11 q -4.2 -1.8 -8.5 -2.5 Z" fill="'+CL+'" stroke="'+AD+'" stroke-width="0.8"/><path d="M 42 30 l 3 -4 M 58 30 l -3 -4" stroke="'+TR+'" stroke-width="1.6"/>'; }
+        else if(tp==="b"){ h += '<path d="M 40 21 q -1 -11.5 10 -12 q 11 0.5 10 12 l -3 1.2 q 0.8 -8.2 -7 -8.6 q -7.8 0.4 -7 8.6 Z" fill="'+CL+'" stroke="'+TR+'" stroke-width="1.1"/><path d="M 39.5 15 L 50 -2 L 60.5 15 q -10.5 3.4 -21 0 Z" fill="'+CL+'" stroke="'+TR+'" stroke-width="1.5"/><circle cx="50" cy="4.5" r="2.3" fill="'+TR+'"/><path d="M 44 26 q 6 5 12 0 l -1.6 6 q -4.4 2 -8.8 0 Z" fill="'+(W?"#d9d9d9":"#8a8a8a")+'"/>'; }
+        else if(tp==="r"){ h = '<path d="M 38 27 v -13 l 4 -3 v -4 h 4 v 3 h 4 v -3 h 4 v 4 l 4 3 v 13 q -11 3.8 -22 0 Z" fill="'+ST+'" stroke="'+SD+'" stroke-width="1.3"/><circle cx="45.5" cy="18.5" r="1.9" fill="#ffb02e"/><circle cx="54.5" cy="18.5" r="1.9" fill="#ffb02e"/><path d="M 45 23.5 h 10" stroke="'+SD+'" stroke-width="1.8"/><path d="M 43 7 v -5.5 M 57 7 v -5.5" stroke="'+SD+'" stroke-width="2.2"/><circle cx="43" cy="1" r="1.7" fill="#ffb02e"/><circle cx="57" cy="1" r="1.7" fill="#ffb02e"/>'; }
+        else if(tp==="q"){ h += '<path d="M 41.5 17 q -2 9 1.5 13 M 58.5 17 q 2 9 -1.5 13" stroke="'+(W?"#8a5a1e":"#d8d8d8")+'" stroke-width="3" fill="none"/><path d="M 39.5 16.5 L 38.5 3 L 45 8.5 L 50 0.5 L 55 8.5 L 61.5 3 L 60.5 16.5 q -10.5 3.2 -21 0 Z" fill="'+TR+'" stroke="#8a6414" stroke-width="0.9"/><circle cx="50" cy="10.5" r="2" fill="'+SABER+'"/><circle cx="41" cy="13" r="1.3" fill="#fff"/><circle cx="59" cy="13" r="1.3" fill="#fff"/>'; }
+        else if(tp==="k"){ if(W){ h += '<path d="M 39.5 22 q -1.5 -13 10.5 -13.5 q 12 0.5 10.5 13.5 l -3.4 1 q 1 -9 -7.1 -9.4 q -8.1 0.4 -7.1 9.4 Z" fill="'+CL+'"/><path d="M 40 11 L 38.5 1 L 45.5 6 L 50 -0.5 L 54.5 6 L 61.5 1 L 60 11 q -10 2.8 -20 0 Z" fill="#e8b923" stroke="#8a6414" stroke-width="0.9"/><circle cx="50" cy="7" r="2" fill="'+SABER+'"/><path d="M 43.5 26.5 q 6.5 3 13 0 l -1.8 6 q -4.7 2.2 -9.4 0 Z" fill="#e8e2d2"/>'; } else { h = '<path d="M 40.5 21 a 9.5 10.5 0 0 1 19 0 v 4 h -19 Z" fill="#17181c" stroke="#000" stroke-width="0.9"/><path d="M 44 18 h 12 l -2 3.4 h -8 Z" fill="#3c4048"/><path d="M 50 22 l 3.4 6.5 h -6.8 Z" fill="#26282e" stroke="#000" stroke-width="0.6"/><path d="M 47 24.5 v 3 M 50 25.5 v 3 M 53 24.5 v 3" stroke="#0a0a0c" stroke-width="1"/><path d="M 40 11 L 38 2 L 45.5 6.5 L 50 0 L 54.5 6.5 L 62 2 L 60 11 q -10 2.6 -20 0 Z" fill="#23252c" stroke="'+RD+'" stroke-width="1"/>'; } }
+        return '<g class="seg head-g">'+h+'</g>';
+      }
+      var cape = (tp==="k"||tp==="q") ? '<path class="cape-cloth" d="M '+(tx+2)+' 31 q -8 22 -4 40 l 9 -1 q -3 -22 -1 -37 Z M '+(tx+tw-2)+' 31 q 8 22 4 40 l -9 -1 q 3 -22 1 -37 Z" fill="'+CL+'" opacity="0.9"/>' : '';
+      var torsoFill = tp==="r" ? ST : A;
+      var s = '<svg class="fig fig-'+tp+' fig-'+col+'" viewBox="0 0 100 100" aria-hidden="true">'
+        + '<ellipse cx="50" cy="92.5" rx="23" ry="4" fill="rgba(0,0,0,.30)"/>'
+        + '<g class="fig-body">' + cape
+        + leg(hipR, "leg-r", true) + leg(hipL, "leg-l", false)
+        + '<g class="seg torso-g">'
+        + '<path d="M '+tx+' 30 q 0 -3 4 -3.4 h '+(tw-8)+' q 4 0.4 4 3.4 l 1.6 22 q 0 5 -5 5 h -'+(tw-10)+' q -5 0 -5 -5 Z" fill="'+torsoFill+'" stroke="'+AD+'" stroke-width="0.9"/>'
+        + '<path d="M 50 28 v 27 M '+(tx+3)+' 39 h '+(tw-6)+'" stroke="'+AD+'" stroke-width="1" opacity="0.65"/>'
+        + '<rect x="'+(tx+1)+'" y="51.5" width="'+(tw-2)+'" height="4.4" fill="'+AD+'"/><rect x="47.4" y="51.2" width="5.2" height="5" fill="'+TR+'"/>'
+        + (view==="back" ? '<path d="M '+(tx+4)+' 32 L '+(tx+tw-4)+' 50 M '+(tx+tw-4)+' 32 L '+(tx+4)+' 50" stroke="'+AD+'" stroke-width="1.6" opacity="0.8"/>' + (tp==="p" ? '<rect x="42.5" y="33" width="15" height="17" rx="2.5" fill="'+AD+'" stroke="'+TR+'" stroke-width="1.2"/><rect x="46" y="36.5" width="8" height="5" fill="'+TR+'" opacity="0.75"/>' : '') + (tp==="q"||tp==="k" ? '<path d="M 50 30 v 22" stroke="'+TR+'" stroke-width="1.4" opacity="0.8"/>' : '') : '')
+        + (tp==="q" && view!=="back" ? '<circle cx="50" cy="40" r="3.4" fill="'+SABER+'" stroke="'+TR+'" stroke-width="1.2"/>' : '')
+        + (tp==="b" && view!=="back" ? '<circle cx="50" cy="40" r="3.2" fill="'+SABER+'" stroke="'+TR+'" stroke-width="1.2"/><path d="M 46 31 l 4 5.5 l 4 -5.5" stroke="'+TR+'" stroke-width="1.4" fill="none"/>' : '')
+        + (tp==="r" ? '<path d="M 41 36 l 7 5 l -7 5 M 59 36 l -7 5 l 7 5" stroke="'+SD+'" stroke-width="1.6" fill="none"/>' : '')
+        + '<circle cx="'+(tx+0.5)+'" cy="31" r="'+pauld+'" fill="'+torsoFill+'" stroke="'+AD+'" stroke-width="0.9"/>'
+        + '<circle cx="'+(tx+tw-0.5)+'" cy="31" r="'+pauld+'" fill="'+torsoFill+'" stroke="'+AD+'" stroke-width="0.9"/>'
+        + arm("arm-off", false) + arm("arm-weapon", true)
+        + head()
+        + '</g></g></svg>';
+      return s;
+    }
+    function idleView(col){ /* Each army faces its enemy across the board: the far-facing army shows its back, the near-facing army its front. Flips with the board. */
+      if(!flipped) return col==="w" ? "back" : "front";
+      return col==="w" ? "front" : "back";
+    }
+    function badgeHTML(p){ return '<span class="piece-badge '+p.c+'" aria-hidden="true">'+GLYPH[p.t]+'</span><span class="piece-tag '+p.c+'" aria-hidden="true">'+TAGNAME[p.t]+'</span>'; }
+    function pieceHTML(p){ return '<span class="piece-wrap"><span class="fig-wrap">'+figSVG(p.t,p.c,idleView(p.c))+'</span>'+badgeHTML(p)+'</span>'; }
+    function fighterHTML(p,cls){ var side=p.c==="w"?"Light Side":"Dark Side"; var flip=cls==="def"?' style="transform:scaleX(-1)"':''; return '<div class="fighter '+cls+'"><div class="fig-wrap"'+flip+'>'+figSVG(p.t,p.c)+'</div><div class="fighter-name">'+CHAR[p.t]+'</div><div class="fighter-side">'+side+'</div><div class="hp"><i></i></div></div>'; }
+
+    /* ---------- Board-anchored movement: one visible step per square ---------- */
+    var animGeom=null;
+    function geomNow(){ var fr=boardFrame.getBoundingClientRect(); var br=boardEl.getBoundingClientRect(); return { ox: br.left-fr.left, oy: br.top-fr.top, sq: br.width/8 }; }
+    function sqElAt(r,c){ var d=displayPos(r,c); return boardEl.children[d.dr*8+d.dc] || null; }
+    function hidePieceAt(r,c){ var el=sqElAt(r,c); if(el){ var w=el.querySelector(".piece-wrap"); if(w) w.style.visibility="hidden"; } }
+    function pathForMove(m){
+      var path=[]; var dr=m.tr-m.fr, dc=m.tc-m.fc; var i, r, c;
+      if(state.board[m.fr][m.fc] && state.board[m.fr][m.fc].t==="n"){
+        if(Math.abs(dr)===2){ for(i=1;i<=2;i++) path.push({r:m.fr+Math.sign(dr)*i,c:m.fc}); path.push({r:m.tr,c:m.tc}); }
+        else { for(i=1;i<=2;i++) path.push({r:m.fr,c:m.fc+Math.sign(dc)*i}); path.push({r:m.tr,c:m.tc}); }
+        return path;
+      }
+      var steps=Math.max(Math.abs(dr),Math.abs(dc));
+      for(i=1;i<=steps;i++){ r=m.fr+Math.round(dr*i/steps); c=m.fc+Math.round(dc*i/steps); path.push({r:r,c:c}); }
+      return path;
+    }
+    function viewForStep(a,b){ /* screen-space: up-board = walking away (back), down-board = toward viewer (front), sideways = profile.
+       Diagonals read best in profile — a bishop gliding diagonally in pure back view looks like he's
+       drifting, so any step with a sideways component shows the side, weapon leading. */
+      var ddr=b.dr-a.dr, ddc=b.dc-a.dc;
+      if(ddc!==0 && (ddr===0 || Math.abs(ddc)>=Math.abs(ddr))) return { view:"side", facing: ddc>0?1:-1 };
+      if(ddr<0) return { view:"back", facing:1 };
+      if(ddr>0) return { view:"front", facing:1 };
+      return { view:"front", facing:1 };
+    }
+    function stepMsFor(piece){ /* weight tells: the droid lumbers, the champion glides, troopers double-time */
+      if(piece.t==="r") return 495;
+      if(piece.t==="k") return 425;
+      if(piece.t==="q") return 330;
+      if(piece.t==="p") return 315;
+      return 360;
+    }
+    function setFighterView(el,piece,view,facing){ var key=view+"/"+facing; if(el.getAttribute("data-view")===key) return; el.setAttribute("data-view",key); el.innerHTML='<span class="bf-inner"><span class="fig-wrap">'+figSVG(piece.t,piece.c,view,facing)+'</span>'+badgeHTML(piece)+'</span>'; }
+    function positionFighter(el,disp,offFX,offFY){ if(!animGeom) animGeom=geomNow(); el.style.left=(animGeom.ox+disp.dc*animGeom.sq+(offFX||0)*animGeom.sq)+"px"; el.style.top=(animGeom.oy+disp.dr*animGeom.sq+(offFY||0)*animGeom.sq)+"px"; }
+    function createFighter(piece,r,c,view,facing){ animGeom=geomNow(); var el=document.createElement("div"); el.className="board-fighter"; el.style.width=animGeom.sq+"px"; el.style.height=animGeom.sq+"px"; el._r=r; el._c=c; setFighterView(el,piece,view||"front",facing||1); positionFighter(el,displayPos(r,c),0,0); boardFrame.appendChild(el); return el; }
+    var stepSideFlip=false;
+    function spawnDust(r,c,heavy){ if(!animGeom) return; var d=displayPos(r,c); stepSideFlip=!stepSideFlip; var footOff=(stepSideFlip?-0.14:0.14)*animGeom.sq; var dust=document.createElement("div"); dust.className="step-dust"; if(heavy){ dust.style.width="40px"; dust.style.height="15px"; } dust.style.left=(animGeom.ox+d.dc*animGeom.sq+animGeom.sq/2+footOff)+"px"; dust.style.top=(animGeom.oy+d.dr*animGeom.sq+animGeom.sq*0.92)+"px"; boardFrame.appendChild(dust); setTimeout(function(){ dust.remove(); },520); }
+    function spawnSparks(cx,cy,n){ var g=animGeom||geomNow(); for(var i=0;i<(n||8);i++){ var sp=document.createElement("div"); sp.className="spark"; var ang=(Math.PI*2*i)/(n||8)+Math.random()*0.7; var dist=13+Math.random()*20; sp.style.setProperty("--dx",Math.cos(ang)*dist+"px"); sp.style.setProperty("--dy",(Math.sin(ang)*dist-6)+"px"); sp.style.left=cx+"px"; sp.style.top=cy+"px"; boardFrame.appendChild(sp); (function(el){ setTimeout(function(){ el.remove(); },520); })(sp); } }
+    function shakeBoard(){ boardFrame.classList.remove("shake"); void boardFrame.offsetWidth; boardFrame.classList.add("shake"); setTimeout(function(){ boardFrame.classList.remove("shake"); },340); }
+    function marchGhost(el,piece,path,done){
+      var idx=0; var ms=stepMsFor(piece); var heavy=piece.t==="r";
+      if(!path.length){ done(el); return; }
+      /* Anticipation: turn toward the first step and gather before setting off —
+         nobody in the reference footage teleports into a stride mid-pose. */
+      var firstD=displayPos(path[0].r,path[0].c); var startD=displayPos(el._r,el._c);
+      var vf0=viewForStep(startD,firstD); setFighterView(el,piece,vf0.view,vf0.facing);
+      setTimeout(function(){
+        el.classList.add("walking");
+        function step(){
+          if(idx>=path.length){ el.classList.remove("walking"); el.classList.add("settle"); setTimeout(function(){ el.classList.remove("settle"); },310); done(el); return; }
+          var isLast=idx===path.length-1;
+          var target=path[idx++]; var curD=displayPos(el._r,el._c); var tgtD=displayPos(target.r,target.c);
+          var vf=viewForStep(curD,tgtD); setFighterView(el,piece,vf.view,vf.facing);
+          /* Knights don't slide round the corner of the L — they hop the turn. */
+          if(piece.t==="n" && idx>1){ el.classList.remove("hop"); void el.offsetWidth; el.classList.add("hop"); }
+          var dur=isLast? ms*1.18 : ms; /* ease into the destination square instead of stopping dead */
+          el.style.transition="left "+dur+"ms cubic-bezier(.38,.02,.32,1), top "+dur+"ms cubic-bezier(.38,.02,.32,1)";
+          positionFighter(el,tgtD,0,0); el._r=target.r; el._c=target.c;
+          setTimeout(function(){ spawnDust(target.r,target.c,heavy); el.classList.remove("land"); void el.offsetWidth; el.classList.add("land"); if(heavy) shakeBoard(); setTimeout(function(){ el.classList.remove("land"); },190); }, Math.round(dur*0.82));
+          setTimeout(step,dur+14);
+        }
+        step();
+      },150);
+    }
+    function animateWalk(m, attacker, done){
+      if(!marchingOn){ done(); return; }
+      var piece={t:attacker.t,c:attacker.c}; hidePieceAt(m.fr,m.fc);
+      var el=createFighter(piece,m.fr,m.fc,"front",1);
+      var rookEl=null, pending=1;
+      function fin(){ pending--; if(pending<=0){ el.remove(); if(rookEl) rookEl.remove(); done(); } }
+      marchGhost(el,piece,pathForMove(m),fin);
+      if(m.castle){ /* the rook marches alongside its king */
+        var rf = m.castle==="K" ? 7 : 0, rt = m.castle==="K" ? 5 : 3; var rook=state.board[m.fr][rf];
+        if(rook){ pending=2; hidePieceAt(m.fr,rf); rookEl=createFighter({t:rook.t,c:rook.c},m.fr,rf,"front",1); marchGhost(rookEl,{t:rook.t,c:rook.c},pathForMove({fr:m.fr,fc:rf,tr:m.fr,tc:rt}),fin); }
+      }
+    }
+    /* ---------- The fight happens HERE, on the capture square ---------- */
+    function playBoardBattle(m, attacker, defender, destSq, done){
+      if(!defender){ done(); return; }
+      if(!duelsOn){ if(marchingOn){ battleBusy=true; animateWalk(m,{t:attacker.t,c:attacker.c},function(){ battleBusy=false; done(); }); } else done(); return; }
+      battleBusy=true;
+      var atkPiece={t:attacker.t,c:attacker.c}, defPiece={t:defender.t,c:defender.c};
+      var defR = m.ep ? m.fr : m.tr, defC = m.tc;
+      var path = pathForMove(m); var prePath = path.slice(0,-1);
+      function startFight(atkEl){
+        hidePieceAt(defR,defC);
+        var toD=displayPos(m.tr,m.tc), fromD=displayPos(m.fr,m.fc);
+        var atkOnLeft = fromD.dc<=toD.dc;
+        var atkOff = atkOnLeft ? -0.30 : 0.30, defOff = -atkOff;
+        var sqEl=sqElAt(m.tr,m.tc); if(sqEl) sqEl.classList.add("fight-square");
+        var defEl=createFighter(defPiece,m.tr,m.tc,"side", atkOnLeft?-1:1); defEl.classList.add("fight-def"); positionFighter(defEl,toD,defOff,0);
+        if(!atkEl) atkEl=createFighter(atkPiece,m.tr,m.tc,"side", atkOnLeft?1:-1);
+        atkEl.classList.add("fight-atk"); atkEl.classList.remove("walking");
+        setFighterView(atkEl,atkPiece,"side", atkOnLeft?1:-1);
+        atkEl.style.transition="left .3s ease-in-out, top .3s ease-in-out"; positionFighter(atkEl,toD,atkOff,0.035);
+        atkEl.style.setProperty("--lunge",(atkOnLeft?18:-18)+"px"); defEl.style.setProperty("--recoil",(atkOnLeft?6:-6)+"px");
+        var g=animGeom||geomNow();
+        var hp=document.createElement("div"); hp.className="fight-hp"; hp.style.width=(g.sq*0.62)+"px"; hp.style.left=(g.ox+toD.dc*g.sq+(defOff+0.5)*g.sq-g.sq*0.31)+"px"; hp.style.top=(g.oy+toD.dr*g.sq-9)+"px"; hp.innerHTML="<i></i>"; boardFrame.appendChild(hp);
+        var slash=document.createElement("div"); slash.className="fight-slash"; slash.style.width=(g.sq*0.95)+"px"; slash.style.left=(g.ox+toD.dc*g.sq+g.sq/2)+"px"; slash.style.top=(g.oy+toD.dr*g.sq+g.sq*0.42)+"px"; boardFrame.appendChild(slash);
+        var cap=document.createElement("div"); cap.className="fight-caption"; var capX=Math.max(86,Math.min(g.sq*8-86, g.ox+toD.dc*g.sq+g.sq/2)); cap.style.left=capX+"px"; cap.style.top=(g.oy+toD.dr*g.sq-14)+"px"; cap.textContent=CHAR[atkPiece.t]+" meets "+CHAR[defPiece.t]+" on "+destSq+"!"; boardFrame.appendChild(cap);
+        /* --- A duel in three exchanges, not one hit: strike, parry, counter,
+           stagger, killing blow. The defender genuinely fights back; the result
+           is fixed by the rules of chess, but he makes the winner earn it. --- */
+        var hpBar=hp.querySelector("i");
+        var clashX=g.ox+toD.dc*g.sq+g.sq/2, clashY=g.oy+toD.dr*g.sq+g.sq*0.42;
+        function mkSlash(cls){ var s=document.createElement("div"); s.className="fight-slash "+cls; s.style.width=(g.sq*(cls==="final"?1.2:0.95))+"px"; s.style.left=clashX+"px"; s.style.top=clashY+"px"; boardFrame.appendChild(s); return s; }
+        var slash1=mkSlash(""), slash2=mkSlash("s2"), slashF=mkSlash("final");
+        cap.style.animation="captionRise 3.9s ease both";
+        atkEl.style.setProperty("--backstep",(atkOnLeft?-5:5)+"px"); defEl.style.setProperty("--backstep",(atkOnLeft?5:-5)+"px");
+        defEl.style.setProperty("--lunge",(atkOnLeft?-16:16)+"px");
+        function flash(el){ el.classList.add("flash"); setTimeout(function(){ el.classList.remove("flash"); },180); }
+        atkEl.classList.add("ignite"); defEl.classList.add("ignite"); sound("check");
+        /* Exchange 1 — attacker strikes, defender parries it */
+        setTimeout(function(){ atkEl.classList.remove("ignite"); defEl.classList.remove("ignite"); atkEl.classList.add("windup"); },420);
+        setTimeout(function(){ atkEl.classList.remove("windup"); atkEl.classList.add("swing"); sound("capture"); },720);
+        setTimeout(function(){ slash1.classList.add("go"); defEl.classList.add("block"); flash(defEl); spawnSparks(clashX,clashY,8); hpBar.style.width="62%"; },860);
+        /* Exchange 2 — defender ripostes, attacker is forced to guard */
+        setTimeout(function(){ atkEl.classList.remove("swing"); defEl.classList.remove("block"); defEl.classList.add("windup"); cap.textContent=CHAR[defPiece.t]+" fights back!"; },1330);
+        setTimeout(function(){ defEl.classList.remove("windup"); defEl.classList.add("swing2"); sound("capture"); },1610);
+        setTimeout(function(){ slash2.classList.add("go"); atkEl.classList.add("block"); flash(atkEl); spawnSparks(clashX,clashY,8); },1750);
+        /* Exchange 3 — the killing blow: bigger lunge, stagger, then the fall */
+        setTimeout(function(){ defEl.classList.remove("swing2"); atkEl.classList.remove("block"); atkEl.style.setProperty("--lunge",(atkOnLeft?24:-24)+"px"); atkEl.classList.add("windup"); },2220);
+        setTimeout(function(){ atkEl.classList.remove("windup"); atkEl.classList.add("swing"); sound("capture"); },2500);
+        setTimeout(function(){ slashF.classList.add("go"); defEl.classList.add("stagger"); flash(defEl); spawnSparks(clashX,clashY,13); shakeBoard(); hpBar.style.width="26%"; spawnDust(m.tr,m.tc,true); },2640);
+        setTimeout(function(){ hpBar.style.width="0%"; defEl.classList.remove("stagger"); defEl.classList.add("hit"); cap.textContent=CHAR[atkPiece.t]+" "+VERB[atkPiece.t]+" "+CHAR[defPiece.t]+"!"; sound("end"); },2920);
+        setTimeout(function(){ hp.remove(); slash.remove(); slash1.remove(); slash2.remove(); slashF.remove(); cap.remove(); if(sqEl) sqEl.classList.remove("fight-square"); defEl.remove(); atkEl.remove(); battleBusy=false; done(); },3980);
+      }
+      if(marchingOn){
+        hidePieceAt(m.fr,m.fc);
+        var atkEl0=createFighter(atkPiece,m.fr,m.fc,"front",1);
+        marchGhost(atkEl0,atkPiece,prePath,function(el){ startFight(el); });
+      } else startFight(null);
+    }
+
+    function doMove(m){
+      if(battleBusy) return;
+      var attacker = state.board[m.fr][m.fc]; if(!attacker) return;
+      var defender = m.ep ? state.board[m.fr][m.tc] : state.board[m.tr][m.tc];
+      var destSq = FILES[m.tc]+(8-m.tr);
+      var isCapture = !!defender;
+      var finish = function(){ commitMove(m, attacker, defender, destSq); };
+      if(isCapture){
+        // March square by square to the defender, then fight right there on that square.
+        playBoardBattle(m, {t:attacker.t,c:attacker.c}, defender?{t:defender.t,c:defender.c}:null, destSq, finish);
+      } else {
+        battleBusy=true;
+        animateWalk(m, {t:attacker.t,c:attacker.c}, function(){ battleBusy=false; finish(); });
+      }
+    }
+    function commitMove(m, attacker, defender, destSq){
+      var legal=currentLegal; var san=toSAN(state,m,legal); var before=cloneState(state); var res=applyTo(state,m);
+      undoStack.push({state:before,san:sanList.length,lastMove:lastMove, logLen: battleLogEntries.length});
+      state=res.state; var wasCapture=!!res.captured; sanList.push(san); lastMove={fr:m.fr,fc:m.fc,tr:m.tr,tc:m.tc}; selected=null; legalFromSel=[]; pendingPromo=null;
+      if(wasCapture && attacker && defender){ battleLogEntries.unshift({html:"<strong>"+(attacker.c==="w"?"Light ":"Dark ")+CHAR[attacker.t]+"</strong> "+VERB[attacker.t]+" "+(defender.c==="w"?"Light ":"Dark ")+CHAR[defender.t]+" on <strong>"+destSq+"</strong> — "+san}); if(battleLogEntries.length>6) battleLogEntries.length=6; }
+      var key=posKey(state); posCounts[key]=(posCounts[key]||0)+1; refreshLegal(); var ended=checkEnd(); refreshLegal(); render();
+      if(ended){ sound("end"); showGameOver(); } else if(san.indexOf("+")>=0) sound("check"); else if(wasCapture) sound("capture"); else sound("move");
+      maybeAI();
+    }
+    function maybeAI(){ if(gameOver||mode!=="ai") return; if(state.turn===playerColor) return; subEl.textContent="Enemy is plotting…"; render(); aiTimer=setTimeout(function(){ aiTimer=null; var m=aiChooseMove(state); if(m) doMove(m); },420); }
+    function undo(){ if(battleBusy) return; if(aiTimer){clearTimeout(aiTimer); aiTimer=null;} if(!undoStack.length) return; var steps=(mode==="ai"&&undoStack.length>=2&&state.turn===playerColor)?2:1; steps=Math.min(steps,undoStack.length); var key=posKey(state); for(var i=0;i<steps;i++){ var snap=undoStack.pop(); if(posCounts[key]) posCounts[key]--; state=snap.state; lastMove=snap.lastMove; sanList.length=snap.san; battleLogEntries.length=snap.logLen||0; key=posKey(state); } gameOver=null; selected=null; legalFromSel=[]; pendingPromo=null; hideOverlay(); refreshLegal(); render(); maybeAI(); }
+
+    function render(){
+      boardEl.innerHTML=""; var checkSq=null; if(inCheck(state.board,state.turn)) checkSq=findKing(state.board,state.turn);
+      var selTargets={}; legalFromSel.forEach(function(m){ selTargets[m.tr+","+m.tc]=m; });
+      boardEl.style.setProperty("--sqsize", (boardEl.clientWidth/8)+"px");
+      for(var di=0;di<8;di++) for(var dj=0;dj<8;dj++){ var r=flipped?7-di:di; var c=flipped?7-dj:dj; var sq=document.createElement("div"); sq.className="sq "+(((r+c)%2===0)?"light":"dark"); sq.setAttribute("role","gridcell"); sq.setAttribute("aria-label",FILES[c]+(8-r)+" "+(state.board[r][c]?CHAR[state.board[r][c].t]:""));
+        if(lastMove&&((lastMove.fr===r&&lastMove.fc===c)||(lastMove.tr===r&&lastMove.tc===c))) sq.classList.add("lastmove");
+        if(selected&&selected.r===r&&selected.c===c) sq.classList.add("selected");
+        if(checkSq&&checkSq.r===r&&checkSq.c===c) sq.classList.add("incheck");
+        if(dj===0){ var rk=document.createElement("span"); rk.className="coord rank"; rk.textContent=(8-r); sq.appendChild(rk); }
+        if(di===7){ var fl=document.createElement("span"); fl.className="coord file"; fl.textContent=FILES[c]; sq.appendChild(fl); }
+        if(selTargets[r+","+c]){ var hint=document.createElement("span"); var tp=state.board[r][c]; var isCap=!!tp||legalFromSel.some(function(m){return m.tr===r&&m.tc===c&&m.ep;}); hint.className="hint"+(isCap?" capture":""); sq.appendChild(hint); }
+        var p=state.board[r][c]; if(p){ var wrap=document.createElement("span"); wrap.innerHTML=pieceHTML(p); sq.appendChild(wrap.firstChild); }
+        (function(rr,cc){ sq.addEventListener("click",function(){ onSquare(rr,cc); }); })(r,c);
+        boardEl.appendChild(sq);
+      }
+      var turnName=state.turn==="w"?"Light Side":"Dark Side"; turnDot.className="turn-dot "+state.turn;
+      if(gameOver){ statusEl.textContent=gameOver.title; subEl.textContent=gameOver.detail; }
+      else { var chk=inCheck(state.board,state.turn); statusEl.textContent=turnName+" to move"+(chk?" — Force Lord in check!":""); if(mode==="ai"&&state.turn!==playerColor){ if(!aiTimer) subEl.textContent="The enemy is plotting…"; } else if(mode==="ai"){ subEl.textContent=chk?"Your Force Lord is under attack — answer it, or he falls.":"Your move. Tap a fighter, then tap where it marches — red rings are lightsaber duels."; } else { subEl.textContent=chk?turnName+"'s Force Lord is in check.":turnName+" to move. Tap a fighter, then its square."; } }
+      var counts={w:{p:8,n:2,b:2,r:2,q:1},b:{p:8,n:2,b:2,r:2,q:1}}; var present={w:{p:0,n:0,b:0,r:0,q:0},b:{p:0,n:0,b:0,r:0,q:0}};
+      for(var r2=0;r2<8;r2++) for(var c2=0;c2<8;c2++){ var pp=state.board[r2][c2]; if(pp&&pp.t!=="k") present[pp.c][pp.t]++; }
+      function capturedDisplay(color){ var lost=[]; ["q","r","b","n","p"].forEach(function(t){ var missing=counts[color][t]-present[color][t]; for(var i=0;i<missing;i++) lost.push(t); }); var extra=0; ["q","r","b","n"].forEach(function(t){ extra+=Math.max(0,present[color][t]-counts[color][t]); }); var pawns=[]; lost.forEach(function(t,i){ if(t==="p") pawns.push(i); }); for(var i=0;i<extra&&pawns.length;i++) lost.splice(pawns.pop(),1); return lost; }
+      var perspective=mode==="ai"?playerColor:"w"; var oppColor=perspective==="w"?"b":"w"; var tookList=capturedDisplay(oppColor); var lostList=capturedDisplay(perspective);
+      var capEl=document.getElementById("capByPlayer"); var lostEl=document.getElementById("capLost");
+      capEl.innerHTML=tookList.map(function(t){ return '<span style="color:'+(oppColor==="w"?"#b9ac93":"#191410")+';text-shadow:0 0 1px rgba(0,0,0,.5)">'+GLYPH[t]+"</span>"; }).join("");
+      lostEl.innerHTML=lostList.map(function(t){ return '<span style="color:'+(perspective==="w"?"#b9ac93":"#191410")+';text-shadow:0 0 1px rgba(0,0,0,.5)">'+GLYPH[t]+"</span>"; }).join("");
+      var tookVal=tookList.reduce(function(a,t){return a+VAL[t];},0); var lostVal=lostList.reduce(function(a,t){return a+VAL[t];},0); var diff=Math.round((tookVal-lostVal)/100);
+      document.getElementById("diffPlayer").textContent=diff>0?"+"+diff:""; document.getElementById("diffOpp").textContent=diff<0?"+"+(-diff):"";
+      document.querySelectorAll(".captured-row .who")[0].textContent=mode==="ai"?"You felled":(perspective==="w"?"Light felled":"Dark felled");
+      document.querySelectorAll(".captured-row .who")[1].textContent=mode==="ai"?"You lost":(perspective==="w"?"Light lost":"Dark lost");
+      var logEl=document.getElementById("battleLog"); if(battleLogEntries.length){ logEl.innerHTML=battleLogEntries.map(function(e){return "<li>"+e.html+"</li>";}).join(""); } else { logEl.innerHTML="<li>No duels yet. The first capture ignites the first lightsaber.</li>"; }
+      var body=document.getElementById("movesBody"); body.innerHTML=""; var has=sanList.length>0; document.getElementById("movesEmpty").style.display=has?"none":""; document.getElementById("movesTable").style.display=has?"":"none";
+      for(var i=0;i<sanList.length;i+=2){ var tr=document.createElement("tr"); if(i+2>=sanList.length) tr.className="current"; var num=document.createElement("td"); num.className="num"; num.textContent=(Math.floor(i/2)+1)+"."; var w=document.createElement("td"); w.className="mv"+(i===sanList.length-1?" lastplayed":""); w.textContent=sanList[i]; var bl=document.createElement("td"); bl.className="mv"+(i+1===sanList.length-1?" lastplayed":""); bl.textContent=sanList[i+1]||""; tr.appendChild(num); tr.appendChild(w); tr.appendChild(bl); body.appendChild(tr); }
+      var scroller=document.getElementById("movesScroll"); scroller.scrollTop=scroller.scrollHeight; document.getElementById("undoBtn").disabled=undoStack.length===0||battleBusy;
+    }
+    function onSquare(r,c){ if(gameOver||pendingPromo||battleBusy) return; if(mode==="ai"&&state.turn!==playerColor) return; var p=state.board[r][c]; if(selected){ var dests=legalFromSel.filter(function(m){return m.tr===r&&m.tc===c;}); if(dests.length){ if(dests.length>1||dests[0].promo){ showPromo(dests); return; } doMove(dests[0]); return; } } if(p&&p.c===state.turn){ selected={r:r,c:c}; legalFromSel=currentLegal.filter(function(m){return m.fr===r&&m.fc===c;}); } else { selected=null; legalFromSel=[]; } render(); }
+    function showPromo(moves){ pendingPromo=moves; var color=state.turn; overlayCard.innerHTML="<h2>Promote your Trooper</h2><p>Your Trooper reached the far side of the galaxy and promotes — pick what he becomes.</p>"; var row=document.createElement("div"); row.className="promo-row"; ["q","r","b","n"].forEach(function(t){ var b=document.createElement("button"); b.className="promo-btn"; b.textContent=GLYPH[t]; b.style.color=color==="w"?"#8a7a5c":"#191410"; b.setAttribute("aria-label","Promote to "+CHAR[t]); b.addEventListener("click",function(){ var m=pendingPromo.filter(function(x){return x.promo===t;})[0]; hideOverlay(); if(m) doMove(m); }); row.appendChild(b); }); overlayCard.appendChild(row); overlay.classList.add("show"); }
+    function showGameOver(){ overlayCard.innerHTML=""; var h=document.createElement("h2"); h.textContent=gameOver.title; var p=document.createElement("p"); p.textContent=gameOver.detail; var b=document.createElement("button"); b.className="btn primary"; b.textContent="New battle"; b.addEventListener("click",function(){ hideOverlay(); startGame(startState()); }); overlayCard.appendChild(h); overlayCard.appendChild(p); overlayCard.appendChild(b); overlay.classList.add("show"); }
+    function hideOverlay(){ overlay.classList.remove("show"); pendingPromo=null; }
+    function segWire(id,attr,fn){ var seg=document.getElementById(id); seg.addEventListener("click",function(e){ var btn=e.target.closest("button"); if(!btn) return; seg.querySelectorAll("button").forEach(function(x){x.classList.remove("on");}); btn.classList.add("on"); fn(btn.getAttribute(attr)); }); }
+    segWire("modeSeg","data-mode",function(v){ mode=v; document.getElementById("aiOptions").style.display=mode==="ai"?"":"none"; startGame(startState()); });
+    segWire("colorSeg","data-color",function(v){ playerColor=v; startGame(startState()); });
+    segWire("diffSeg","data-diff",function(v){ difficulty=parseInt(v,10); var cfg=DIFF_LEVELS[difficulty]; if(cfg) document.getElementById("diffDesc").textContent=cfg.desc; });
+    document.getElementById("battleToggle").addEventListener("click",function(){ duelsOn=!duelsOn; this.textContent="Duels: "+(duelsOn?"ON":"OFF"); this.classList.toggle("on-toggle",duelsOn); });
+    document.getElementById("walkToggle").addEventListener("click",function(){ marchingOn=!marchingOn; this.textContent="Marching: "+(marchingOn?"ON":"OFF"); this.classList.toggle("on-toggle",marchingOn); });
+    document.getElementById("walkToggle").classList.add("on-toggle");
+    document.getElementById("newBtn").addEventListener("click",function(){ if(battleBusy) return; hideOverlay(); startGame(startState()); });
+document.getElementById("undoBtn").addEventListener("click",undo);
+    document.getElementById("flipBtn").addEventListener("click",function(){ flipped=!flipped; render(); });
+    document.getElementById("pgnBtn").addEventListener("click",function(){ var pgn=""; for(var i=0;i<sanList.length;i+=2){ pgn+=(Math.floor(i/2)+1)+". "+sanList[i]+(sanList[i+1]?" "+sanList[i+1]+" ":" "); } if(gameOver){ if(gameOver.title.indexOf("Checkmate")===0) pgn+=state.turn==="w"?"0-1":"1-0"; else pgn+="1/2-1/2"; } else pgn+="*"; var blob=new Blob([pgn],{type:"text/plain"}); var a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="chess-game.pgn"; document.body.appendChild(a); a.click(); setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },400); });
+    /* Roster portraits are drawn by the very same fighter rig as the board —
+       the panel and the battlefield can never drift apart in style. */
+    document.querySelectorAll(".roster-fig").forEach(function(el){ el.innerHTML='<span class="fig-wrap">'+figSVG(el.getAttribute("data-t"),"w","front")+'</span>'; });
+    startGame(startState());
+    </script>
+  </body>
+</html>
