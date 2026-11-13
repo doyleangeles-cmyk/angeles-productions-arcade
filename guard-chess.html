@@ -508,6 +508,7 @@
         <div class="card">
           <div class="btnrow">
             <button class="btn primary" id="newBtn">New shift</button>
+            <button class="btn" id="apPauseBtn">&#9208; Pause</button>
             <button class="btn" id="undoBtn">Undo</button>
             <button class="btn" id="flipBtn">Flip board</button>
             <button class="btn" id="pgnBtn">Download PGN</button>
@@ -1113,5 +1114,42 @@
     updateDiffDesc();
     startGame(startState());
     </script>
-  </body>
+  
+<style>
+#apOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(4,4,8,.72)}
+#apOverlay.on{display:flex}
+#apOverlay .ap-card{background:#101826;border:2px solid #ffd23f;border-radius:14px;padding:26px 28px;text-align:center;min-width:260px;max-width:88vw;box-shadow:0 18px 50px rgba(0,0,0,.65)}
+#apOverlay .ap-title{font-size:26px;font-weight:900;letter-spacing:.06em;color:#eef2ff;margin:0 0 16px}
+#apOverlay .ap-btn{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px 16px;border-radius:10px;border:1px solid #ffd23f;background:rgba(255,255,255,.06);color:#eef2ff;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
+#apOverlay .ap-btn:hover{background:rgba(255,255,255,.16)}
+#apOverlay .ap-primary{background:#ffd23f;color:#171106}
+#apOverlay .ap-primary:hover{background:#ffd23f;filter:brightness(1.1)}
+</style>
+<div id="apOverlay" role="dialog" aria-label="Paused">
+  <div class="ap-card">
+    <div class="ap-title">&#9208; PAUSED</div>
+    <button type="button" class="ap-btn ap-primary" id="apResume">&#9654; Resume</button>
+    <button type="button" class="ap-btn" id="apTitle">&#127968; Return to Title</button>
+    <a class="ap-btn" id="apArcade" href="https://angeles-productions-arcade.onrender.com">&#128377; Back to Arcade</a>
+  </div>
+</div>
+
+<script>
+/* ---- AP pause menu (arcade-wide standard) ---- */
+(function(){
+  var ov = document.getElementById('apOverlay'), open = false;
+  function apSet(v){ open = v; ov.classList.toggle('on', v); }
+  document.getElementById('apPauseBtn').addEventListener('click', function(){ apSet(!open); });
+  document.getElementById('apResume').addEventListener('click', function(){ apSet(false); });
+  document.getElementById('apTitle').addEventListener('click', function(){ apSet(false); hideOverlay(); startGame(startState()); window.scrollTo(0, 0); });
+  document.addEventListener('keydown', function(e){ if(e.code === 'Escape' || e.code === 'KeyP') apSet(!open); });
+})();
+</script>
+
+<script>
+/* ---- AP launch mode: homepage chooser passes ?mode=pc | ?mode=mobile (per-launch, never persisted) ---- */
+window.__apMode = new URLSearchParams(location.search).get('mode') === 'mobile' ? 'mobile' : 'pc';
+</script>
+
+</body>
 </html>

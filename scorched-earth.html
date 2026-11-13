@@ -213,6 +213,7 @@
     <span class="grp"><select id="selWeapon"></select></span>
     <span class="cell">CASH <b id="hudCash" class="gold">$0</b></span>
     <button class="fire" id="btnFire" type="button">FIRE!</button>
+    <button id="apPauseBtn" type="button">&#9208; Pause</button>
     <span class="grp"><button id="btnBattery" type="button">BATTERY</button><button id="btnShield" type="button">SHIELD</button></span>
     <span class="grp">DRIVE <button id="btnMoveL" type="button">◀</button><button id="btnMoveR" type="button">▶</button></span>
     <span class="grp"><button id="btnTrig" type="button">CONTACT TRIG: OFF</button></span>
@@ -3245,5 +3246,57 @@ $('wrap').focus();
   requestAnimationFrame(frame);
 })();
 </script>
+
+<style>
+#controls #apPauseBtn{background:#2a3324;color:#f3ecd9;border:1px solid #ffb347;border-radius:8px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:inherit}
+#controls #apPauseBtn:hover{background:#37452e}
+</style>
+
+<style>
+#apOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(4,4,8,.72)}
+#apOverlay.on{display:flex}
+#apOverlay .ap-card{background:#141a12;border:2px solid #ffb347;border-radius:14px;padding:26px 28px;text-align:center;min-width:260px;max-width:88vw;box-shadow:0 18px 50px rgba(0,0,0,.65)}
+#apOverlay .ap-title{font-size:26px;font-weight:900;letter-spacing:.06em;color:#f3ecd9;margin:0 0 16px}
+#apOverlay .ap-btn{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px 16px;border-radius:10px;border:1px solid #ffb347;background:rgba(255,255,255,.06);color:#f3ecd9;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
+#apOverlay .ap-btn:hover{background:rgba(255,255,255,.16)}
+#apOverlay .ap-primary{background:#ffb347;color:#171106}
+#apOverlay .ap-primary:hover{background:#ffb347;filter:brightness(1.1)}
+</style>
+<div id="apOverlay" role="dialog" aria-label="Paused">
+  <div class="ap-card">
+    <div class="ap-title">&#9208; PAUSED</div>
+    <button type="button" class="ap-btn ap-primary" id="apResume">&#9654; Resume</button>
+    <button type="button" class="ap-btn" id="apTitle">&#127968; Return to Title</button>
+    <a class="ap-btn" id="apArcade" href="https://angeles-productions-arcade.onrender.com">&#128377; Back to Arcade</a>
+  </div>
+</div>
+
+<script>
+/* ---- AP pause menu (arcade-wide standard) ---- */
+(function(){
+  var ov = document.getElementById('apOverlay');
+  function apShow(){ if(ov) ov.classList.toggle('on', !!G.paused); }
+  function apSet(v){
+    G.paused = !!v; apShow();
+    var b = document.getElementById('apPauseBtn');
+    if(b) b.textContent = v ? '\u25B6 Resume' : '\u23F8 Pause';
+  }
+  document.getElementById('apPauseBtn').addEventListener('click', function(){ apSet(!G.paused); });
+  document.getElementById('apResume').addEventListener('click', function(){ apSet(false); });
+  document.getElementById('apTitle').addEventListener('click', function(){ apSet(false); backToSetup(); });
+  window.addEventListener('keydown', function(e){
+    var tag = (e.target && e.target.tagName) || '';
+    if(tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA'){ if(e.code !== 'Escape') return; }
+    if(e.code === 'Escape' || e.code === 'KeyP') apSet(!G.paused);
+  });
+  apShow();
+})();
+</script>
+
+<script>
+/* ---- AP launch mode: homepage chooser passes ?mode=pc | ?mode=mobile (per-launch, never persisted) ---- */
+window.__apMode = new URLSearchParams(location.search).get('mode') === 'mobile' ? 'mobile' : 'pc';
+</script>
+
 </body>
 </html>

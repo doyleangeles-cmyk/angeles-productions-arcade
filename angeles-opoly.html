@@ -1651,5 +1651,51 @@ function advanceTurnSilent(){
   S.cur=n; S.doubles=0; S.phase="roll"; S.turns++;
 }
 </script>
+
+<style>
+#apOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(4,4,8,.72)}
+#apOverlay.on{display:flex}
+#apOverlay .ap-card{background:#0d2b1f;border:2px solid #ffd34d;border-radius:14px;padding:26px 28px;text-align:center;min-width:260px;max-width:88vw;box-shadow:0 18px 50px rgba(0,0,0,.65)}
+#apOverlay .ap-title{font-size:26px;font-weight:900;letter-spacing:.06em;color:#fdf6da;margin:0 0 16px}
+#apOverlay .ap-btn{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px 16px;border-radius:10px;border:1px solid #ffd34d;background:rgba(255,255,255,.06);color:#fdf6da;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
+#apOverlay .ap-btn:hover{background:rgba(255,255,255,.16)}
+#apOverlay .ap-primary{background:#ffd34d;color:#171106}
+#apOverlay .ap-primary:hover{background:#ffd34d;filter:brightness(1.1)}
+</style>
+<div id="apOverlay" role="dialog" aria-label="Paused">
+  <div class="ap-card">
+    <div class="ap-title">&#9208; PAUSED</div>
+    <button type="button" class="ap-btn ap-primary" id="apResume">&#9654; Resume</button>
+    <button type="button" class="ap-btn" id="apTitle">&#127968; Return to Title</button>
+    <a class="ap-btn" id="apArcade" href="https://angeles-productions-arcade.onrender.com">&#128377; Back to Arcade</a>
+  </div>
+</div>
+
+<script>
+/* ---- AP pause menu (arcade-wide standard) ---- */
+(function(){
+  var ov = document.getElementById('apOverlay'), open = false;
+  function inGame(){ var s = document.getElementById('setup'); return !!s && s.style.display === 'none'; }
+  function apSet(v){ if(v && !inGame()) return; open = v; ov.classList.toggle('on', v); }
+  var nb = document.getElementById('newGameBtn');
+  var pb = document.createElement('button');
+  pb.className = 'small'; pb.id = 'apPauseBtn'; pb.type = 'button'; pb.textContent = '\u23F8 Pause';
+  if(nb && nb.parentNode) nb.parentNode.insertBefore(pb, nb);
+  pb.addEventListener('click', function(){ apSet(!open); });
+  document.getElementById('apResume').addEventListener('click', function(){ apSet(false); });
+  document.getElementById('apTitle').addEventListener('click', function(){ location.reload(); });
+  document.addEventListener('keydown', function(e){
+    var tag = (e.target && e.target.tagName) || '';
+    if(tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if(e.code === 'Escape' || e.code === 'KeyP') apSet(!open);
+  });
+})();
+</script>
+
+<script>
+/* ---- AP launch mode: homepage chooser passes ?mode=pc | ?mode=mobile (per-launch, never persisted) ---- */
+window.__apMode = new URLSearchParams(location.search).get('mode') === 'mobile' ? 'mobile' : 'pc';
+</script>
+
 </body>
 </html>

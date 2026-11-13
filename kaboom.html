@@ -98,6 +98,7 @@ body.intro-lock{overflow:hidden}
   <div class="controls">
     <button class="btn btn-primary" id="fireBtn">🔴 PRESS PADDLE BUTTON — START</button>
     <button class="btn btn-ghost" id="resetBtn">↺ Game Reset</button>
+    <button class="btn btn-ghost" id="apPauseBtn" type="button">&#9208; Pause</button>
     <button class="btn btn-ghost" id="replayIntroBtn" type="button">🎬 Replay Intro</button>
     <div class="seg" role="group" aria-label="Players"><button id="mode1" class="on">1 PLAYER</button><button id="mode2">2 PLAYERS</button></div>
     <div class="seg" role="group" aria-label="Difficulty"><button id="diffB" class="on">Difficulty B — Full buckets</button><button id="diffA">Difficulty A — Half buckets</button></div>
@@ -197,6 +198,7 @@ function sfxBucket(){tone(300,600,.15,.14);setTimeout(function(){tone(450,750,.1
 // ---------- game flow ----------
 function resetGame(){players=[makePlayer(0),makePlayer(1)];current=0;bombs=[];particles=[];dropped=0;caught=0;bomber.x=400;bomber.dir=1;bomber.face='frown';bucketX=400;state='idle';updateHUD();say('<strong>Ready.</strong> Buckets under the Bomber, then press the red paddle button — Group 1, 10 bombs, 1 point each.');els.fire.textContent='🔴 PRESS PADDLE BUTTON — START';}
 function startWave(){
+  if(kbPaused)return;
   if(state==='playing')return;
   if(state==='gameover'){resetGame();}
   ac();
@@ -393,7 +395,7 @@ function draw(){
   if(state==='gameover'){ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(0,GREY,W,WALL_BOTTOM-GREY);ctx.fillStyle='#ffd923';ctx.font='800 34px "Press Start 2P",monospace';ctx.fillText('GAME OVER',W/2,300);ctx.font='700 16px Inter,sans-serif';ctx.fillStyle='#fff';ctx.fillText('Press Game Reset to play again',W/2,332);}
   ctx.restore();
 }
-function loop(ts){var dt=Math.min(.033,(ts-lastTs)/1000||0);lastTs=ts;update(dt);draw();requestAnimationFrame(loop);}
+function loop(ts){var dt=Math.min(.033,(ts-lastTs)/1000||0);lastTs=ts;if(!kbPaused)update(dt);draw();requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 
 // ---------- HUD ----------
@@ -424,6 +426,24 @@ document.getElementById('mode2').addEventListener('click',function(){mode=2;this
 document.getElementById('diffB').addEventListener('click',function(){difficulty='B';this.classList.add('on');document.getElementById('diffA').classList.remove('on');});
 document.getElementById('diffA').addEventListener('click',function(){difficulty='A';this.classList.add('on');document.getElementById('diffB').classList.remove('on');say('<strong>Difficulty A:</strong> buckets are half size. Advanced players only — per the manual.');});
 document.getElementById('soundBtn').addEventListener('click',function(){soundOn=!soundOn;this.textContent=soundOn?'🔊 Sound ON':'🔇 Sound OFF';if(soundOn)ac();});
+/* ---- AP pause menu (arcade-wide standard) ---- */
+var kbPaused = false;
+function apSetPaused(v){
+  kbPaused = v;
+  document.getElementById('apOverlay').classList.toggle('on', v);
+  document.getElementById('apPauseBtn').textContent = v ? '\u25B6 Resume' : '\u23F8 Pause';
+}
+function apWire(){
+  document.getElementById('apPauseBtn').addEventListener('click', function(){ if(state !== 'idle' && state !== 'gameover') apSetPaused(!kbPaused); });
+  document.getElementById('apResume').addEventListener('click', function(){ apSetPaused(false); });
+  document.getElementById('apTitle').addEventListener('click', function(){ apSetPaused(false); resetGame(); });
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apWire); else apWire();
+window.addEventListener('keydown', function(e){
+  if((e.code === 'Escape' || e.code === 'KeyP') && state !== 'idle' && state !== 'gameover') apSetPaused(!kbPaused);
+});
+window.__kbDebug = function(){ return { state: state, paused: kbPaused, bombs: bombs.map(function(b){ return [Math.round(b.x), Math.round(b.y)]; }), bomberX: Math.round(bomber.x), bucketX: Math.round(bucketX) }; };
+
 resetGame();
 })();
 </script>
@@ -536,5 +556,31 @@ window.addEventListener('keydown',function(e){if(e.key==='Escape'&&running)endIn
 playIntro();
 })();
 </script>
+
+<style>
+#apOverlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(4,4,8,.72)}
+#apOverlay.on{display:flex}
+#apOverlay .ap-card{background:#171a10;border:2px solid #ffd923;border-radius:14px;padding:26px 28px;text-align:center;min-width:260px;max-width:88vw;box-shadow:0 18px 50px rgba(0,0,0,.65)}
+#apOverlay .ap-title{font-size:26px;font-weight:900;letter-spacing:.06em;color:#fff8e1;margin:0 0 16px}
+#apOverlay .ap-btn{display:block;width:100%;box-sizing:border-box;margin:8px 0;padding:12px 16px;border-radius:10px;border:1px solid #ffd923;background:rgba(255,255,255,.06);color:#fff8e1;font-size:16px;font-weight:700;cursor:pointer;text-decoration:none;text-align:center;font-family:inherit}
+#apOverlay .ap-btn:hover{background:rgba(255,255,255,.16)}
+#apOverlay .ap-primary{background:#ffd923;color:#171106}
+#apOverlay .ap-primary:hover{background:#ffd923;filter:brightness(1.1)}
+</style>
+<div id="apOverlay" role="dialog" aria-label="Paused">
+  <div class="ap-card">
+    <div class="ap-title">&#9208; PAUSED</div>
+    <button type="button" class="ap-btn ap-primary" id="apResume">&#9654; Resume</button>
+    <button type="button" class="ap-btn" id="apTitle">&#127968; Return to Title</button>
+    <a class="ap-btn" id="apArcade" href="https://angeles-productions-arcade.onrender.com">&#128377; Back to Arcade</a>
+  </div>
+</div>
+
+
+<script>
+/* ---- AP launch mode: homepage chooser passes ?mode=pc | ?mode=mobile (per-launch, never persisted) ---- */
+window.__apMode = new URLSearchParams(location.search).get('mode') === 'mobile' ? 'mobile' : 'pc';
+</script>
+
 </body>
 </html>
