@@ -210,14 +210,23 @@
     animation:marqueePulse 3.6s ease-in-out infinite;
   }
   @keyframes marqueePulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.13)}}
-  .marquee-art{
-    flex:none; width:64px; height:64px; border-radius:10px;
-    display:grid; place-items:center;
-    background:rgba(0,0,0,.38); border:1px solid rgba(255,255,255,.14);
-    overflow:hidden;
+  /* cabinet screen — real game screenshot in a bezel frame */
+  .cab-screen{
+    margin:.65rem .65rem 0;
+    padding:7px;
+    border-radius:13px;
+    background:linear-gradient(180deg,#26263f,#07070f 62%);
+    border:1px solid rgba(255,255,255,.20);
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 26px rgba(0,0,0,.75), 0 0 20px color-mix(in srgb, var(--accent) 24%, transparent);
   }
-  .cab.flagship .marquee-art{width:76px;height:76px}
-  .marquee-art svg{width:100%;height:100%;display:block}
+  .cab-screen img{
+    display:block; width:100%; aspect-ratio:16/10; object-fit:cover;
+    border-radius:7px; background:#000;
+  }
+  .cab.flagship .cab-screen{
+    padding:9px;
+    box-shadow:inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 30px rgba(0,0,0,.8), 0 0 32px rgba(57,255,136,.30);
+  }
   .marquee-text{min-width:0; flex:1}
   .cab-title{
     margin:0; font-family:"Bungee", system-ui, sans-serif; font-weight:400;
@@ -432,7 +441,6 @@
 
   @media(max-width:380px){
     .cab-title{font-size:1.12rem}
-    .marquee-art{width:54px;height:54px}
     .play{font-size:.72rem}
   }
   @media (prefers-reduced-motion: reduce){
@@ -476,23 +484,14 @@
     <!-- QUESTS OF GROOO — NEW #1 -->
     <article class="cab g-grooo">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Candy crown over a lollipop swirl">
-            <rect x="4" y="4" width="72" height="72" rx="8" fill="#2a0a2e"/>
-            <path d="M22 30 L28 18 L36 27 L40 15 L44 27 L52 18 L58 30 Z" fill="#f5c542" stroke="#ffe66d" stroke-width="1.5" stroke-linejoin="round"/>
-            <circle cx="40" cy="50" r="13" fill="#ff5da2"/>
-            <circle cx="40" cy="50" r="9" fill="#ffd1e8"/>
-            <circle cx="40" cy="50" r="5" fill="#ff5da2"/>
-            <circle cx="40" cy="50" r="2" fill="#fff"/>
-            <g fill="#7bf1c0"><circle cx="16" cy="58" r="1.8"/><circle cx="64" cy="56" r="1.8"/><circle cx="60" cy="38" r="1.4"/><circle cx="19" cy="40" r="1.4"/></g>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">QUESTS OF GROOO</h3>
           <p class="cab-sub">Save Grooo! · Candy ARPG</p>
         </div>
         <span class="flag-badge">NEW</span>
       </div>
+      <div class="cab-screen"><img src="shots/quests-of-grooo.jpg" alt="Quests of Grooo screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">THE HOLLOW KING is back — and Grooo needs saving! Pick your hero, grab <em>sparkly loot</em>, master awesome skills, and set out on the adventure to <em>SAVE GROOO!</em></p>
         <div class="tags"><span class="tag">8 heroes</span><span class="tag">1–2 player co-op</span><span class="tag">Sparkly loot</span></div>
@@ -508,24 +507,14 @@
     <!-- KM SECURITY — FLAGSHIP -->
     <article class="cab flagship g-km">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Hospital floor plan blueprint">
-            <rect x="6" y="6" width="68" height="68" rx="4" fill="#0b2a3f"/>
-            <g stroke="#2ee6ff" stroke-width="2" fill="none" opacity=".95">
-              <rect x="14" y="14" width="22" height="18"/><rect x="44" y="14" width="22" height="18"/>
-              <rect x="14" y="42" width="22" height="24"/><rect x="44" y="42" width="22" height="24"/>
-              <path d="M36 23h8M36 54h8M25 32v10M55 32v10"/>
-            </g>
-            <g fill="#39ff88"><rect x="20" y="20" width="10" height="4"/><rect x="50" y="20" width="10" height="4"/><rect x="20" y="48" width="10" height="4"/><rect x="50" y="48" width="10" height="4"/></g>
-            <circle cx="40" cy="40" r="4" fill="#ff3d8a"/>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">KM SECURITY</h3>
           <p class="cab-sub">Kern Medical · Swing Shift</p>
         </div>
         <span class="flag-badge">FLAGSHIP</span>
       </div>
+      <div class="cab-screen"><img src="shots/km-security.jpg" alt="KM Security screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">The KMC ER swing-shift game. <em>Hold the beds, stop the runners,</em> and keep the floor under control — hit <em>10 Code Greens</em> and your shift is over.</p>
         <div class="tags"><span class="tag">Floor-plan action</span><span class="tag">Co-op mode</span><span class="tag">Top 10 leaderboard</span></div>
@@ -541,20 +530,13 @@
     <!-- RIGO'S SPACE FORCE -->
     <article class="cab g-space">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Starfighter over a starfield">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#060a24"/>
-            <g fill="#fff"><circle cx="16" cy="16" r="1.6"/><circle cx="62" cy="12" r="1.3"/><circle cx="68" cy="34" r="1.6"/><circle cx="12" cy="42" r="1.2"/><circle cx="34" cy="10" r="1.2"/><circle cx="54" cy="62" r="1.4"/><circle cx="18" cy="66" r="1.3"/></g>
-            <path d="M40 18 L48 44 L58 50 L46 52 L44 62 L40 54 L36 62 L34 52 L22 50 L32 44 Z" fill="#dbeafe" stroke="#6cb8ff" stroke-width="2" stroke-linejoin="round"/>
-            <circle cx="40" cy="40" r="4" fill="#ff3d3d"/>
-            <path d="M14 26 h10 M56 24 h10" stroke="#ff3d3d" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">RIGO'S SPACE FORCE</h3>
           <p class="cab-sub">Down With The Teslas</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/rigos-space-force.jpg" alt="Rigo's Space Force screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">Blast the <em>Tesla fleet</em> of the evil Space X. Rescue your captured fighter to fly as the <em>Dual Fighter</em> — auto-fire included.</p>
         <div class="tags"><span class="tag">Formation shooter</span><span class="tag">Tractor beam</span><span class="tag">Auto-fire</span></div>
@@ -570,20 +552,13 @@
     <!-- STAR WARS CHESS -->
     <article class="cab g-chess">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Chess knight over a starfield board">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#12081f"/>
-            <g fill="#fff" opacity=".9"><circle cx="16" cy="14" r="1.4"/><circle cx="64" cy="18" r="1.2"/><circle cx="58" cy="8" r="1.1"/><circle cx="24" cy="26" r="1.1"/></g>
-            <g opacity=".28"><rect x="10" y="52" width="15" height="15" fill="#fff"/><rect x="25" y="52" width="15" height="15" fill="#000"/><rect x="40" y="52" width="15" height="15" fill="#fff"/><rect x="55" y="52" width="15" height="15" fill="#000"/></g>
-            <path d="M52 62 L30 62 L32 50 C26 46 24 38 28 32 L32 24 L38 20 L40 28 L46 24 C44 34 48 40 54 44 L52 62 Z" fill="#f5c542" stroke="#ffe27a" stroke-width="1.6" stroke-linejoin="round"/>
-            <circle cx="35" cy="30" r="2.2" fill="#12081f"/>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">STAR WARS CHESS</h3>
           <p class="cab-sub">Battle Chess · A Galaxy Away</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/star-wars-chess.jpg" alt="Star Wars Chess screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">Chess where the pieces <em>march across the board</em> and duel on every capture. Pick your side and work your way up the <em>difficulty ranks</em>.</p>
         <div class="tags"><span class="tag">Animated captures</span><span class="tag">Difficulty ranks</span><span class="tag">2 themes</span></div>
@@ -599,19 +574,13 @@
     <!-- GUARD CHESS -->
     <article class="cab g-guard">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Guard shield with a chess knight">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#0a1626"/>
-            <path d="M40 10 L64 18 V38 C64 56 54 66 40 72 C26 66 16 56 16 38 V18 Z" fill="#16324f" stroke="#8ec5ff" stroke-width="2.4" stroke-linejoin="round"/>
-            <path d="M48 56 L32 56 L33 47 C29 44 28 38 31 34 L34 28 L38 25 L39 31 L44 28 C43 35 45 39 49 42 L48 56 Z" fill="#eaf4ff"/>
-            <path d="M24 22 h8 M24 30 h5" stroke="#39ff88" stroke-width="2.4" stroke-linecap="round"/>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">GUARD CHESS</h3>
           <p class="cab-sub">Battle Chess · On Post</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/guard-chess.jpg" alt="Guard Chess screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">The guard-post edition of battle chess — pieces <em>march and duel on captures</em>, with <em>difficulty ranks</em> to climb between shifts.</p>
         <div class="tags"><span class="tag">Animated captures</span><span class="tag">Difficulty ranks</span><span class="tag">On-post theme</span></div>
@@ -627,21 +596,13 @@
     <!-- SCORCHED EARTH -->
     <article class="cab g-scorched">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Tanks trading artillery fire over hills">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#1c0f06"/>
-            <path d="M4 58 Q22 44 38 56 T76 52 V76 H4 Z" fill="#4a2a10"/>
-            <path d="M18 30 Q40 12 62 28" fill="none" stroke="#ff9a3d" stroke-width="2.4" stroke-dasharray="4 4"/>
-            <circle cx="62" cy="28" r="3.4" fill="#ffe27a"/>
-            <g fill="#ffb03d"><rect x="12" y="50" width="16" height="7" rx="2"/><rect x="17" y="45" width="8" height="6" rx="2"/><rect x="24" y="42" width="10" height="3" rx="1.5" transform="rotate(-24 24 42)"/></g>
-            <g fill="#ff6b4a"><rect x="52" y="46" width="16" height="7" rx="2"/><rect x="57" y="41" width="8" height="6" rx="2"/><rect x="48" y="38" width="10" height="3" rx="1.5" transform="rotate(24 58 38)"/></g>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">SCORCHED EARTH</h3>
           <p class="cab-sub">Blast From The Past</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/scorched-earth.jpg" alt="Scorched Earth screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">The <em>1991 artillery classic</em>, recreated. Dial in your angle and power, read the wind, and drop the other tank off the ridge.</p>
         <div class="tags"><span class="tag">Angle + power</span><span class="tag">Wind</span><span class="tag">Destructible hills</span></div>
@@ -657,19 +618,13 @@
     <!-- KABOOM! -->
     <article class="cab g-kaboom">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Falling bombs above water buckets">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#200808"/>
-            <g><circle cx="24" cy="18" r="7" fill="#222"/><path d="M28 12 q6 -6 9 -3" stroke="#f5c542" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="40" cy="30" r="7" fill="#222"/><path d="M44 24 q6 -6 9 -3" stroke="#f5c542" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="58" cy="16" r="7" fill="#222"/><path d="M62 10 q6 -6 9 -3" stroke="#ff9a3d" stroke-width="2.4" fill="none" stroke-linecap="round"/></g>
-            <g fill="#2ee6ff"><path d="M16 52 h20 l-3 14 a3 3 0 0 1 -3 2 h-8 a3 3 0 0 1 -3 -2 Z"/><path d="M44 52 h20 l-3 14 a3 3 0 0 1 -3 2 h-8 a3 3 0 0 1 -3 -2 Z"/></g>
-            <path d="M16 56 h20 M44 56 h20" stroke="#0b3a4a" stroke-width="2"/>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">KABOOM!</h3>
           <p class="cab-sub">Catch 'Em All</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/kaboom.jpg" alt="Kaboom! screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">The Mad Bomber is dropping bombs from the wall. <em>Catch every one in your buckets</em> — miss three and it's game over.</p>
         <div class="tags"><span class="tag">Pure reflexes</span><span class="tag">Speeds up</span><span class="tag">3 buckets</span></div>
@@ -685,24 +640,13 @@
     <!-- BURGERTIME -->
     <article class="cab g-burger">
       <div class="marquee">
-        <div class="marquee-art" aria-hidden="true">
-          <svg viewBox="0 0 80 80" role="img" aria-label="Stacked burger layers">
-            <rect x="4" y="4" width="72" height="72" rx="6" fill="#221005"/>
-            <g>
-              <path d="M16 26 Q40 10 64 26 L64 30 Q40 24 16 30 Z" fill="#f0a84e"/>
-              <rect x="16" y="34" width="48" height="6" rx="3" fill="#39ff88"/>
-              <rect x="16" y="43" width="48" height="6" rx="3" fill="#ff3d3d"/>
-              <rect x="16" y="52" width="48" height="7" rx="3" fill="#7a3d14"/>
-              <path d="M16 62 h48 v4 a4 4 0 0 1 -4 4 h-40 a4 4 0 0 1 -4 -4 Z" fill="#f0a84e"/>
-            </g>
-            <g fill="#fff"><circle cx="30" cy="20" r="1.6"/><circle cx="42" cy="17" r="1.6"/><circle cx="52" cy="21" r="1.6"/></g>
-          </svg>
-        </div>
+        
         <div class="marquee-text">
           <h3 class="cab-title">BURGERTIME</h3>
           <p class="cab-sub">Build 'Em Tall</p>
         </div>
       </div>
+      <div class="cab-screen"><img src="shots/burgertime.jpg" alt="BurgerTime screenshot" loading="lazy"></div>
       <div class="screen">
         <p class="pitch">Walk the layers down and <em>build the burgers</em> while eggs, pickles, and hot dogs chase you. <em>Pepper</em> stuns them — use it wisely.</p>
         <div class="tags"><span class="tag">Maze climb</span><span class="tag">Pepper stun</span><span class="tag">Food foes</span></div>
@@ -715,7 +659,8 @@
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
 
-  <!-- ANGELES-OPOLY --> <article class="cab g-opoly"> <div class="marquee"> <div class="marquee-art" aria-hidden="true"> <svg viewBox="0 0 80 80" role="img" aria-label="Angeles-Opoly board"> <rect x="4" y="4" width="72" height="72" rx="6" fill="#12081f"/> <g fill="none" stroke="#f5c542" stroke-width="2"><rect x="14" y="14" width="52" height="52" rx="4"/><rect x="28" y="28" width="24" height="24" rx="2"/></g> <g fill="#f5c542"><rect x="14" y="14" width="12" height="12"/><rect x="54" y="14" width="12" height="12"/><rect x="14" y="54" width="12" height="12"/><rect x="54" y="54" width="12" height="12"/></g> <circle cx="40" cy="40" r="5" fill="#ff3d8a"/> </svg> </div> <div class="marquee-text"> <h3 class="cab-title">Angeles-opoly</h3> <p class="cab-sub">Buy It All · Pass &amp; Play + AI</p> </div> </div> <div class="screen"> <p class="pitch">The Angeles take on the classic property game. <em>Buy, build, and bankrupt</em> your rivals around the board.</p> <div class="tags"><span class="tag">Property trading</span><span class="tag">Pass &amp; Play + AI</span></div>
+  <!-- ANGELES-OPOLY --> <article class="cab g-opoly"> <div class="marquee">  <div class="marquee-text"> <h3 class="cab-title">Angeles-opoly</h3> <p class="cab-sub">Buy It All · Pass &amp; Play + AI</p> </div> </div> <div class="cab-screen"><img src="shots/angeles-opoly.jpg" alt="Angeles-opoly screenshot" loading="lazy"></div>
+      <div class="screen"> <p class="pitch">The Angeles take on the classic property game. <em>Buy, build, and bankrupt</em> your rivals around the board.</p> <div class="tags"><span class="tag">Property trading</span><span class="tag">Pass &amp; Play + AI</span></div>
         <div class="play-count"><span class="pc-pill" data-play-counter="angeles-opoly">▶ PLAYS <b data-pc-num>–</b></span></div> </div> <div class="deck"> <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div> <a class="play" href="https://angeles-productions-arcade.onrender.com/angeles-opoly.html" data-count-slug="angeles-opoly" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a> </div> <p class="deck-note">1 COIN · 1 PLAY</p> </article> </section> <!-- EMAIL A COMMENT -->
   <section class="mailbox" aria-labelledby="mail-title">
     <div class="mail-head">
