@@ -206,26 +206,38 @@
     background:var(--marquee-bg);
     border:1px solid rgba(255,255,255,.16);
     box-shadow:inset 0 0 22px rgba(255,255,255,.06), 0 0 20px color-mix(in srgb, var(--accent) 28%, transparent);
-    display:flex; align-items:center; gap:.85rem;
+    display:flex; align-items:center; justify-content:center; gap:.85rem;
+    text-align:center;
+    position:relative;
     animation:marqueePulse 3.6s ease-in-out infinite;
   }
   @keyframes marqueePulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.13)}}
-  /* cabinet screen — real game screenshot in a bezel frame */
+  /* cabinet screen — rotating game screenshots in a rounded CRT bezel */
   .cab-screen{
     margin:.65rem .65rem 0;
-    padding:7px;
-    border-radius:13px;
-    background:linear-gradient(180deg,#26263f,#07070f 62%);
-    border:1px solid rgba(255,255,255,.20);
-    box-shadow:inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 26px rgba(0,0,0,.75), 0 0 20px color-mix(in srgb, var(--accent) 24%, transparent);
+    position:relative;
+    aspect-ratio:16/10;
+    border:10px solid #05050a;
+    border-radius:24px;
+    overflow:hidden;
+    background:#000;
+    box-shadow:inset 0 0 30px rgba(0,0,0,.8), 0 0 22px color-mix(in srgb, var(--accent) 28%, transparent);
+  }
+  .cab-screen::after{
+    content:""; position:absolute; inset:0; pointer-events:none; z-index:2;
+    background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.05) 50%, transparent 58%);
   }
   .cab-screen img{
-    display:block; width:100%; aspect-ratio:16/10; object-fit:cover;
-    border-radius:7px; background:#000;
+    position:absolute; inset:0;
+    display:block; width:100%; height:100%; object-fit:cover;
+    background:#000;
+    opacity:0; transition:opacity .9s ease;
   }
+  .cab-screen img.on{opacity:1}
+  .cab-screen img.dead{display:none}
   .cab.flagship .cab-screen{
-    padding:9px;
-    box-shadow:inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 30px rgba(0,0,0,.8), 0 0 32px rgba(57,255,136,.30);
+    border-width:13px;
+    box-shadow:inset 0 0 34px rgba(0,0,0,.85), 0 0 34px rgba(57,255,136,.32);
   }
   .marquee-text{min-width:0; flex:1}
   .cab-title{
@@ -241,34 +253,26 @@
     text-transform:uppercase;
   }
   .flag-badge{
-    flex:none; align-self:flex-start;
+    position:absolute; top:-.45rem; right:.55rem; z-index:4;
+    transform:rotate(7deg);
     font-family:"Press Start 2P", monospace; font-size:.5rem; letter-spacing:.03em;
     color:#06130a; background:var(--neon-green);
     padding:.5rem .55rem; border-radius:7px;
-    box-shadow:0 0 16px rgba(57,255,136,.55);
+    box-shadow:0 3px 8px rgba(0,0,0,.5), 0 0 16px rgba(57,255,136,.55);
+  }
+  .g-grooo .flag-badge{
+    background:var(--accent); color:#fff;
+    box-shadow:0 3px 8px rgba(0,0,0,.5), 0 0 16px color-mix(in srgb, var(--accent) 60%, transparent);
   }
 
-  /* screen */
-  .screen{
-    margin:.65rem .65rem 0;
-    border-radius:12px;
-    background:
-      repeating-linear-gradient(0deg, rgba(255,255,255,.035) 0 1px, transparent 1px 4px),
-      radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,.06), transparent 55%),
-      var(--screen);
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:inset 0 0 28px rgba(0,0,0,.85), inset 0 0 3px rgba(255,255,255,.12);
-    padding:1rem 1rem .95rem;
+  /* description — pitch + tags under the control deck */
+  .desc{
+    padding:.8rem 1rem 0;
     flex:1; display:flex; flex-direction:column; gap:.75rem;
-    position:relative; overflow:hidden;
   }
-  .screen::after{
-    content:""; position:absolute; inset:0; pointer-events:none;
-    background:linear-gradient(115deg, transparent 42%, rgba(255,255,255,.045) 50%, transparent 58%);
-  }
-  .pitch{margin:0; font-size:.98rem; line-height:1.55; color:#e8e5da; font-weight:500}
+  .pitch{margin:0; font-size:.98rem; line-height:1.55; color:#e8e5da; font-weight:500; text-align:center}
   .pitch em{color:var(--gold-2); font-style:normal; font-weight:700}
-  .tags{display:flex; flex-wrap:wrap; gap:.42rem; margin-top:auto}
+  .tags{display:flex; flex-wrap:wrap; gap:.42rem; margin-top:auto; justify-content:center}
   .tag{
     font-size:.72rem; font-weight:700; letter-spacing:.02em;
     padding:.34rem .55rem; border-radius:999px;
@@ -277,12 +281,16 @@
     background:color-mix(in srgb, var(--accent) 10%, transparent);
     white-space:nowrap;
   }
-  .play-count{display:flex; margin-top:.5rem}
+  /* plays counter — inset plate at the cabinet's base */
+  .play-count{margin:.95rem .85rem 1.05rem}
   .pc-pill{
-    font-size:.72rem; font-weight:800; letter-spacing:.06em;
-    padding:.34rem .6rem; border-radius:999px;
-    border:1px solid rgba(245,197,66,.45); color:var(--gold-2);
-    background:rgba(245,197,66,.08); white-space:nowrap;
+    display:block; text-align:center;
+    font-family:ui-monospace, "Courier New", monospace;
+    font-size:.95rem; font-weight:700; letter-spacing:.22em;
+    padding:.68rem .6rem; border-radius:10px;
+    border:1px solid #3a3a55; color:var(--gold-2);
+    background:#10101c; box-shadow:inset 0 2px 9px rgba(0,0,0,.8);
+    white-space:nowrap;
   }
   .pc-pill b{color:#fff; font-weight:800}
   #modeChooser{position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:rgba(5,4,16,.86); padding:18px}
@@ -300,43 +308,47 @@
   .mc-cancel{margin-top:16px; background:none; border:none; color:#8d8d7a; font-weight:700; cursor:pointer; font-size:.85rem}
   .mc-status{margin-top:8px; color:#f5c542; font-weight:800; letter-spacing:.2em; min-height:1.1em}
 
-  /* control deck */
+  /* control deck — joystick + player info | gold coin-plate PLAY | arcade buttons */
   .deck{
-    padding:.85rem .85rem 1rem;
-    display:flex; align-items:stretch; gap:.7rem;
+    padding:.9rem .95rem .35rem;
+    display:flex; align-items:center; justify-content:space-between; gap:.7rem;
   }
-  .coin-slot{
-    flex:none; width:54px; border-radius:11px;
-    background:linear-gradient(180deg,#23233f,#15152b);
-    border:1px solid rgba(255,255,255,.14);
-    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.3rem;
-    padding:.45rem 0;
+  .deck-players{
+    flex:none; width:74px;
+    display:flex; flex-direction:column; align-items:center; gap:.28rem;
+    text-align:center;
   }
-  .coin-slot .slot{width:5px; height:26px; border-radius:99px; background:#000; box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), 0 0 8px rgba(0,0,0,.8)}
-  .coin-slot .cents{font-family:"Press Start 2P", monospace; font-size:.48rem; color:var(--gold-2)}
-  .coin-slot .label{font-size:.56rem; font-weight:800; letter-spacing:.12em; color:var(--muted-2)}
+  .deck-players .joy{font-size:1.35rem; line-height:1}
+  .deck-players .ptext{
+    font-size:.66rem; font-weight:800; letter-spacing:.08em; line-height:1.45;
+    color:#cbbfa3; text-transform:uppercase;
+  }
   .play{
-    flex:1; min-height:60px;
-    display:flex; align-items:center; justify-content:center; gap:.6rem;
+    flex:1; min-height:60px; max-width:230px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.32rem;
     text-decoration:none; text-align:center;
     font-family:"Press Start 2P", monospace; font-size:.82rem; letter-spacing:.03em;
     color:#171200; background:linear-gradient(180deg, var(--gold-2), var(--gold) 55%, #e0aa1e);
     border-radius:12px; border:1px solid #ffe98f;
     box-shadow:0 6px 0 var(--gold-dark), 0 12px 24px rgba(0,0,0,.5), 0 0 22px rgba(245,197,66,.35);
-    padding:.9rem .8rem;
+    padding:.7rem .8rem;
     transition:transform .12s ease, box-shadow .12s ease, filter .12s ease;
   }
   .play:hover{filter:brightness(1.06)}
   .play:active{transform:translateY(4px); box-shadow:0 2px 0 var(--gold-dark), 0 6px 14px rgba(0,0,0,.5)}
   .play:focus-visible{outline:3px solid var(--neon-cyan); outline-offset:3px}
   .play .tri{font-size:.9rem}
-  .insert-coin{
-    margin:0 .85rem 1rem; text-align:center;
-    font-family:"Press Start 2P", monospace; font-size:.55rem; letter-spacing:.05em;
-    color:var(--neon-green); text-shadow:0 0 12px rgba(57,255,136,.6);
-    animation:blink 1.3s steps(2,start) infinite;
+  .play small{
+    font-family:"Archivo", system-ui, sans-serif;
+    font-size:.62rem; font-weight:800; letter-spacing:.24em; color:#4a3800;
   }
-  .deck-note{margin:0 .85rem 1rem; text-align:center; font-size:.74rem; font-weight:600; color:var(--muted-2); letter-spacing:.04em}
+  .deck-btns{flex:none; width:74px; display:flex; gap:.55rem; justify-content:center}
+  .deck-btns i{
+    width:26px; height:26px; border-radius:50%; display:block;
+    box-shadow:0 3px 0 rgba(0,0,0,.55), inset 0 -4px 7px rgba(0,0,0,.35);
+  }
+  .deck-btns .b1{background:var(--accent)}
+  .deck-btns .b2{background:var(--accent-2)}
 
   /* per-game accents */
   .g-km{--accent:#39ff88; --accent-2:#2ee6ff; --marquee-bg:linear-gradient(135deg,#0a2e22,#0b1e3a)}
@@ -386,6 +398,25 @@
   .mail-form textarea{min-height:96px; resize:vertical}
   .mail-form input::placeholder,.mail-form textarea::placeholder{color:var(--muted-2)}
   .mail-form input:focus,.mail-form textarea:focus{outline:3px solid var(--neon-cyan); outline-offset:1px; border-color:transparent}
+  .mail-topic-label{
+    display:block; font-family:"Press Start 2P", monospace; font-size:.55rem; letter-spacing:.04em;
+    color:var(--neon-cyan); margin-bottom:.45rem;
+  }
+  .topic-chips{display:flex; flex-wrap:wrap; gap:.5rem}
+  .topic-chip{
+    cursor:pointer;
+    font-family:"Press Start 2P", monospace; font-size:.55rem; letter-spacing:.03em; line-height:1.4;
+    padding:.6rem .7rem; border-radius:999px;
+    border:1px solid rgba(255,255,255,.20);
+    background:#06061a; color:var(--muted);
+    transition:filter .12s ease, border-color .12s ease, color .12s ease, background .12s ease;
+  }
+  .topic-chip:hover{border-color:rgba(245,197,66,.6); color:var(--ink)}
+  .topic-chip:focus-visible{outline:3px solid var(--neon-cyan); outline-offset:2px}
+  .topic-chip.is-on{
+    color:#171200; background:linear-gradient(180deg, var(--gold-2), var(--gold) 55%, #e0aa1e);
+    border-color:#ffe98f; box-shadow:0 0 14px rgba(245,197,66,.35);
+  }
   .mail-send{
     min-height:60px; cursor:pointer;
     display:flex; align-items:center; justify-content:center; gap:.6rem;
@@ -491,17 +522,17 @@
         </div>
         <span class="flag-badge">NEW</span>
       </div>
-      <div class="cab-screen"><img src="shots/quests-of-grooo.jpg" alt="Quests of Grooo screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/quests-of-grooo.jpg" alt="Quests of Grooo screenshot" loading="lazy"><img src="shots/quests-of-grooo-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/quests-of-grooo-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">1–2 Player</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/quests-of-grooo.html" data-count-slug="quests-of-grooo" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">THE HOLLOW KING is back — and Grooo needs saving! Pick your hero, grab <em>sparkly loot</em>, master awesome skills, and set out on the adventure to <em>SAVE GROOO!</em></p>
         <div class="tags"><span class="tag">8 heroes</span><span class="tag">1–2 player co-op</span><span class="tag">Sparkly loot</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="quests-of-grooo">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/quests-of-grooo.html" data-count-slug="quests-of-grooo" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="quests-of-grooo">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- KM SECURITY — FLAGSHIP -->
@@ -514,17 +545,17 @@
         </div>
         <span class="flag-badge">FLAGSHIP</span>
       </div>
-      <div class="cab-screen"><img src="shots/km-security.jpg" alt="KM Security screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/km-security.jpg" alt="KM Security screenshot" loading="lazy"><img src="shots/km-security-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/km-security-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Co-op Mode</span></div>
+        <a class="play" href="https://km-security.onrender.com" data-count-slug="km-security" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">The KMC ER swing-shift game. <em>Hold the beds, stop the runners,</em> and keep the floor under control — hit <em>10 Code Greens</em> and your shift is over.</p>
         <div class="tags"><span class="tag">Floor-plan action</span><span class="tag">Co-op mode</span><span class="tag">Top 10 leaderboard</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="km-security">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://km-security.onrender.com" data-count-slug="km-security" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="insert-coin" aria-hidden="true">★ INSERT COIN ★</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="km-security">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- RIGO'S SPACE FORCE -->
@@ -536,17 +567,17 @@
           <p class="cab-sub">Down With The Teslas</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/rigos-space-force.jpg" alt="Rigo's Space Force screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/rigos-space-force.jpg" alt="Rigo's Space Force screenshot" loading="lazy"><img src="shots/rigos-space-force-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/rigos-space-force-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Auto-fire</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/rigos-space-force.html" data-count-slug="rigos-space-force" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">Blast the <em>Tesla fleet</em> of the evil Space X. Rescue your captured fighter to fly as the <em>Dual Fighter</em> — auto-fire included.</p>
         <div class="tags"><span class="tag">Formation shooter</span><span class="tag">Tractor beam</span><span class="tag">Auto-fire</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="rigos-space-force">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/rigos-space-force.html" data-count-slug="rigos-space-force" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="rigos-space-force">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- STAR WARS CHESS -->
@@ -558,17 +589,17 @@
           <p class="cab-sub">Battle Chess · A Galaxy Away</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/star-wars-chess.jpg" alt="Star Wars Chess screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/star-wars-chess.jpg" alt="Star Wars Chess screenshot" loading="lazy"><img src="shots/star-wars-chess-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/star-wars-chess-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">2 Themes</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/chess.html" data-count-slug="star-wars-chess" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">Chess where the pieces <em>march across the board</em> and duel on every capture. Pick your side and work your way up the <em>difficulty ranks</em>.</p>
         <div class="tags"><span class="tag">Animated captures</span><span class="tag">Difficulty ranks</span><span class="tag">2 themes</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="star-wars-chess">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/chess.html" data-count-slug="star-wars-chess" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="star-wars-chess">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- GUARD CHESS -->
@@ -580,17 +611,17 @@
           <p class="cab-sub">Battle Chess · On Post</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/guard-chess.jpg" alt="Guard Chess screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/guard-chess.jpg" alt="Guard Chess screenshot" loading="lazy"><img src="shots/guard-chess-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/guard-chess-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Difficulty Ranks</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/guard-chess.html" data-count-slug="guard-chess" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">The guard-post edition of battle chess — pieces <em>march and duel on captures</em>, with <em>difficulty ranks</em> to climb between shifts.</p>
         <div class="tags"><span class="tag">Animated captures</span><span class="tag">Difficulty ranks</span><span class="tag">On-post theme</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="guard-chess">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/guard-chess.html" data-count-slug="guard-chess" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="guard-chess">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- SCORCHED EARTH -->
@@ -602,17 +633,17 @@
           <p class="cab-sub">Blast From The Past</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/scorched-earth.jpg" alt="Scorched Earth screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/scorched-earth.jpg" alt="Scorched Earth screenshot" loading="lazy"><img src="shots/scorched-earth-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/scorched-earth-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Angle + Power</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/scorched-earth.html" data-count-slug="scorched-earth" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">The <em>1991 artillery classic</em>, recreated. Dial in your angle and power, read the wind, and drop the other tank off the ridge.</p>
         <div class="tags"><span class="tag">Angle + power</span><span class="tag">Wind</span><span class="tag">Destructible hills</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="scorched-earth">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/scorched-earth.html" data-count-slug="scorched-earth" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="scorched-earth">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- KABOOM! -->
@@ -624,17 +655,17 @@
           <p class="cab-sub">Catch 'Em All</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/kaboom.jpg" alt="Kaboom! screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/kaboom.jpg" alt="Kaboom! screenshot" loading="lazy"><img src="shots/kaboom-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/kaboom-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Pure Reflexes</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/kaboom.html" data-count-slug="kaboom" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">The Mad Bomber is dropping bombs from the wall. <em>Catch every one in your buckets</em> — miss three and it's game over.</p>
         <div class="tags"><span class="tag">Pure reflexes</span><span class="tag">Speeds up</span><span class="tag">3 buckets</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="kaboom">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/kaboom.html" data-count-slug="kaboom" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="kaboom">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
     <!-- BURGERTIME -->
@@ -646,28 +677,45 @@
           <p class="cab-sub">Build 'Em Tall</p>
         </div>
       </div>
-      <div class="cab-screen"><img src="shots/burgertime.jpg" alt="BurgerTime screenshot" loading="lazy"></div>
-      <div class="screen">
+      <div class="cab-screen"><img src="shots/burgertime.jpg" alt="BurgerTime screenshot" loading="lazy"><img src="shots/burgertime-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/burgertime-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Maze Climb</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/burgertime.html" data-count-slug="burgertime" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
         <p class="pitch">Walk the layers down and <em>build the burgers</em> while eggs, pickles, and hot dogs chase you. <em>Pepper</em> stuns them — use it wisely.</p>
         <div class="tags"><span class="tag">Maze climb</span><span class="tag">Pepper stun</span><span class="tag">Food foes</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="burgertime">▶ PLAYS <b data-pc-num>–</b></span></div>
       </div>
-      <div class="deck">
-        <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href="https://angeles-productions-arcade.onrender.com/burgertime.html" data-count-slug="burgertime" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
-      </div>
-      <p class="deck-note">1 COIN · 1 PLAY</p>
+      <div class="play-count"><span class="pc-pill" data-play-counter="burgertime">▶ PLAYS <b data-pc-num>–</b></span></div>
     </article>
 
-  <!-- ANGELES-OPOLY --> <article class="cab g-opoly"> <div class="marquee">  <div class="marquee-text"> <h3 class="cab-title">Angeles-opoly</h3> <p class="cab-sub">Buy It All · Pass &amp; Play + AI</p> </div> </div> <div class="cab-screen"><img src="shots/angeles-opoly.jpg" alt="Angeles-opoly screenshot" loading="lazy"></div>
-      <div class="screen"> <p class="pitch">The Angeles take on the classic property game. <em>Buy, build, and bankrupt</em> your rivals around the board.</p> <div class="tags"><span class="tag">Property trading</span><span class="tag">Pass &amp; Play + AI</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="angeles-opoly">▶ PLAYS <b data-pc-num>–</b></span></div> </div> <div class="deck"> <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div> <a class="play" href="https://angeles-productions-arcade.onrender.com/angeles-opoly.html" data-count-slug="angeles-opoly" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a> </div> <p class="deck-note">1 COIN · 1 PLAY</p> </article> </section> <!-- EMAIL A COMMENT -->
+  <!-- ANGELES-OPOLY --> <article class="cab g-opoly"> <div class="marquee">  <div class="marquee-text"> <h3 class="cab-title">Angeles-opoly</h3> <p class="cab-sub">Buy It All · Pass &amp; Play + AI</p> </div> </div> <div class="cab-screen"><img src="shots/angeles-opoly.jpg" alt="Angeles-opoly screenshot" loading="lazy"><img src="shots/angeles-opoly-b.jpg" alt="" aria-hidden="true" loading="lazy"><img src="shots/angeles-opoly-c.jpg" alt="" aria-hidden="true" loading="lazy"></div>
+      <div class="deck">
+        <div class="deck-players"><span class="joy" aria-hidden="true">🕹️</span><span class="ptext">Pass &amp; Play</span></div>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/angeles-opoly.html" data-count-slug="angeles-opoly" target="_blank" rel="noopener"><span class="play-main"><span class="tri" aria-hidden="true">▶</span> PLAY</span><small>25¢ · 1 COIN</small></a>
+        <div class="deck-btns" aria-hidden="true"><i class="b1"></i><i class="b2"></i></div>
+      </div>
+      <div class="desc">
+        <p class="pitch">The Angeles take on the classic property game. <em>Buy, build, and bankrupt</em> your rivals around the board.</p>
+        <div class="tags"><span class="tag">Property trading</span><span class="tag">Pass &amp; Play + AI</span></div>
+      </div>
+      <div class="play-count"><span class="pc-pill" data-play-counter="angeles-opoly">▶ PLAYS <b data-pc-num>–</b></span></div> </article> </section> <!-- EMAIL A COMMENT -->
   <section class="mailbox" aria-labelledby="mail-title">
     <div class="mail-head">
       <h2 id="mail-title">EMAIL A COMMENT</h2>
       <p class="mail-sub">Comments go straight to the arcade's inbox — no accounts, no wall, just email.</p>
     </div>
     <form class="mail-form" id="mail-form" autocomplete="off">
+      <div>
+        <span class="mail-topic-label" id="mail-topic-label">WHAT'S THIS ABOUT?</span>
+        <div class="topic-chips" role="group" aria-labelledby="mail-topic-label">
+          <button type="button" class="topic-chip is-on" data-topic="comment" aria-pressed="true">💬 COMMENT</button>
+          <button type="button" class="topic-chip" data-topic="idea" aria-pressed="false">💡 GAME IDEA</button>
+          <button type="button" class="topic-chip" data-topic="bug" aria-pressed="false">🐛 BUG REPORT</button>
+          <button type="button" class="topic-chip" data-topic="suggestion" aria-pressed="false">✨ SUGGESTION</button>
+        </div>
+      </div>
       <div>
         <label for="mail-name">YOUR NAME / TAG</label>
         <input id="mail-name" name="name" type="text" maxlength="60" required placeholder="e.g. AAA or PIXEL_PETE">
@@ -710,12 +758,33 @@
   var form = document.getElementById('mail-form');
   if(!form) return;
 
+  var TOPICS = {
+    comment:    { subject: 'Arcade comment',    ph: 'Best cabinet? Biggest score? Say it here.' },
+    idea:       { subject: 'Arcade game idea',  ph: 'Your game idea — the wilder the better. What do you do? How do you win?' },
+    bug:        { subject: 'Arcade bug report', ph: 'Which game? What happened — and what were you doing when it broke?' },
+    suggestion: { subject: 'Arcade suggestion', ph: 'What should the arcade do better or add next?' }
+  };
+  var topic = 'comment';
+  var commentEl = document.getElementById('mail-comment');
+  var chips = form.querySelectorAll('.topic-chip');
+  chips.forEach(function(chip){
+    chip.addEventListener('click', function(){
+      topic = chip.getAttribute('data-topic');
+      chips.forEach(function(c){
+        var on = (c === chip);
+        c.classList.toggle('is-on', on);
+        c.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+      if(TOPICS[topic]) commentEl.placeholder = TOPICS[topic].ph;
+    });
+  });
+
   form.addEventListener('submit', function(ev){
     ev.preventDefault();
     var name = document.getElementById('mail-name').value.trim();
-    var comment = document.getElementById('mail-comment').value.trim();
+    var comment = commentEl.value.trim();
     if(!name || !comment) return;
-    var subject = 'Arcade comment from ' + name;
+    var subject = (TOPICS[topic] ? TOPICS[topic].subject : 'Arcade comment') + ' from ' + name;
     var a = document.createElement('a');
     a.href = 'mailto:angelegameslive@gmail.com'
       + '?subject=' + encodeURIComponent(subject)
@@ -814,6 +883,46 @@
   document.getElementById('mcPhone').addEventListener('click',function(){ launch('mobile') });
   document.getElementById('mcCancel').addEventListener('click',function(){ chooser.classList.remove('open'); pending=null });
   chooser.addEventListener('click',function(e){ if(e.target===chooser){ chooser.classList.remove('open'); pending=null } });
+})();
+</script>
+<script>
+(function(){
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  document.querySelectorAll('.cab-screen').forEach(function(screen, idx){
+    var imgs = Array.prototype.slice.call(screen.querySelectorAll('img'));
+    if(!imgs.length) return;
+    var started = false;
+    function begin(){
+      if(started) return;
+      var loaded = imgs.filter(function(im){ return !im.classList.contains('dead') && im.complete && im.naturalWidth > 0; });
+      if(!loaded.length) return;
+      started = true;
+      var cur = Math.floor(Math.random() * loaded.length);
+      function show(i){
+        cur = i;
+        loaded.forEach(function(im, j){ im.classList.toggle('on', j === i); });
+        screen.setAttribute('data-active', String(i));
+      }
+      show(cur);
+      if(reduce || loaded.length < 2) return;
+      var phase = (idx * 397) % 1200;
+      setTimeout(function(){
+        setInterval(function(){ show((cur + 1) % loaded.length); }, 4500);
+      }, phase);
+    }
+    var pending = imgs.length;
+    function settled(){ pending--; if(pending <= 0) begin(); }
+    imgs.forEach(function(im){
+      if(im.complete){
+        if(im.naturalWidth === 0) im.classList.add('dead');
+        settled();
+      } else {
+        im.addEventListener('load', settled);
+        im.addEventListener('error', function(){ im.classList.add('dead'); settled(); });
+      }
+    });
+    setTimeout(begin, 2500);
+  });
 })();
 </script>
 </body>
