@@ -1241,6 +1241,8 @@ setInterval(()=>{ const tsEl=document.getElementById('titleScreen'); if(!tsEl||t
  const vhC= innerWidth<700 ? Math.min(innerHeight,560) : vwC*ph/pw;
  const sxC=Math.max(0,Math.min(Math.max(0,innerWidth-vwC), pxS-vwC/2)), syC=Math.max(0,Math.min(Math.max(0,innerHeight-vhC), pyS-vhC/2));
  try{ pc.drawImage(canvas, sxC*ratio, syC*ratio, vwC*ratio, vhC*ratio, 0, 0, pw, ph) }catch(e){} },120);
+/* ===== LAUNCH MODE from the arcade loading screen: ?mode=pc opens default; ?mode=mobile opens in Mobile version at 50% zoom. The pause menu can still change both afterwards. ===== */
+(function(){ try{ const m=new URLSearchParams(location.search).get('mode'); if(m==='mobile'||m==='phone'){ platformMode='mobile'; localStorage.setItem('qg_mode','mobile'); camZoom=0.5; localStorage.setItem('qg_zoom','0.5'); applyMode() } else if(m==='pc'||m==='computer'){ platformMode='pc'; localStorage.setItem('qg_mode','pc'); applyMode() } }catch(e){} })();
 </script>
 </body>
 </html>

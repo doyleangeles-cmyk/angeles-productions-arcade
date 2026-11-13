@@ -276,6 +276,20 @@
     background:rgba(245,197,66,.08); white-space:nowrap;
   }
   .pc-pill b{color:#fff; font-weight:800}
+  #modeChooser{position:fixed; inset:0; z-index:90; display:none; align-items:center; justify-content:center; background:rgba(5,4,16,.86); padding:18px}
+  #modeChooser.open{display:flex}
+  .mc-box{width:min(680px,94vw); text-align:center; background:linear-gradient(180deg,#1b1b33,#10101f); border:3px solid #f5c542; border-radius:18px; padding:26px 22px; box-shadow:0 0 60px rgba(245,197,66,.25)}
+  .mc-load{font-family:'Bungee',cursive; color:#f5c542; letter-spacing:.14em; font-size:.95rem}
+  .mc-game{font-family:'Bungee',cursive; font-size:clamp(1.4rem,4.5vw,2.2rem); margin:.35rem 0 .1rem; color:#fff}
+  .mc-q{color:#bdbda6; letter-spacing:.22em; font-weight:800; font-size:.8rem; margin:.2rem 0 1.1rem}
+  .mc-row{display:flex; gap:14px}
+  .mc-choice{flex:1; display:flex; flex-direction:column; align-items:center; gap:.35rem; padding:20px 10px; border-radius:14px; border:2px solid rgba(245,197,66,.5); background:rgba(255,255,255,.04); color:#fff; cursor:pointer}
+  .mc-choice:hover{background:rgba(245,197,66,.12)}
+  .mc-ico{font-size:2.6rem}
+  .mc-name{font-family:'Bungee',cursive; font-size:1.15rem; letter-spacing:.06em}
+  .mc-desc{font-size:.78rem; color:#bdbda6; line-height:1.45}
+  .mc-cancel{margin-top:16px; background:none; border:none; color:#8d8d7a; font-weight:700; cursor:pointer; font-size:.85rem}
+  .mc-status{margin-top:8px; color:#f5c542; font-weight:800; letter-spacing:.2em; min-height:1.1em}
 
   /* control deck */
   .deck{
@@ -486,7 +500,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="quests-of-grooo"https://angeles-productions-arcade.onrender.com/quests-of-grooo.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/quests-of-grooo.html" data-count-slug="quests-of-grooo" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -519,7 +533,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="km-security"https://km-security.onrender.com" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://km-security.onrender.com" data-count-slug="km-security" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="insert-coin" aria-hidden="true">★ INSERT COIN ★</p>
     </article>
@@ -548,7 +562,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="rigos-space-force"https://angeles-productions-arcade.onrender.com/rigos-space-force.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/rigos-space-force.html" data-count-slug="rigos-space-force" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -577,7 +591,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="star-wars-chess"https://angeles-productions-arcade.onrender.com/chess.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/chess.html" data-count-slug="star-wars-chess" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -605,7 +619,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="guard-chess"https://angeles-productions-arcade.onrender.com/guard-chess.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/guard-chess.html" data-count-slug="guard-chess" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -635,7 +649,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="scorched-earth"https://angeles-productions-arcade.onrender.com/scorched-earth.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/scorched-earth.html" data-count-slug="scorched-earth" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -663,7 +677,7 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="kaboom"https://angeles-productions-arcade.onrender.com/kaboom.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/kaboom.html" data-count-slug="kaboom" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
@@ -696,13 +710,13 @@
       </div>
       <div class="deck">
         <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div>
-        <a class="play" href=" data-count-slug="burgertime"https://angeles-productions-arcade.onrender.com/burgertime.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
+        <a class="play" href="https://angeles-productions-arcade.onrender.com/burgertime.html" data-count-slug="burgertime" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a>
       </div>
       <p class="deck-note">1 COIN · 1 PLAY</p>
     </article>
 
   <!-- ANGELES-OPOLY --> <article class="cab g-opoly"> <div class="marquee"> <div class="marquee-art" aria-hidden="true"> <svg viewBox="0 0 80 80" role="img" aria-label="Angeles-Opoly board"> <rect x="4" y="4" width="72" height="72" rx="6" fill="#12081f"/> <g fill="none" stroke="#f5c542" stroke-width="2"><rect x="14" y="14" width="52" height="52" rx="4"/><rect x="28" y="28" width="24" height="24" rx="2"/></g> <g fill="#f5c542"><rect x="14" y="14" width="12" height="12"/><rect x="54" y="14" width="12" height="12"/><rect x="14" y="54" width="12" height="12"/><rect x="54" y="54" width="12" height="12"/></g> <circle cx="40" cy="40" r="5" fill="#ff3d8a"/> </svg> </div> <div class="marquee-text"> <h3 class="cab-title">Angeles-opoly</h3> <p class="cab-sub">Buy It All · Pass &amp; Play + AI</p> </div> </div> <div class="screen"> <p class="pitch">The Angeles take on the classic property game. <em>Buy, build, and bankrupt</em> your rivals around the board.</p> <div class="tags"><span class="tag">Property trading</span><span class="tag">Pass &amp; Play + AI</span></div>
-        <div class="play-count"><span class="pc-pill" data-play-counter="angeles-opoly">▶ PLAYS <b data-pc-num>–</b></span></div> </div> <div class="deck"> <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div> <a class="play" href=" data-count-slug="angeles-opoly"https://angeles-productions-arcade.onrender.com/angeles-opoly.html" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a> </div> <p class="deck-note">1 COIN · 1 PLAY</p> </article> </section> <!-- EMAIL A COMMENT -->
+        <div class="play-count"><span class="pc-pill" data-play-counter="angeles-opoly">▶ PLAYS <b data-pc-num>–</b></span></div> </div> <div class="deck"> <div class="coin-slot" aria-hidden="true"><span class="slot"></span><span class="cents">25¢</span><span class="label">COIN</span></div> <a class="play" href="https://angeles-productions-arcade.onrender.com/angeles-opoly.html" data-count-slug="angeles-opoly" target="_blank" rel="noopener"><span class="tri" aria-hidden="true">▶</span> PLAY</a> </div> <p class="deck-note">1 COIN · 1 PLAY</p> </article> </section> <!-- EMAIL A COMMENT -->
   <section class="mailbox" aria-labelledby="mail-title">
     <div class="mail-head">
       <h2 id="mail-title">EMAIL A COMMENT</h2>
@@ -823,6 +837,19 @@
 </script>
 
 
+<div id="modeChooser" role="dialog" aria-modal="true" aria-label="Choose how you are playing">
+  <div class="mc-box">
+    <div class="mc-load">🕹️ NOW LOADING</div>
+    <h3 class="mc-game" id="mcGame">Game</h3>
+    <p class="mc-q">HOW ARE YOU PLAYING?</p>
+    <div class="mc-row">
+      <button class="mc-choice" id="mcPc" type="button"><span class="mc-ico">💻</span><span class="mc-name">COMPUTER</span><span class="mc-desc">Default mode<br>Pop-up info ON</span></button>
+      <button class="mc-choice" id="mcPhone" type="button"><span class="mc-ico">📱</span><span class="mc-name">PHONE</span><span class="mc-desc">Mobile mode<br>Zoom 50% · clean screen</span></button>
+    </div>
+    <button class="mc-cancel" id="mcCancel" type="button">✕ Not now</button>
+    <div class="mc-status" id="mcStatus"></div>
+  </div>
+</div>
 <script>
 (function(){
   var NS='angeles-productions-arcade', API='https://abacus.jasoncameron.dev';
@@ -833,14 +860,15 @@
       if(num) num.textContent=fmt(j && typeof j.value==='number' ? j.value : 0);
     }).catch(function(){ if(num) num.textContent='0' });
   });
-  document.querySelectorAll('a.play').forEach(function(a){
-    a.addEventListener('click',function(){
-      var slug=a.getAttribute('data-count-slug'); if(!slug) return;
-      try{ fetch(API+'/hit/'+NS+'/'+slug,{keepalive:true}).catch(function(){}) }catch(e){}
-      var chip=document.querySelector('[data-play-counter="'+slug+'"] [data-pc-num]');
-      if(chip){ var cur=parseInt(chip.textContent,10); if(!isNaN(cur)) chip.textContent=fmt(cur+1) }
-    });
-  });
+  var chooser=document.getElementById('modeChooser'), mcGame=document.getElementById('mcGame'), mcStatus=document.getElementById('mcStatus'), pending=null;
+  function countPlay(slug){ if(!slug) return; try{ fetch(API+'/hit/'+NS+'/'+slug,{keepalive:true}).catch(function(){}) }catch(e){} var chip=document.querySelector('[data-play-counter="'+slug+'"] [data-pc-num]'); if(chip){ var cur=parseInt(chip.textContent,10); if(!isNaN(cur)) chip.textContent=fmt(cur+1) } }
+  function openChooser(a){ pending={ href:a.getAttribute('href'), slug:a.getAttribute('data-count-slug') }; var art=a.closest('article'); var t=art?art.querySelector('.cab-title'):null; mcGame.textContent= t? t.textContent : 'Arcade Game'; mcStatus.textContent=''; chooser.classList.add('open') }
+  function launch(mode){ if(!pending) return; countPlay(pending.slug); mcStatus.textContent='LOADING…'; var url=pending.href+(pending.href.indexOf('?')>=0?'&':'?')+'mode='+mode; window.open(url,'_blank','noopener'); setTimeout(function(){ chooser.classList.remove('open'); pending=null },450) }
+  document.querySelectorAll('a.play').forEach(function(a){ a.addEventListener('click',function(e){ e.preventDefault(); openChooser(a) }) });
+  document.getElementById('mcPc').addEventListener('click',function(){ launch('pc') });
+  document.getElementById('mcPhone').addEventListener('click',function(){ launch('mobile') });
+  document.getElementById('mcCancel').addEventListener('click',function(){ chooser.classList.remove('open'); pending=null });
+  chooser.addEventListener('click',function(e){ if(e.target===chooser){ chooser.classList.remove('open'); pending=null } });
 })();
 </script>
 </body>
