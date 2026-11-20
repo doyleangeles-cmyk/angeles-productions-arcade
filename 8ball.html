@@ -142,14 +142,57 @@
   #loadov .mc-q { font-size:11px; letter-spacing:3px; color:#c8a75a; margin-top:-6px; }
   .modecard .mc-ico { display:block; font-size:34px; margin-bottom:7px; }
 
+  /* ---------- NOW LOADING beat (entry-path audit, owner 2026-11-19 21:14) ----------
+     Every way into the game passes a brief branded beat naming
+     ANGELES 8 BALL: an arcade launch (?mode= given) flashes it
+     instead of dumping the player straight onto the title; an
+     invite link (?join=) beats "JOINING YOUR FRIEND'S GAME"; a
+     turn link (#g=) beats "[NAME]'S TURN" before the replay.
+     A bare visit gets the chooser above, which IS the beat.
+     The beat never gates: pointer-events none, gone in ~a second. */
+  #beatov { z-index:9; pointer-events:none; }
+  #beatov .mc-load { font-size:13px; font-weight:bold; letter-spacing:4px; color:#f2c14e;
+                     text-shadow:0 1px 3px rgba(0,0,0,.85); }
+  .beatbar { width:min(300px,70%); height:8px; border:1px solid #77591f; border-radius:5px;
+             overflow:hidden; background:#120b04; box-shadow:inset 0 2px 4px rgba(0,0,0,.8); }
+  .beatfill { height:100%; width:40%; background:linear-gradient(90deg,#57b25e,#f2c14e 55%,#e0483e);
+              animation:beatSlide 1s ease-in-out infinite alternate; }
+  @keyframes beatSlide { from { transform:translateX(-110%);} to { transform:translateX(280%);} }
+
   /* rotated (mobile portrait): the tall table is sized from the
      screen-height budget left by the (now slim) chrome, capped so the
      table + power gutter together never exceed the row width; the
      row is centered as one unit. The constant is the measured chrome:
      slim top bar + message + controls + gaps + foot + body padding. */
   body.rot #tablerow { justify-content:center; }
-  body.rot #tablewrap { flex:none; margin:0; width:min(calc((100vh - 258px) * 0.5421), calc(100% - 21px)); }
+  body.rot #tablewrap { flex:none; margin:0; width:min(calc((100vh - 258px) * 0.5421), calc(100% - 21px)); transition:width .25s ease; }
   body.rot #tablewrap { width:min(calc((100dvh - 258px) * 0.5421), calc(100% - 21px)); }
+
+  /* ---------- portrait fullscreen (owner pick 2026-11-19 21:01) ----------
+     In a portrait phone game the chrome — slim header, message line,
+     controls, foot — collapses OUT of the layout and the rotated
+     table takes the freed screen (the fix he picked for "pool table
+     is tiny and sideways"). A slim handle strip (#fsbar) stays in
+     the frame at all times — in the layout flow, never over the
+     cloth — carrying a one-tap PAUSE (the arcade standing rule) and
+     the CONTROLS reveal tab; the message line echoes inside it, so
+     game news survives the hide. The 15px power gutter stays
+     reserved beside the cloth (his never-over-the-table rule).
+     Chrome returns on the reveal tap, for menus and pause, and
+     re-hides on the next aim/shot or after a few idle seconds
+     [draft: 4s]. Landscape phones and PC mode never see any of it. */
+  #fsbar { display:none; align-items:center; gap:8px; padding:4px 8px; }
+  body.fs #fsbar { display:flex; }
+  body.fs #topbar, body.fs #msg, body.fs #controls, body.fs #foot, body.fs #pingbar { display:none; }
+  #fsmsg { flex:1; min-width:0; text-align:center; font-size:10.5px; color:#ffd873; letter-spacing:.3px;
+           white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #fsbar .tbtn { padding:5px 10px; font-size:11px; }
+  body.rot.fs #tablewrap { width:min(calc((100vh - 96px) * 0.5421), calc(100% - 21px)); }
+  body.rot.fs #tablewrap { width:min(calc((100dvh - 96px) * 0.5421), calc(100% - 21px)); }
+  /* the ⛶ fullscreen button lives in the revealable chrome (top bar),
+     portrait phones only — desktop and landscape stay as they were */
+  #fsbtn { display:none; }
+  body.rot #fsbtn { display:block; }
 
   /* ---------- touch power bar (mobile mode only) ----------
      Shooting on touch gets its OWN control: a vertical bar in a
@@ -254,6 +297,13 @@
     <div class="pchip" id="chip0"><div class="pb-txt"><div class="pname" id="name0">PLAYER 1</div><div class="pgrp" id="grp0">—</div></div><div class="tray" id="tray0"></div></div>
     <div class="pchip" id="chip1"><div class="pb-txt"><div class="pname" id="name1">PLAYER 2</div><div class="pgrp" id="grp1">—</div></div><div class="tray" id="tray1"></div></div>
     <button class="tbtn" id="pausebtn">❚❚ PAUSE</button>
+    <button class="tbtn" id="fsbtn" title="Fullscreen — get the browser bars out of the way">⛶ FULL</button>
+  </div>
+
+  <div id="fsbar" class="panel">
+    <button class="tbtn" id="fspause">❚❚ PAUSE</button>
+    <div id="fsmsg"></div>
+    <button class="tbtn" id="fsreveal">CONTROLS ▾</button>
   </div>
 
   <div id="tablerow">
@@ -265,6 +315,7 @@
       <canvas id="rackcv" width="660" height="192"></canvas>
       <p>Classic 8-ball the way it should be — clean table, honest physics, no clutter.
          Pocket your group, then the 8. Fouls give ball-in-hand.</p>
+      <div class="frow"><label>YOUR NAME</label><input id="tname" maxlength="14" placeholder="PLAYER 1" autocomplete="off"></div>
       <div class="cardrow">
         <button class="modecard" id="mode2p"><div class="mc-t">👥 2 PLAYERS</div>
           <div class="mc-d">Pass &amp; play on this device. Loser racks, winner breaks… house rules.</div></button>
@@ -291,6 +342,7 @@
         </div>
       </div>
       <button class="bigbtn" id="startbtn">RACK 'EM</button>
+      <button class="ghostbtn" id="copylinkbtn">🔗 COPY GAME LINK</button>
       <p style="font-size:11px;">Drag on the table to aim · scroll or hold FINE for hair-fine angles ·
          on PC pull down &amp; release to shoot · on phone pull the POWER bar beside the table ·
          set spin on the cue ball</p>
@@ -372,6 +424,13 @@
         <button class="modecard" id="apPhone"><span class="mc-ico">📱</span><div class="mc-t">PHONE</div>
           <div class="mc-d">Mobile mode<br>Table turns upright in portrait</div></button>
       </div>
+    </div>
+
+    <div class="overlay hidden" id="beatov" aria-hidden="true">
+      <div class="mc-load">🕹️ NOW LOADING</div>
+      <h1>ANGELES 8 BALL</h1>
+      <p id="beatmsg">GETTING THE TABLE READY…</p>
+      <div class="beatbar"><div class="beatfill"></div></div>
     </div>
 
   </div>
@@ -1537,6 +1596,10 @@ function drawCueStick(angle, gap, alpha) {
 const msgEl = document.getElementById('msg');
 function setMsg(html, isHTML) {
   if (isHTML) msgEl.innerHTML = html; else msgEl.textContent = html;
+  // the portrait-fullscreen handle strip echoes the message line, so
+  // game news stays visible while the chrome is hidden
+  const fm = document.getElementById('fsmsg');
+  if (fm) fm.textContent = msgEl.textContent;
 }
 function updateHUD() {
   document.getElementById('name0').textContent = names[0];
@@ -1617,8 +1680,13 @@ function sfx(type, v) {
 // table's right edge (see below) — pull down to charge, release to
 // fire, pull back up to zero to cancel.
 // =====================================================================
+let dragRect = null;   // canvas rect captured at pointerdown: the whole
+                       // drag maps through it, so the portrait-fullscreen
+                       // hide (which reflows the page mid-gesture) can
+                       // never bend an aim or a pull already in flight
+let lastTap = null;    // where the last pointerdown mapped, + the rect used
 function canvasPos(e) {
-  const r = cv.getBoundingClientRect();
+  const r = dragRect || cv.getBoundingClientRect();
   const px = (e.clientX - r.left) * (cv.width / r.width);
   const py = (e.clientY - r.top) * (cv.height / r.height);
   // rotated view: device px are the table canvas turned -90 deg
@@ -1644,7 +1712,14 @@ function humanAiming() {
 cv.addEventListener('pointerdown', e => {
   audio();
   if (!humanAiming()) return;
+  // map the touch FIRST, with the layout the finger actually landed
+  // on — hiding the chrome reflows the page (the canvas jumps up and
+  // starts growing), and a point mapped after that jump lands wrong.
+  dragRect = cv.getBoundingClientRect();
   const p = canvasPos(e);
+  lastTap = { x: +p.x.toFixed(1), y: +p.y.toFixed(1), rl: Math.round(dragRect.left),
+              rt: Math.round(dragRect.top), rw: Math.round(dragRect.width), rh: Math.round(dragRect.height) };
+  fsHideNow();   // portrait fullscreen: starting to aim re-hides the chrome
   if (ballInHand) {
     if (placementOK(p.x, p.y)) {
       cueBall().x = p.x; cueBall().y = p.y;
@@ -1681,7 +1756,7 @@ cv.addEventListener('pointermove', e => {
       // "pull down" charges on the device in your hand, whichever way
       // the table is turned. Unrotated this is exactly the old table-
       // space dy/dx — same numbers, same feel.
-      const r = cv.getBoundingClientRect();
+      const r = dragRect || cv.getBoundingClientRect();
       const dy = (ev.clientY - dragStartScr.y) * (cv.height / r.height);
       const dx = (ev.clientX - dragStartScr.x) * (cv.width / r.width);
       const pullDist = Math.max(0, dy) + Math.abs(dx) * 0.25;
@@ -1714,6 +1789,7 @@ cv.addEventListener('wheel', e => {
   aimAngle += Math.sign(e.deltaY) * 0.00045;
 }, { passive: false });
 function endDrag() {
+  dragRect = null;
   // a finger lifting off the table ends an AIM drag — full stop. It
   // never fires, whatever direction or distance the drag took.
   if (dragTouch) { dragging = false; dragStart = null; dragTouch = false; return; }
@@ -1778,7 +1854,10 @@ pbar.addEventListener('pointerdown', e => {
   audio();
   if (!pbUsable()) return;
   e.preventDefault();
-  pbDrag = { id: e.pointerId, y: e.clientY, max: 0 };
+  fsHideNow();   // portrait fullscreen: starting a charge re-hides the chrome
+  // snapshot the range NOW: the hide grows the bar's track mid-drag,
+  // and the pull must stay calibrated to the bar the finger grabbed.
+  pbDrag = { id: e.pointerId, y: e.clientY, max: 0, range: pbRange() };
   charging = true; power = 0;
   pbar.setPointerCapture(e.pointerId);
   updatePowerUI();
@@ -1786,7 +1865,7 @@ pbar.addEventListener('pointerdown', e => {
 function pbRange() { return Math.max(120, pbtrack.clientHeight * 0.9); }
 pbar.addEventListener('pointermove', e => {
   if (!pbDrag || e.pointerId !== pbDrag.id) return;
-  power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbRange()));
+  power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbDrag.range));
   if (power > pbDrag.max) pbDrag.max = power;
   updatePowerUI();
 });
@@ -1797,7 +1876,7 @@ function pbEnd(e) {
   // finger actually let go, so a charge dragged back to the start
   // cancels even if the last move event was coalesced or dropped.
   if (e && typeof e.clientY === 'number')
-    power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbRange()));
+    power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbDrag.range));
   pbDrag = null;
   charging = false;
   const pw = power;
@@ -1916,6 +1995,8 @@ spincv.addEventListener('dblclick', () => { spinX = 0; spinY = 0; drawSpinWidget
 // ---------- overlays / flow ----------
 function startGame() {
   aiToken++;
+  names[0] = myName();            // the title-screen name rides into every game
+  if (mode === '2p') names[1] = 'PLAYER 2';
   rack();
   phase = 'aim';
   document.getElementById('loadov').classList.add('hidden');
@@ -2083,8 +2164,70 @@ function frame(now) {
     }
     if (n >= 20000) acc = 0;
   }
+  // portrait fullscreen: keep the chrome state honest every frame —
+  // menus, pause and rotation changes bring the chrome back; an idle
+  // reveal (nobody touching anything) re-hides it.
+  if (apMode === 'mobile') {
+    if (!fsActive()) { if (fsHidden) { fsHidden = false; document.body.classList.remove('fs'); } }
+    else if (!fsHidden && performance.now() >= fsIdleT &&
+             !dragging && !charging && !chargeKey && !spinDrag && !ptDrag && !pbDrag)
+      fsHideNow();
+  }
   render(now);
 }
+
+/* =====================================================================
+   PORTRAIT FULLSCREEN (owner pick 2026-11-19 21:01) — on a portrait
+   phone, an in-progress game hides its chrome (body.fs) so the
+   rotated table fills the screen; the #fsbar handle strip stays in
+   the layout (never over the cloth) with a one-tap PAUSE and the
+   CONTROLS reveal tab. Chrome re-hides when the player starts
+   aiming or charging, when a shot fires, or after FS_IDLE_MS idle
+   [draft timing]. Menus (title / friend / send-a-turn / win) and
+   pause always get the normal chrome — fsActive() says no then.
+   The spin setting lives in the hidden chrome but its state is just
+   spinX/spinY: it persists untouched while hidden and still resets
+   after each shot in finishShot(), as always.
+   ===================================================================== */
+const FS_IDLE_MS = 4000;               // [draft] idle seconds before chrome re-hides
+let fsHidden = false, fsIdleT = 0;
+function fsOverlayOpen() {
+  for (const id of ['titleov', 'friendov', 'asyncov', 'winov', 'loadov'])
+    if (!document.getElementById(id).classList.contains('hidden')) return true;
+  return false;
+}
+function fsActive() {
+  return apMode === 'mobile' && viewRot && !paused &&
+         (phase === 'aim' || phase === 'shooting') && !fsOverlayOpen();
+}
+function fsHideNow() { if (fsActive()) { fsHidden = true; document.body.classList.add('fs'); } }
+function fsShow() {
+  fsHidden = false;
+  document.body.classList.remove('fs');
+  fsIdleT = performance.now() + FS_IDLE_MS;
+}
+function fsKeepAlive() { if (!fsHidden) fsIdleT = performance.now() + FS_IDLE_MS; }
+document.getElementById('fsreveal').addEventListener('click', fsShow);
+document.getElementById('fspause').addEventListener('click', () => togglePause());
+document.getElementById('topbar').addEventListener('pointerdown', fsKeepAlive);
+document.getElementById('controls').addEventListener('pointerdown', fsKeepAlive);
+// ⛶ FULLSCREEN — the Kaboom pattern: fullscreen the page so the
+// browser's own bars get out of the way (portrait stays portrait;
+// no orientation lock). Best-effort: some phones (iPhone Safari)
+// don't offer element fullscreen at all, and that's fine.
+const fsBtn = document.getElementById('fsbtn');
+function syncFsBtn() { fsBtn.textContent = document.fullscreenElement ? '⛶ EXIT' : '⛶ FULL'; }
+fsBtn.addEventListener('click', () => {
+  try {
+    if (document.fullscreenElement) { const p = document.exitFullscreen(); if (p && p.catch) p.catch(() => {}); }
+    else if (document.documentElement.requestFullscreen) {
+      const p = document.documentElement.requestFullscreen();
+      if (p && p.catch) p.catch(() => {});
+    }
+  } catch (e) {}
+  setTimeout(syncFsBtn, 60);
+});
+document.addEventListener('fullscreenchange', syncFsBtn);
 
 /* =====================================================================
    LAUNCH MODE + VIEW — the arcade pattern (same as Kaboom): the
@@ -2105,6 +2248,7 @@ function updateView() {
   const rot = apMode === 'mobile' && window.innerHeight > window.innerWidth;
   document.body.classList.toggle('rot', rot);
   document.body.classList.toggle('mobile', apMode === 'mobile');
+  if (!rot || apMode !== 'mobile') { fsHidden = false; document.body.classList.remove('fs'); }
   if (rot === viewRot) return;
   viewRot = rot;
   cv.width = rot ? CH : CW;      // swapping the backing store clears it;
@@ -2119,6 +2263,72 @@ function chooseMode(m) {
 }
 document.getElementById('apPc').addEventListener('click', () => chooseMode('pc'));
 document.getElementById('apPhone').addEventListener('click', () => chooseMode('mobile'));
+
+// ---------- your name (owner 2026-11-19 21:14: "input your name at
+// the beginning") ----------
+// ONE name, typed once on the title screen, remembered in
+// localStorage, and used everywhere the player is named: the header
+// badge, the LIVE lobby (the name your opponent sees) and the
+// SEND-A-TURN payload. The friend screen's name field is the same
+// name — the two inputs mirror each other. Empty = PLAYER 1; friend
+// modes never hard-block on it.
+const tnameEl = document.getElementById('tname');
+const fnameEl = document.getElementById('fname');
+function syncNameFrom(src) {
+  const v = (src.value || '').trim();
+  try { localStorage.setItem('angeles8ball.name', v); } catch (e) {}
+  if (src !== tnameEl) tnameEl.value = v;
+  if (src !== fnameEl) fnameEl.value = v;
+  if (phase === 'title') { names[0] = myName(); updateHUD(); }
+}
+tnameEl.addEventListener('input', () => syncNameFrom(tnameEl));
+tnameEl.addEventListener('change', () => syncNameFrom(tnameEl));
+fnameEl.addEventListener('input', () => syncNameFrom(fnameEl));
+fnameEl.addEventListener('change', () => syncNameFrom(fnameEl));
+
+// ---------- copy game link (owner 2026-11-19 21:13) ----------
+// A clean link to the game itself: origin + path only — no ?mode=,
+// no ?join=, no #g= turn payload rides along.
+function cleanGameURL() {
+  return (location.origin && location.origin !== 'null')
+    ? location.origin + location.pathname
+    : location.href.split(/[?#]/)[0];
+}
+const copylinkBtn = document.getElementById('copylinkbtn');
+let copylinkTimer = null;
+copylinkBtn.addEventListener('click', async () => {
+  const url = cleanGameURL();
+  let shared = false;
+  if (navigator.share) {
+    try {
+      await Promise.race([
+        navigator.share({ title: 'ANGELES 8 BALL', url }).then(() => { shared = true; }),
+        new Promise(r => setTimeout(r, 1500)),   // a stuck share sheet must not eat the copy
+      ]);
+    } catch (e) { /* dismissed — fall through to the clipboard */ }
+  }
+  if (!shared) await copyText(url);
+  copylinkBtn.textContent = shared ? 'SHARED ✓' : 'LINK COPIED ✓';
+  clearTimeout(copylinkTimer);
+  copylinkTimer = setTimeout(() => { copylinkBtn.textContent = '🔗 COPY GAME LINK'; }, 2000);
+});
+
+// ---------- NOW LOADING beat (entry-path audit, owner 2026-11-19 21:14) ----------
+const beatov = document.getElementById('beatov');
+const beatmsgEl = document.getElementById('beatmsg');
+let beatTimer = null;
+let lastBeat = null;   // { text, at } — the last beat shown (test-visible)
+function showBeat(text, ms) {
+  beatmsgEl.textContent = text;
+  lastBeat = { text, at: Date.now() };
+  beatov.classList.remove('hidden');
+  clearTimeout(beatTimer);
+  if (ms) beatTimer = setTimeout(hideBeat, ms);
+}
+function hideBeat() {
+  clearTimeout(beatTimer);
+  beatov.classList.add('hidden');
+}
 
 // ---------- boot ----------
 if (apMode) document.getElementById('loadov').classList.add('hidden');
@@ -2197,7 +2407,10 @@ function myPid() {
   } catch (e) { return 'p' + Math.random().toString(36).slice(2, 10); }
 }
 function myName() {
-  const v = (document.getElementById('fname').value || '').trim();
+  // the title-screen name field is the player's name everywhere;
+  // the friend screen's field is the same name (the two are mirrored)
+  const v = (document.getElementById('tname').value ||
+             document.getElementById('fname').value || '').trim();
   return v ? v.toUpperCase().slice(0, 14) : 'PLAYER 1';
 }
 function defaultServerURL() {
@@ -2695,6 +2908,7 @@ window.GAME = {
     mySide: asyncGame ? asyncGame.mySide : (net ? net.seat - 1 : null),
     names: [...names],
     apMode: apMode || 'chooser', viewRot,
+    fsHidden, fsActive: fsActive(), fullscreen: !!document.fullscreenElement, lastTap, lastBeat,
     aimDeg: +(aimAngle * 180 / Math.PI).toFixed(4),
     power: +power.toFixed(3), charging, pbCharging: !!pbDrag,
     spin: { x: spinX, y: spinY }, tableTheme,
@@ -2711,15 +2925,30 @@ window.GAME = {
 // exercises the whole friend stack (codecs, snapshots, overlays).
 try {
   const nm = localStorage.getItem('angeles8ball.name');
-  if (nm) document.getElementById('fname').value = nm;
+  if (nm) {
+    document.getElementById('fname').value = nm;
+    document.getElementById('tname').value = nm;
+  }
   const sv = localStorage.getItem('angeles8ball.server');
   document.getElementById('fserver').value = sv || defaultServerURL();
 } catch (e) {}
 (function friendBoot() {
-  // a turn link (#g=…) opens the send-a-turn game it carries
+  // a turn link (#g=…) — a NOW LOADING beat naming the sender, then
+  // the game it carries opens and their shot replays
   if (location.hash.startsWith('#g=')) {
-    try { asyncOpenPayload(asyncOpenString(location.hash.slice(3))); return; }
-    catch (e) { setMsg('That turn link could not be read.'); }
+    let p = null;
+    try { p = asyncOpenString(location.hash.slice(3)); } catch (e) {}
+    if (p) {
+      const who = (p.nm && p.nm[p.from]) ? p.nm[p.from] : 'YOUR FRIEND';
+      showBeat(`NOW LOADING — ${who}'S TURN`);
+      setTimeout(() => {
+        hideBeat();
+        try { asyncOpenPayload(p); }
+        catch (e) { setMsg('That turn link could not be read.'); }
+      }, 1500);
+      return;
+    }
+    setMsg('That turn link could not be read.');
   }
   // an invite link (?join=CODE) walks straight into the room, and a
   // plain reload rejoins the room this tab was in (same pid = my seat)
@@ -2732,8 +2961,23 @@ try {
     document.getElementById('mode2p').classList.remove('sel');
     document.getElementById('modeai').classList.remove('sel');
     document.getElementById('friendov').classList.remove('hidden');
+    showBeat('NOW LOADING — JOINING YOUR FRIEND\'S GAME');
     friendJoin(code);
+    // the beat lifts when the room answers (lobby/game) or the
+    // friend screen surfaces a problem — never before ~0.9s on
+    // screen, and never stuck: an 8s safety hides it regardless.
+    const t0 = Date.now();
+    const iv = setInterval(() => {
+      const el = Date.now() - t0;
+      const ready = !!net && (net.phase === 'lobby' || net.phase === 'game');
+      const erred = (document.getElementById('fstatus').textContent || '').trim().length > 0;
+      if (((ready || erred) && el > 900) || el > 8000) { clearInterval(iv); hideBeat(); }
+    }, 150);
+    return;
   }
+  // a plain arcade launch (?mode= given — no chooser needed) still
+  // gets its NOW LOADING beat: a brand moment, not a gate
+  if (apMode) showBeat('NOW LOADING — ANGELES 8 BALL', 900);
 })();
 </script>
 </body>
