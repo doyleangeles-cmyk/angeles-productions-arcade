@@ -1,0 +1,2740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ANGELES 8 BALL</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { color:#e8e6df; font-family:Verdana, Geneva, Tahoma, sans-serif; }
+  /* the room: dark pool-hall surround with a warm lamp glow over the table */
+  body { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:10px 6px 20px;
+         background:
+           radial-gradient(ellipse 90% 46% at 50% -6%, rgba(255,196,92,.16), rgba(255,196,92,0) 62%),
+           radial-gradient(ellipse 120% 90% at 50% 38%, #241a10 0%, #171008 46%, #0b0704 100%); }
+  #app { width:100%; max-width:1060px; display:flex; flex-direction:column; gap:9px; }
+
+  /* shared panel language: dark walnut + leather + brass */
+  .panel { background:linear-gradient(180deg,#2e2115,#1d1409 55%,#160f07);
+           border:1px solid #77591f; border-radius:12px;
+           box-shadow:inset 0 1px 0 rgba(255,222,150,.28), inset 0 -1px 0 rgba(0,0,0,.65), 0 6px 18px rgba(0,0,0,.5); }
+
+  /* ---------- top bar: ONE slim row (owner order 2026-11-19 20:03) ----------
+     Player info is compact badges next to the PAUSE button; the big
+     stacked cards and the ANGELES 8 BALL title block are gone from the
+     in-game screen (branding lives on the title overlay + felt print),
+     so every reclaimed pixel goes to the table. */
+  #topbar { display:flex; align-items:center; gap:8px; padding:5px 8px; flex-wrap:nowrap; }
+  .pchip { flex:1; min-width:0; display:flex; align-items:center; gap:7px;
+           border:1.5px solid #4d3a1e; border-radius:8px; padding:4px 8px;
+           background:linear-gradient(180deg,#3a2a1a,#241708);
+           box-shadow:inset 0 1px 0 rgba(255,225,160,.16);
+           transition:border-color .2s, box-shadow .2s; }
+  .pchip.active { border-color:#f2c14e; box-shadow:0 0 12px rgba(242,193,78,.45), inset 0 1px 0 rgba(255,225,160,.25); }
+  .pb-txt { display:flex; flex-direction:column; min-width:0; line-height:1.2; }
+  .pchip .pname { font-size:11px; font-weight:bold; letter-spacing:.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#f5ead0; }
+  .pchip .pgrp { font-size:8.5px; color:#cbb98d; letter-spacing:1px; white-space:nowrap; }
+  .tray { display:flex; gap:2px; margin-left:auto; min-height:0; flex-wrap:nowrap; align-items:center; }
+  .tray .tb { width:10px; height:10px; border-radius:50%; position:relative; flex:none; overflow:hidden;
+              box-shadow:inset -1px -2px 3px rgba(0,0,0,.45), inset 1px 2px 2px rgba(255,255,255,.35), 0 1px 2px rgba(0,0,0,.6); }
+  .tray .tb.stripe { background:radial-gradient(circle at 35% 30%, #ffffff, #d9d7cd 75%); }
+  .tray .tb.stripe::after { content:''; position:absolute; left:0; right:0; top:3px; bottom:3px; background:var(--c); }
+  .tray .tb.solid { background:var(--c); }
+  .tbtn { background:linear-gradient(180deg,#6b5222,#4a360f); color:#ffe9a8; border:1px solid #a07d2c; border-radius:8px;
+          padding:7px 11px; font-family:Georgia, serif; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer;
+          flex:none; box-shadow:inset 0 1px 0 rgba(255,235,180,.4), 0 2px 5px rgba(0,0,0,.5); text-shadow:0 1px 2px rgba(0,0,0,.7); }
+  .tbtn:active { filter:brightness(1.2); }
+
+  /* ---------- table row: table + power gutter (mobile) ---------- */
+  #tablerow { display:flex; gap:6px; align-items:stretch; width:100%; }
+  #tablewrap { position:relative; flex:1 1 auto; min-width:0; border-radius:16px; overflow:hidden; background:#0a0705;
+               border:1px solid #77591f;
+               box-shadow:0 24px 60px rgba(0,0,0,.75), 0 4px 14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,222,150,.25); }
+  canvas#cv { display:block; width:100%; height:auto; touch-action:none; }
+
+  /* ---------- message ---------- */
+  #msg { text-align:center; font-size:13px; min-height:18px; color:#ffd873; letter-spacing:.4px; padding:1px 4px;
+         text-shadow:0 1px 3px rgba(0,0,0,.8); }
+  #msg .foul { color:#ff8a7a; }
+
+  /* ---------- controls ---------- */
+  #controls { display:flex; gap:10px; align-items:stretch; padding:8px 10px; }
+  /* on a phone the gutter POWER bar replaces the horizontal track —
+     dropping it keeps the controls to one thin row */
+  body.mobile #powerbox { display:none; }
+  #spinbox { display:flex; flex-direction:column; align-items:center; gap:3px; flex:none; }
+  #spinbox label, #powerbox label { font-size:9px; letter-spacing:2px; color:#c8a75a; }
+  canvas#spincv { width:84px; height:84px; border-radius:50%; cursor:pointer; touch-action:none;
+                  box-shadow:0 3px 8px rgba(0,0,0,.6), 0 0 0 3px #77591f, 0 0 0 5px #2c1e0c; }
+  #powerbox { flex:1; display:flex; flex-direction:column; gap:6px; justify-content:center; min-width:120px; }
+  #powertrack { position:relative; height:26px; background:linear-gradient(180deg,#0f0a05,#241708 55%,#120b04);
+                border:1px solid #77591f; border-radius:13px; overflow:hidden; cursor:pointer; touch-action:none;
+                box-shadow:inset 0 3px 7px rgba(0,0,0,.85), inset 0 -1px 0 rgba(255,222,150,.18); }
+  #powerfill { position:absolute; left:0; top:0; bottom:0; width:0%;
+               background:linear-gradient(90deg,#57b25e,#f2c14e 55%,#e0483e);
+               box-shadow:inset 0 2px 2px rgba(255,255,255,.35), inset 0 -3px 4px rgba(0,0,0,.35); }
+  #powerpct { position:absolute; right:9px; top:50%; transform:translateY(-50%); font-size:12px; font-weight:bold;
+              color:#fff; text-shadow:0 1px 3px #000; }
+  #aimbtns { display:flex; gap:6px; flex:none; align-items:center; }
+  .abtn { width:44px; height:44px; border-radius:50%; color:#ffe9a8; font-size:16px; cursor:pointer; font-family:inherit;
+          background:radial-gradient(circle at 35% 30%, #8a6a2a, #4a360f 70%);
+          border:1px solid #a07d2c; box-shadow:inset 0 1px 2px rgba(255,240,200,.5), 0 3px 6px rgba(0,0,0,.55);
+          text-shadow:0 1px 2px rgba(0,0,0,.8); }
+  .abtn:active { filter:brightness(1.25); }
+  #finebtn { font-size:10px; letter-spacing:1px; font-weight:bold; }
+  #finebtn.sel { background:radial-gradient(circle at 35% 30%, #ffe9a8, #c9932a 72%); color:#2a1c02;
+                 text-shadow:0 1px 0 rgba(255,246,210,.7); box-shadow:0 0 10px rgba(242,193,78,.55), inset 0 1px 2px rgba(255,255,255,.6); }
+  #shootbtn { flex:none; align-self:center; color:#2a1c02;
+              background:linear-gradient(180deg,#ffe9a8,#e8b93e 45%,#c9932a);
+              border:1px solid #8a6a1d; border-radius:10px; padding:14px 20px;
+              font-family:Georgia, 'Times New Roman', serif;
+              font-size:16px; font-weight:bold; letter-spacing:2px; cursor:pointer;
+              box-shadow:inset 0 1px 0 rgba(255,255,255,.75), inset 0 -2px 4px rgba(120,80,10,.5), 0 4px 10px rgba(0,0,0,.55);
+              text-shadow:0 1px 0 rgba(255,246,210,.7); }
+  #shootbtn:active { filter:brightness(1.12); }
+  #shootbtn:disabled { filter:grayscale(.85); opacity:.45; cursor:default; }
+
+  /* ---------- overlays ---------- */
+  .overlay { position:absolute; inset:0; display:flex; flex-direction:column; overflow-y:auto;
+             align-items:center; justify-content:center; gap:13px; z-index:5; text-align:center; padding:18px;
+             background:radial-gradient(ellipse at 50% 42%, rgba(16,58,32,.90), rgba(4,8,6,.95) 78%); }
+  .overlay.hidden { display:none; }
+  .overlay h1 { font-family:Georgia, 'Times New Roman', serif; letter-spacing:4px; font-size:38px; color:#f2c14e;
+                background:linear-gradient(180deg,#ffeda9,#f2c14e 48%,#a87a1c);
+                -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+                filter:drop-shadow(0 2px 0 rgba(0,0,0,.9)) drop-shadow(0 0 22px rgba(242,193,78,.30)); }
+  .overlay h2 { font-family:Georgia, 'Times New Roman', serif; color:#f2c14e; letter-spacing:3px; font-size:27px;
+                text-shadow:0 2px 0 rgba(0,0,0,.9), 0 0 18px rgba(242,193,78,.3); }
+  .overlay p { color:#d8d2c2; font-size:13px; max-width:520px; line-height:1.55; }
+  #rackcv { width:min(330px,80vw); height:auto; filter:drop-shadow(0 6px 8px rgba(0,0,0,.55)); }
+  .cardrow { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .modecard { border:1.5px solid #4d3a1e; border-radius:12px; padding:16px 18px; width:228px;
+              background:linear-gradient(180deg,#3a2a1a,#211507);
+              box-shadow:inset 0 1px 0 rgba(255,225,160,.16), 0 6px 14px rgba(0,0,0,.5);
+              outline:1px dashed rgba(232,199,122,.22); outline-offset:-6px;
+              cursor:pointer; text-align:center; color:#e8e6df; font-family:inherit; transition:transform .15s, border-color .15s, box-shadow .15s; }
+  .modecard:hover { transform:translateY(-2px); }
+  .modecard:hover, .modecard.sel { border-color:#f2c14e; box-shadow:0 0 14px rgba(242,193,78,.35), inset 0 1px 0 rgba(255,225,160,.25); }
+  .modecard .mc-t { font-family:Georgia, serif; font-size:16px; font-weight:bold; letter-spacing:1px; margin-bottom:6px; color:#f5ead0; }
+  .modecard .mc-d { font-size:11px; color:#bdb096; line-height:1.5; }
+  .segrow { display:flex; gap:6px; justify-content:center; flex-wrap:wrap; }
+  .seg { background:linear-gradient(180deg,#3a2c18,#241a0a); border:1px solid #6b5322; color:#e5d9b8; border-radius:7px;
+         padding:8px 13px; font-family:Georgia, serif; font-size:12px; font-weight:bold; letter-spacing:1px; cursor:pointer;
+         box-shadow:inset 0 1px 0 rgba(255,235,180,.25); }
+  .seg.sel { background:linear-gradient(180deg,#ffe9a8,#e8b93e 55%,#c9932a); color:#2a1c02; border-color:#f2c14e;
+             text-shadow:0 1px 0 rgba(255,246,210,.7); }
+  .bigbtn { background:linear-gradient(180deg,#ffe9a8,#e8b93e 45%,#c9932a); color:#2a1c02; border:1px solid #8a6a1d;
+            border-radius:10px; padding:13px 30px; font-family:Georgia, 'Times New Roman', serif;
+            font-size:16px; font-weight:bold; letter-spacing:2px; cursor:pointer;
+            box-shadow:inset 0 1px 0 rgba(255,255,255,.75), inset 0 -2px 4px rgba(120,80,10,.5), 0 5px 12px rgba(0,0,0,.55);
+            text-shadow:0 1px 0 rgba(255,246,210,.7); }
+  .bigbtn:active { filter:brightness(1.12); }
+  .ghostbtn { background:linear-gradient(180deg,#3a2c18,#241a0a); color:#e5d9b8; border:1px solid #6b5322; border-radius:10px;
+              padding:11px 22px; font-family:Georgia, serif; font-size:13px; font-weight:bold; letter-spacing:1px; cursor:pointer;
+              box-shadow:inset 0 1px 0 rgba(255,235,180,.25); }
+  #winballs { font-size:15px; color:#fff; letter-spacing:1px; }
+  #foot { text-align:center; font-size:10px; color:#8d7648; letter-spacing:3px; margin-top:2px; }
+
+  /* ---------- launch-mode chooser (arcade NOW LOADING pattern) ---------- */
+  #loadov { z-index:8; }
+  #loadov .mc-load { font-size:13px; font-weight:bold; letter-spacing:4px; color:#f2c14e;
+                     text-shadow:0 1px 3px rgba(0,0,0,.85); }
+  #loadov .mc-q { font-size:11px; letter-spacing:3px; color:#c8a75a; margin-top:-6px; }
+  .modecard .mc-ico { display:block; font-size:34px; margin-bottom:7px; }
+
+  /* rotated (mobile portrait): the tall table is sized from the
+     screen-height budget left by the (now slim) chrome, capped so the
+     table + power gutter together never exceed the row width; the
+     row is centered as one unit. The constant is the measured chrome:
+     slim top bar + message + controls + gaps + foot + body padding. */
+  body.rot #tablerow { justify-content:center; }
+  body.rot #tablewrap { flex:none; margin:0; width:min(calc((100vh - 258px) * 0.5421), calc(100% - 21px)); }
+  body.rot #tablewrap { width:min(calc((100dvh - 258px) * 0.5421), calc(100% - 21px)); }
+
+  /* ---------- touch power bar (mobile mode only) ----------
+     Shooting on touch gets its OWN control: a vertical bar in a
+     GUTTER STRIP beside the table (owner hard rule 2026-11-19 20:05:
+     the power control can NEVER overlap the cloth — it lives in the
+     UI frame, and the gutter comes out of the frame, not the felt).
+     Pull DOWN to charge (the cue pulls back with it), release to
+     fire; pull back UP into the hatched top zone and releasing fires
+     nothing — the shot is cancelled. The strip is screen-space and
+     upright — it does NOT rotate with the cloth in portrait. Hidden
+     entirely in PC mode, where the table takes the full row.
+     Owner order 2026-11-19 20:27: the gutter is 1/4 the old width —
+     15px, not 60px — and the reclaimed width goes to the table. At
+     15px the labels run VERTICALLY in the gutter (never over the
+     cloth), and the full "✕ CANCEL — LET GO" signal also rides the
+     message line while a charge is dragged back to zero. The drag
+     uses pointer capture, so once a pull starts on the strip the
+     charge follows the finger's Y even if the finger drifts wider
+     than the strip itself. */
+  #powerbar { flex:none; width:15px; display:none;
+              flex-direction:column; align-items:center; gap:4px;
+              padding:8px 0; border-radius:8px;
+              background:linear-gradient(180deg,#2e2115,#1d1409 55%,#160f07);
+              border:1px solid #77591f;
+              box-shadow:inset 0 1px 0 rgba(255,222,150,.28), inset 0 -1px 0 rgba(0,0,0,.65), 0 6px 18px rgba(0,0,0,.5);
+              touch-action:none; user-select:none; -webkit-user-select:none; }
+  body.mobile #powerbar { display:flex; }
+  #powerbar.off { opacity:.30; pointer-events:none; }
+  #pb-label { writing-mode:vertical-rl; font-size:8px; font-weight:bold; letter-spacing:2px; color:#ffd873;
+              text-shadow:0 1px 3px #000; }
+  #pb-track { position:relative; flex:1; width:11px; border-radius:6px; overflow:hidden;
+              background:linear-gradient(180deg,#0f0a05,#241708 55%,#120b04);
+              border:1px solid #a07d2c;
+              box-shadow:inset 0 3px 8px rgba(0,0,0,.9), 0 3px 8px rgba(0,0,0,.55); }
+  #pb-fill { position:absolute; left:0; top:0; width:100%; height:0%;
+             background:linear-gradient(180deg,#57b25e,#f2c14e 55%,#e0483e);
+             box-shadow:inset 0 2px 2px rgba(255,255,255,.3); }
+  #pb-zone { position:absolute; left:0; right:0; top:0; height:12%;
+             border-bottom:1px dashed rgba(255,138,122,.85);
+             background:repeating-linear-gradient(45deg, rgba(224,72,62,.28) 0 6px, rgba(224,72,62,0) 6px, rgba(224,72,62,0) 12px); }
+  #pb-pct { writing-mode:vertical-rl; font-size:9px; font-weight:bold; color:#fff; text-shadow:0 1px 3px #000; }
+  #pb-state { writing-mode:vertical-rl; font-size:8px; font-weight:bold; letter-spacing:1px; color:#c8a75a;
+              line-height:1.3; text-shadow:0 1px 3px #000; }
+  #powerbar.cancel #pb-track { border-color:#e0483e;
+              box-shadow:0 0 12px rgba(224,72,62,.55), inset 0 3px 8px rgba(0,0,0,.9); }
+  #powerbar.cancel #pb-state { color:#ff8a7a; }
+
+  /* ---------- play-a-friend overlays + ping bar ---------- */
+  #friendov, #asyncov { justify-content:flex-start; overflow-y:auto; }
+  .fsec { width:min(560px,100%); border:1.5px solid #4d3a1e; border-radius:12px; padding:13px 14px;
+          background:linear-gradient(180deg,rgba(58,42,26,.85),rgba(33,21,7,.85));
+          box-shadow:inset 0 1px 0 rgba(255,225,160,.14); display:flex; flex-direction:column; gap:9px; align-items:stretch; }
+  .fsec-t { font-family:Georgia, serif; font-size:14px; font-weight:bold; letter-spacing:1px; color:#f5ead0; text-align:center; }
+  .fsec p { font-size:11.5px; }
+  .frow { display:flex; align-items:center; gap:8px; justify-content:center; flex-wrap:wrap; }
+  .frow label { font-size:9px; letter-spacing:2px; color:#c8a75a; }
+  .overlay input[type=text], .overlay input:not([type]), .overlay textarea {
+          background:linear-gradient(180deg,#0f0a05,#1c1206); border:1px solid #77591f; border-radius:8px;
+          color:#ffe9a8; font-family:inherit; font-size:13px; padding:9px 10px; outline:none;
+          box-shadow:inset 0 2px 5px rgba(0,0,0,.8); }
+  .overlay input:focus, .overlay textarea:focus { border-color:#f2c14e; }
+  #fname { width:180px; } #fserver { width:min(300px,80vw); font-size:11px; }
+  #fjoincode { width:110px; text-transform:uppercase; letter-spacing:3px; text-align:center; font-weight:bold; }
+  #flink, #asynclink { width:min(520px,92vw); font-size:11px; }
+  #fpaste, #asynccode { width:min(520px,92vw); font-size:10px; resize:vertical; }
+  #flobby { display:flex; flex-direction:column; gap:9px; align-items:center; }
+  #flobby.hidden { display:none; }
+  .fcode { font-family:Georgia, serif; font-size:34px; font-weight:bold; letter-spacing:10px; color:#f2c14e;
+           text-shadow:0 2px 0 rgba(0,0,0,.9), 0 0 18px rgba(242,193,78,.35); padding-left:10px; }
+  #fstatus, #fastatus, #asyncstatus { font-size:12px; color:#ffd873; min-height:16px; text-align:center; line-height:1.45; }
+  #pingbar { display:flex; gap:6px; align-items:center; justify-content:center; flex-wrap:wrap; padding:2px 4px; }
+  #pingbar.hidden { display:none; }
+  #pingbar .pb-lab { font-size:9px; letter-spacing:2px; color:#c8a75a; }
+  #pingbar button { background:linear-gradient(180deg,#3a2c18,#241a0a); border:1px solid #6b5322; color:#e5d9b8;
+          border-radius:999px; padding:5px 11px; font-family:Georgia, serif; font-size:10.5px; font-weight:bold;
+          letter-spacing:1px; cursor:pointer; box-shadow:inset 0 1px 0 rgba(255,235,180,.25); }
+  #pingbar button:active { filter:brightness(1.3); }
+
+  @media (max-width:640px) {
+    #controls { flex-wrap:wrap; gap:6px; }
+    #shootbtn { flex:1; padding:12px 14px; }
+    /* slimmer spin dial on phones so the controls stay ONE thin row */
+    canvas#spincv { width:72px; height:72px; }
+    .overlay { gap:8px; padding:10px; justify-content:flex-start; }
+    .overlay h1 { font-size:25px; }
+    .overlay h2 { font-size:21px; letter-spacing:2px; }
+    #rackcv { width:190px; }
+    /* title/menu must fit a phone column: cards cap at the column width,
+       the TABLE picker becomes a 2x2 grid, level row wraps in thirds —
+       nothing may stick out past the overlay (owner playtest defect:
+       GREEN.OAK / BLACK.GOLD clipped off the edges at 390px). */
+    .modecard { width:min(300px,100%); padding:13px 12px; }
+    #tableseg .seg { flex:1 1 42%; padding:9px 6px; font-size:11px; white-space:normal; }
+    #diffseg .seg { flex:1 1 28%; padding:9px 6px; font-size:11px; }
+    .overlay p { max-width:100%; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar" class="panel">
+    <div class="pchip" id="chip0"><div class="pb-txt"><div class="pname" id="name0">PLAYER 1</div><div class="pgrp" id="grp0">—</div></div><div class="tray" id="tray0"></div></div>
+    <div class="pchip" id="chip1"><div class="pb-txt"><div class="pname" id="name1">PLAYER 2</div><div class="pgrp" id="grp1">—</div></div><div class="tray" id="tray1"></div></div>
+    <button class="tbtn" id="pausebtn">❚❚ PAUSE</button>
+  </div>
+
+  <div id="tablerow">
+  <div id="tablewrap">
+    <canvas id="cv" width="1092" height="592"></canvas>
+
+    <div class="overlay" id="titleov">
+      <h1>ANGELES 8 BALL</h1>
+      <canvas id="rackcv" width="660" height="192"></canvas>
+      <p>Classic 8-ball the way it should be — clean table, honest physics, no clutter.
+         Pocket your group, then the 8. Fouls give ball-in-hand.</p>
+      <div class="cardrow">
+        <button class="modecard" id="mode2p"><div class="mc-t">👥 2 PLAYERS</div>
+          <div class="mc-d">Pass &amp; play on this device. Loser racks, winner breaks… house rules.</div></button>
+        <button class="modecard sel" id="modeai"><div class="mc-t">🤖 VS PIP</div>
+          <div class="mc-d">Play against Pip, the house AI. Pick her level below — she plays legal, sensible pool.</div></button>
+        <button class="modecard" id="modefriend"><div class="mc-t">🎱 PLAY A FRIEND</div>
+          <div class="mc-d">Two phones, one table. Play LIVE together, or SEND A TURN by link and answer each other whenever.</div></button>
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;color:#c8a75a;margin-bottom:6px;">PIP'S LEVEL</div>
+        <div class="segrow" id="diffseg">
+          <button class="seg" data-d="rookie">ROOKIE</button>
+          <button class="seg sel" data-d="average">AVERAGE</button>
+          <button class="seg" data-d="pro">PRO</button>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:2px;color:#c8a75a;margin-bottom:6px;">TABLE</div>
+        <div class="segrow" id="tableseg">
+          <button class="seg" data-t="oak">GREEN · OAK</button>
+          <button class="seg" data-t="walnut">BLUE · WALNUT</button>
+          <button class="seg" data-t="cherry">BURGUNDY · CHERRY</button>
+          <button class="seg" data-t="onyx">BLACK · GOLD</button>
+        </div>
+      </div>
+      <button class="bigbtn" id="startbtn">RACK 'EM</button>
+      <p style="font-size:11px;">Drag on the table to aim · scroll or hold FINE for hair-fine angles ·
+         on PC pull down &amp; release to shoot · on phone pull the POWER bar beside the table ·
+         set spin on the cue ball</p>
+    </div>
+
+    <div class="overlay hidden" id="pauseov">
+      <h2>PAUSED</h2>
+      <button class="bigbtn" id="resumebtn">RESUME</button>
+      <button class="ghostbtn" id="pausetitlebtn">RETURN TO TITLE</button>
+    </div>
+
+    <div class="overlay hidden" id="winov">
+      <h2 id="wintext">PLAYER 1 WINS!</h2>
+      <div id="winballs"></div>
+      <button class="bigbtn" id="againbtn">RACK AGAIN</button>
+      <button class="ghostbtn" id="wintitlebtn">RETURN TO TITLE</button>
+    </div>
+
+    <div class="overlay hidden" id="friendov">
+      <h2>PLAY A FRIEND</h2>
+      <div class="frow"><label>YOUR NAME</label><input id="fname" maxlength="14" placeholder="PLAYER 1" autocomplete="off"></div>
+      <div class="fsec">
+        <div class="fsec-t">📡 LIVE — BOTH ONLINE</div>
+        <div class="frow"><label>SERVER</label><input id="fserver" spellcheck="false" autocomplete="off"></div>
+        <button class="bigbtn" id="fcreate">CREATE ROOM</button>
+        <div id="flobby" class="hidden">
+          <div style="font-size:10px;letter-spacing:2px;color:#c8a75a;">YOUR ROOM CODE</div>
+          <div class="fcode" id="fcode">-----</div>
+          <input id="flink" readonly>
+          <div class="cardrow">
+            <button class="ghostbtn" id="fshare">📤 SHARE LINK</button>
+            <button class="ghostbtn" id="fcopy">COPY LINK</button>
+          </div>
+        </div>
+        <div class="frow"><label>HAVE A CODE?</label><input id="fjoincode" maxlength="5" placeholder="ABCDE" autocomplete="off"><button class="ghostbtn" id="fjoin">JOIN ROOM</button></div>
+        <div id="fstatus"></div>
+      </div>
+      <div class="fsec">
+        <div class="fsec-t">✉️ SEND A TURN — PLAY BY LINK</div>
+        <p>Start a game, take your shot, then send the link. Your friend opens it,
+           watches your shot play out, takes theirs and sends it back. No server,
+           no both-online — the whole game travels in the link.</p>
+        <button class="bigbtn" id="fasyncstart">START A TURN GAME</button>
+        <div class="frow"><label>PASTE A TURN CODE</label></div>
+        <textarea id="fpaste" rows="3" placeholder="Paste a turn code (or a whole turn link) here…"></textarea>
+        <button class="ghostbtn" id="fasyncopen">OPEN TURN</button>
+        <div id="fastatus"></div>
+      </div>
+      <button class="ghostbtn" id="fback">← BACK TO TITLE</button>
+    </div>
+
+    <div class="overlay hidden" id="asyncov">
+      <h2 id="asyncovt">SEND YOUR TURN</h2>
+      <p id="asyncovp">This link carries the whole table — and your shot. Send it to your
+         friend: they open it, watch your shot, take theirs, and send it back.</p>
+      <div id="asyncsend">
+        <input id="asynclink" readonly>
+        <div class="cardrow" style="margin:9px 0;">
+          <button class="bigbtn" id="asyncshare">📤 SEND TURN</button>
+          <button class="ghostbtn" id="asynccopy">COPY LINK</button>
+        </div>
+        <div class="frow"><label>OR SEND THE CODE</label></div>
+        <textarea id="asynccode" rows="3" readonly></textarea>
+        <div class="cardrow" style="margin-top:9px;">
+          <button class="ghostbtn" id="asynccopycode">COPY CODE</button>
+        </div>
+      </div>
+      <div id="asyncstatus"></div>
+      <button class="ghostbtn" id="asyncdone">DONE — BACK TO TITLE</button>
+    </div>
+
+    <div class="overlay" id="loadov" role="dialog" aria-modal="true" aria-label="Choose how you are playing">
+      <div class="mc-load">🕹️ NOW LOADING</div>
+      <h2>ANGELES 8 BALL</h2>
+      <div class="mc-q">HOW ARE YOU PLAYING?</div>
+      <div class="cardrow">
+        <button class="modecard" id="apPc"><span class="mc-ico">💻</span><div class="mc-t">COMPUTER</div>
+          <div class="mc-d">Default mode<br>Full table view · mouse &amp; keys</div></button>
+        <button class="modecard" id="apPhone"><span class="mc-ico">📱</span><div class="mc-t">PHONE</div>
+          <div class="mc-d">Mobile mode<br>Table turns upright in portrait</div></button>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="powerbar" class="off">
+    <div id="pb-label">POWER</div>
+    <div id="pb-track"><div id="pb-fill"></div><div id="pb-zone"></div></div>
+    <div id="pb-pct">0%</div>
+    <div id="pb-state">PULL DOWN ▼</div>
+  </div>
+  </div>
+
+  <div id="msg">Welcome to Angeles 8 Ball.</div>
+
+  <div id="pingbar" class="hidden">
+    <span class="pb-lab">SAY:</span>
+    <button data-k="hi">HI 👋</button>
+    <button data-k="nice">NICE SHOT</button>
+    <button data-k="unlucky">UNLUCKY</button>
+    <button data-k="gg">GG</button>
+    <button data-k="wp">WELL PLAYED</button>
+    <button data-k="rematch">REMATCH?</button>
+  </div>
+
+  <div id="controls" class="panel">
+    <div id="spinbox">
+      <canvas id="spincv" width="168" height="168"></canvas>
+      <label>ENGLISH / SPIN</label>
+    </div>
+    <div id="aimbtns">
+      <button class="abtn" id="fineL">◀</button>
+      <button class="abtn" id="fineR">▶</button>
+      <button class="abtn" id="finebtn" title="Fine aim: drags nudge the angle in hair steps">FINE</button>
+    </div>
+    <div id="powerbox">
+      <div id="powertrack"><div id="powerfill"></div><div id="powerpct">0%</div></div>
+      <label>POWER — drag here + SHOOT · hold SPACE · PC: pull down on the table · phone: POWER bar beside the table</label>
+    </div>
+    <button id="shootbtn">SHOOT</button>
+  </div>
+
+  <div id="foot">FREE TO PLAY · NO ADS · ANGELES PRODUCTIONS</div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   ANGELES 8 BALL — classic 8-ball pool, hand-built physics.
+   Single file, no external assets. Physics constants are flagged
+   [draft] where they were tuned by feel rather than measured.
+   ===================================================================== */
+
+// ---------- table geometry (physics units: play surface 1000 x 500) ----------
+const TW = 1000, TH = 500;            // playing surface between cushion noses
+const RAIL = 46;                      // canvas margin for rails
+const CW = TW + RAIL * 2, CH = TH + RAIL * 2;
+const R = 11.5;                       // ball radius
+const HEAD_X = 250, FOOT_X = 700;     // head string / foot spot x
+const POCKETS = [
+  { x: -9,   y: -9,   cap: 27, corner: true  },
+  { x: TW+9, y: -9,   cap: 27, corner: true  },
+  { x: -9,   y: TH+9, cap: 27, corner: true  },
+  { x: TW+9, y: TH+9, cap: 27, corner: true  },
+  { x: TW/2, y: -12,  cap: 25, corner: false },
+  { x: TW/2, y: TH+12,cap: 25, corner: false },
+];
+// cushion segments [x1,y1,x2,y2] — faces along the play boundary, with
+// short angled jaw segments at every pocket mouth so balls rattle honestly.
+const CUSHIONS = [
+  [36,0,472,0],[528,0,964,0],                 // top
+  [36,TH,472,TH],[528,TH,964,TH],             // bottom
+  [0,36,0,464],[TW,36,TW,464],                // left / right
+  [36,0,17,-16],[0,36,-16,17],                // jaws TL
+  [964,0,983,-16],[TW,36,TW+16,17],           // jaws TR
+  [36,TH,17,TH+16],[0,464,-16,483],           // jaws BL
+  [964,TH,983,TH+16],[TW,464,TW+16,483],      // jaws BR
+  [472,0,484,-17],[528,0,516,-17],            // jaws side top
+  [472,TH,484,TH+17],[528,TH,516,TH+17],      // jaws side bottom
+];
+
+// ---------- physics constants ----------
+const PHYS_HZ = 720;                  // substeps per second (>= 240 required)
+const STEP = 1 / PHYS_HZ;
+const REST_BALL = 0.95;               // ball-ball restitution
+const REST_CUSH = 0.75;               // cushion restitution
+const ROLL_DECEL = 190;               // [draft] rolling friction, units/s^2
+const STOP_EPS = 8;                   // speed below this = stopped
+const MAX_SPEED = 3050;               // [draft] full-power cue speed, units/s
+const SPIN_FORCE = 1500;              // [draft] follow/draw accel at full spin
+const SPIN_TAU = 0.85;                // [draft] spin decay time constant, s
+const SLIDE_K = 3.0;                  // english masse-curve factor [draft]
+const ENGLISH_KICK = 150;             // [draft] cushion tangential kick at full side spin
+
+// ---------- ball colors ----------
+const BALL_COLORS = { 1:'#f6c90e',2:'#2048c8',3:'#d8232a',4:'#5b2a9d',5:'#f07d18',
+  6:'#0d7a3f',7:'#8e2323',8:'#17181a',9:'#f6c90e',10:'#2048c8',11:'#d8232a',
+  12:'#5b2a9d',13:'#f07d18',14:'#0d7a3f',15:'#8e2323' };
+const isStripe = n => n >= 9 && n <= 15;
+const groupOf = n => n === 0 ? 'cue' : n === 8 ? 'eight' : (n < 8 ? 'solid' : 'stripe');
+
+// ---------- game state ----------
+let balls = [];                       // {n,x,y,vx,vy,spin:{x,y},sz,pocketed}
+let phase = 'title';                  // title | aim | shooting | gameover
+let paused = false;
+let mode = 'ai';                      // 'ai' | '2p'
+let difficulty = 'average';
+let turn = 0;                         // 0 = player 1 / human, 1 = player 2 / Pip
+let groups = null;                    // null = open table; else {0:'solid'|'stripe',1:...}
+let ballInHand = false;
+let breakShot = true;
+let winner = -1, winReason = '';
+let aimAngle = Math.PI;               // initial aim: from cue toward rack (+x) -> set on rack
+let power = 0;                        // 0..1 selected power (slider / pull)
+let charging = false, chargeKey = false;
+let spinX = 0, spinY = 0;             // cue strike point -1..1 (x: side, y: follow+/draw-)
+let shot = null;                      // per-shot event record
+let cueAnim = null;                   // strike-through animation (rendering only)
+let aiTimer = null, aiToken = 0;
+let timeScale = 1;                    // test hook: physics speed multiplier
+let lastShotStats = { cushionHits: 0, pockets: 0, maxSpeed: 0 };
+const names = ['PLAYER 1', 'PLAYER 2'];
+
+// ---------- play-a-friend sessions (live relay + send-a-turn) ----------
+let net = null;                       // live session (see the NET section)
+let asyncGame = null;                 // send-a-turn session
+let firingRemote = false;             // true while a replayed shot is fired
+let shotLocal = true;                 // the current shot was fired locally
+let shotPreSnap = null;               // snapshot taken the moment a shot fires
+let shotCuePos = null;                // cue placement if the shot used ball-in-hand
+let shotParams = null;                // {angle, power, sx, sy} of the current shot
+let lastShotLocal = true;             // ...as read back after finishShot()
+let lastShotFoul = false;
+
+function cueBall() { return balls[0]; }
+function ballByNum(n) { return balls[n]; }
+function liveBalls() { return balls.filter(b => !b.pocketed); }
+
+function makeBall(n, x, y) {
+  // q: 3D orientation (unit quaternion) — the ball's surface pattern is
+  // rendered through this rotation, so balls visibly ROLL instead of slide.
+  // Racked balls get a random orientation, like real balls out of the tray.
+  return { n, x, y, vx: 0, vy: 0, spin: { x: 0, y: 0 }, sz: 0, pocketed: false,
+           q: randomQuat() };
+}
+
+// ---------- quaternion helpers (orientation only; physics untouched) ----
+function randomQuat() {
+  const u = Math.random(), v = Math.random(), w = Math.random();
+  const s1 = Math.sqrt(1 - u), s2 = Math.sqrt(u);
+  return { x: s1 * Math.sin(2 * Math.PI * v), y: s1 * Math.cos(2 * Math.PI * v),
+           z: s2 * Math.sin(2 * Math.PI * w), w: s2 * Math.cos(2 * Math.PI * w) };
+}
+// rotate orientation q by angular velocity (wx,wy,wz) for dt seconds
+function integrateQuat(q, wx, wy, wz, dt) {
+  const wl = Math.hypot(wx, wy, wz);
+  if (wl < 1e-6) return;
+  const half = 0.5 * wl * dt, s = Math.sin(half) / wl, c = Math.cos(half);
+  const rx = wx * s, ry = wy * s, rz = wz * s;   // delta quaternion
+  const nx = c * q.x + rx * q.w + ry * q.z - rz * q.y;
+  const ny = c * q.y - rx * q.z + ry * q.w + rz * q.x;
+  const nz = c * q.z + rx * q.y - ry * q.x + rz * q.w;
+  const nw = c * q.w - rx * q.x - ry * q.y - rz * q.z;
+  const il = 1 / Math.hypot(nx, ny, nz, nw);
+  q.x = nx * il; q.y = ny * il; q.z = nz * il; q.w = nw * il;
+}
+
+// rack: apex on the foot spot, rows extending +x; 8 in the middle,
+// one back corner solid, the other stripe (standard).
+function rack() {
+  balls = [makeBall(0, HEAD_X, TH / 2)];
+  const layout = [1, 9, 2, 10, 8, 3, 4, 11, 5, 12, 6, 13, 7, 14, 15]; // row-major
+  const dx = 2 * R * 0.866 + 0.15, dy = 2 * R + 0.35;
+  let k = 0;
+  for (let row = 0; row < 5; row++) {
+    for (let i = 0; i <= row; i++) {
+      const n = layout[k++];
+      balls[n] = makeBall(n, FOOT_X + row * dx, TH / 2 + (i - row / 2) * dy);
+    }
+  }
+  groups = null; breakShot = true; winner = -1; ballInHand = false;
+  turn = 0; spinX = 0; spinY = 0; power = 0;
+  aimAngle = 0; // cue at head, rack at +x
+  lastShotStats = { cushionHits: 0, pockets: 0, maxSpeed: 0 };
+}
+
+// =====================================================================
+// PHYSICS — fixed-timestep substeps, swept pocket checks, spin model.
+// Spin: ball.spin is a table-space vector (follow = along travel at
+// strike, draw = against it). It persists through ball collisions and
+// keeps accelerating the ball — that is what makes follow/draw real.
+// ball.sz is side spin (english): curves the ball slightly while it
+// slides and kicks tangentially off cushions.
+// =====================================================================
+function anyMoving() {
+  for (const b of balls) if (!b.pocketed && (b.vx !== 0 || b.vy !== 0)) return true;
+  return false;
+}
+
+function stepPhysics(dt) {
+  for (const b of balls) {
+    if (b.pocketed) continue;
+    let sp = Math.hypot(b.vx, b.vy);
+    if (sp === 0 && b.spin.x === 0 && b.spin.y === 0) continue;
+
+    // --- spin: follow/draw acceleration + decay ---
+    const sm = Math.hypot(b.spin.x, b.spin.y);
+    if (sm > 0.02) {
+      b.vx += b.spin.x * SPIN_FORCE * dt;
+      b.vy += b.spin.y * SPIN_FORCE * dt;
+      const dec = Math.exp(-dt / SPIN_TAU);
+      b.spin.x *= dec; b.spin.y *= dec;
+      // english: slight masse curve while the ball is travelling
+      if (b.sz !== 0 && sp > 40) {
+        const px = -b.vy / sp, py = b.vx / sp;
+        b.vx += px * b.sz * sp * SLIDE_K * 0.045 * dt;
+        b.vy += py * b.sz * sp * SLIDE_K * 0.045 * dt;
+      }
+    } else { b.spin.x = 0; b.spin.y = 0; }
+    b.sz *= Math.exp(-dt / 2.2);
+
+    // --- rolling friction ---
+    sp = Math.hypot(b.vx, b.vy);
+    if (sp > 0) {
+      const ns = sp - ROLL_DECEL * dt;
+      if (ns <= 0) { b.vx = 0; b.vy = 0; }
+      else { b.vx *= ns / sp; b.vy *= ns / sp; }
+    }
+
+    // --- integrate ---
+    b.x += b.vx * dt;
+    b.y += b.vy * dt;
+
+    // --- orientation: roll with the motion (rendering state only) ---
+    // rolling without slipping: w = (-vy, vx, 0)/R; side spin (sz) adds
+    // rotation about the vertical axis. [draft] SPIN_VIS scales sz to rad/s.
+    integrateQuat(b.q, -b.vy / R, b.vx / R, b.sz * 5.0, dt);
+
+    // --- pockets (checked before cushions so drops win) ---
+    for (const p of POCKETS) {
+      const d = Math.hypot(b.x - p.x, b.y - p.y);
+      if (d < p.cap) { pocketBall(b, p); break; }
+    }
+    if (b.pocketed) continue;
+
+    // --- cushions (circle vs segment, jaws included) ---
+    for (const s of CUSHIONS) collideSegment(b, s);
+    if (b.pocketed) continue;
+
+    // --- stop epsilon (never stop a ball that still carries spin:
+    // a draw ball creeps, stops, and then the spin pulls it back) ---
+    sp = Math.hypot(b.vx, b.vy);
+    const smag2 = Math.hypot(b.spin.x, b.spin.y);
+    if (sp < STOP_EPS && smag2 < 0.05) {
+      b.vx = 0; b.vy = 0; b.spin.x = 0; b.spin.y = 0; b.sz = 0;
+    }
+    if (sp > lastShotStats.maxSpeed) lastShotStats.maxSpeed = sp;
+  }
+
+  // --- ball-ball collisions (equal mass, restitution) ---
+  for (let i = 0; i < balls.length; i++) {
+    const a = balls[i]; if (a.pocketed) continue;
+    for (let j = i + 1; j < balls.length; j++) {
+      const c = balls[j]; if (c.pocketed) continue;
+      let dx = c.x - a.x, dy = c.y - a.y;
+      let d2 = dx * dx + dy * dy;
+      const min = 2 * R;
+      if (d2 >= min * min || d2 === 0) continue;
+      const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+      const overlap = (min - d) / 2;
+      a.x -= nx * overlap; a.y -= ny * overlap;
+      c.x += nx * overlap; c.y += ny * overlap;
+      const rvn = (c.vx - a.vx) * nx + (c.vy - a.vy) * ny;
+      if (rvn < 0) {
+        const jimp = -(1 + REST_BALL) * rvn / 2;
+        a.vx -= jimp * nx; a.vy -= jimp * ny;
+        c.vx += jimp * nx; c.vy += jimp * ny;
+        onBallHit(a, c, Math.abs(rvn));
+      }
+    }
+  }
+}
+
+function collideSegment(b, s) {
+  const [x1, y1, x2, y2] = s;
+  const ex = x2 - x1, ey = y2 - y1;
+  const len2 = ex * ex + ey * ey;
+  let t = ((b.x - x1) * ex + (b.y - y1) * ey) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = x1 + ex * t, cy = y1 + ey * t;
+  let dx = b.x - cx, dy = b.y - cy;
+  const d = Math.hypot(dx, dy);
+  if (d >= R || d === 0) return;
+  const nx = dx / d, ny = dy / d;
+  b.x += nx * (R - d); b.y += ny * (R - d);
+  const vn = b.vx * nx + b.vy * ny;
+  if (vn < 0) {
+    // tangential english kick before reflection
+    const tx = -ny, ty = nx;
+    const kick = b.sz * ENGLISH_KICK;
+    b.vx += tx * kick * 0.5; b.vy += ty * kick * 0.5;
+    b.vx -= (1 + REST_CUSH) * vn * nx;
+    b.vy -= (1 + REST_CUSH) * vn * ny;
+    b.sz *= 0.7;
+    onCushionHit(b, Math.abs(vn));
+  }
+}
+
+// safety net: a ball that somehow escapes near a pocket counts as dropped
+function pocketBall(b, p) {
+  b.pocketed = true; b.vx = 0; b.vy = 0; b.spin.x = 0; b.spin.y = 0; b.sz = 0;
+  lastShotStats.pockets++;
+  if (shot) {
+    shot.pocketed.push(b.n);
+    if (b.n === 0) shot.scratch = true;
+    shot.railOrPocket = true;
+  }
+  sfx('pocket', 1);
+}
+
+// ---------- shot event hooks (called from physics) ----------
+function onBallHit(a, c, strength) {
+  if (shot) {
+    if (shot.firstHit === null) {
+      if (a.n === 0) shot.firstHit = c.n;
+      else if (c.n === 0) shot.firstHit = a.n;
+    }
+    if (shot.firstHit !== null) shot.contactMade = true;
+  }
+  sfx('ball', Math.min(1, strength / 1400));
+}
+function onCushionHit(b, strength) {
+  lastShotStats.cushionHits++;
+  if (shot && shot.contactMade) shot.railOrPocket = true;
+  sfx('cushion', Math.min(1, strength / 1600));
+}
+
+// =====================================================================
+// RULES — casual app-style 8-ball.
+// Open table until a ball drops on a shot AFTER the break. Pocket your
+// group to keep shooting. Fouls (scratch / no contact / no rail after
+// contact / wrong group first) give the opponent ball-in-hand.
+// 8-ball only once your group is cleared; early 8 or a scratch on the
+// 8 loses. An 8 on the break is re-spotted, never a win.
+// =====================================================================
+function shoot(powerVal, angle, sx, sy) {
+  const cue = cueBall();
+  if (phase !== 'aim' || cue.pocketed) return false;
+  // play-a-friend capture: who fired, from what table, with what stroke —
+  // the live relay ships these params, send-a-turn packs them in the link.
+  shotLocal = !firingRemote;
+  shotPreSnap = snapState();
+  shotCuePos = ballInHand ? { x: cue.x, y: cue.y } : null;
+  shotParams = { angle, power: powerVal, sx: sx || 0, sy: sy || 0 };
+  // LIVE: my stroke goes to the relay the moment it fires — my
+  // opponent's table replays it live, then snaps to my settled result.
+  if (mode === 'live' && shotLocal && net && net.phase === 'game' && turn === net.seat - 1) {
+    const m = { t: 'shot', angle, power: powerVal, spin: { x: sx || 0, y: sy || 0 } };
+    if (shotCuePos) m.cue = shotCuePos;
+    netSend(m);
+  }
+  const sp = Math.max(0.05, Math.min(1, powerVal)) * MAX_SPEED;
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  cue.vx = dx * sp; cue.vy = dy * sp;
+  // spin vector: follow (+) points along travel, draw (-) against it
+  const smag = (sy || 0);
+  cue.spin.x = dx * smag; cue.spin.y = dy * smag;
+  cue.sz = sx || 0;
+  cueAnim = { t0: performance.now(), angle,
+              gap0: 16 + Math.max(0.05, Math.min(1, powerVal)) * 170 };
+  shot = { pocketed: [], firstHit: null, contactMade: false, railOrPocket: false,
+           scratch: false, wasBreak: breakShot, shooter: turn };
+  lastShotStats = { cushionHits: 0, pockets: 0, maxSpeed: sp };
+  phase = 'shooting';
+  ballInHand = false;
+  sfx('cue', Math.min(1, powerVal + 0.2));
+  updateHUD();
+  return true;
+}
+
+function groupCleared(p) {
+  if (!groups) return false;
+  const g = groups[p];
+  return balls.every(b => b.pocketed || groupOf(b.n) !== g || b.n === 0);
+}
+function remainingOf(p) {
+  if (!groups) return liveBalls().filter(b => b.n !== 0 && b.n !== 8).length;
+  const g = groups[p];
+  return liveBalls().filter(b => groupOf(b.n) === g).length;
+}
+
+function finishShot() {
+  const s = shot; shot = null;
+  lastShotLocal = shotLocal;
+  // owner's ruling: english resets after every shot — the next shooter
+  // (either player, and Pip) always starts from a dead-center strike.
+  spinX = 0; spinY = 0; drawSpinWidget();
+  const shooter = s.shooter, opp = 1 - shooter;
+  let foul = null;
+
+  // --- 8 on the break: re-spot, no win, no group assignment ---
+  let eightRespot = false;
+  if (s.wasBreak && s.pocketed.includes(8)) {
+    eightRespot = true;
+    s.pocketed = s.pocketed.filter(n => n !== 8);
+    respot8();
+    setMsg('8 on the break — re-spotted. Table is open.');
+  }
+
+  // --- fouls ---
+  if (s.scratch) foul = 'Scratch!';
+  else if (!s.contactMade) foul = 'No ball contacted!';
+  else if (!s.railOrPocket) foul = 'No rail after contact!';
+  if (!foul && s.contactMade) {
+    const fh = s.firstHit;
+    if (!groups) { if (fh === 8) foul = '8-ball first on an open table!'; }
+    else if (groupCleared(shooter)) { if (fh !== 8) foul = 'Wrong ball first!'; }
+    else if (groupOf(fh) !== groups[shooter]) foul = 'Wrong group first!';
+  }
+  lastShotFoul = !!foul;
+
+  // --- 8-ball resolution ---
+  if (!eightRespot && s.pocketed.includes(8)) {
+    if (groupCleared(shooter) && !foul) endGame(shooter, 'cleared the table and sank the 8');
+    else endGame(opp, names[shooter] + ' sank the 8 too soon');
+    return;
+  }
+
+  // --- group assignment (first ball down on a non-break shot) ---
+  let assignedMsg = '';
+  if (!groups && !s.wasBreak) {
+    const first = s.pocketed.find(n => n !== 0 && n !== 8);
+    if (first !== undefined) {
+      const g = groupOf(first);
+      groups = {}; groups[shooter] = g; groups[opp] = g === 'solid' ? 'stripe' : 'solid';
+      assignedMsg = ` ${names[shooter]} takes ${g}s.`;
+    }
+  }
+
+  // --- who shoots next ---
+  const ownDown = s.pocketed.some(n => n !== 0 && n !== 8 &&
+    (!groups || groupOf(n) === groups[shooter] || s.wasBreak && !groups));
+  const keepTurn = ownDown && !foul;
+  if (!keepTurn) turn = opp;
+  if (foul) {
+    ballInHand = true;
+    placeCueDefault();
+    setMsg(`<span class="foul">FOUL — ${foul}</span> Ball in hand for ${names[turn]}.${assignedMsg}`, true);
+  } else if (keepTurn) {
+    setMsg(`Nice — ${names[turn]} shoots again.${assignedMsg}`);
+  } else {
+    setMsg(`${names[turn]} to shoot.${assignedMsg}`);
+  }
+  if (s.wasBreak && !foul && !ownDown) setMsg(`Break done — ${names[turn]} to shoot, table open.`);
+  breakShot = false;
+  phase = 'aim';
+  aimAtSuggested();
+  maybeAI();
+  updateHUD();
+}
+
+function respot8() {
+  const b = ballByNum(8);
+  let x = FOOT_X, y = TH / 2;
+  while (balls.some(o => !o.pocketed && o.n !== 8 && Math.hypot(o.x - x, o.y - y) < 2 * R + 1)) x += 4;
+  b.x = x; b.y = y; b.vx = 0; b.vy = 0; b.pocketed = false;
+}
+
+function endGame(w, reason) {
+  winner = w; winReason = reason; phase = 'gameover';
+  document.getElementById('wintext').textContent = `${names[w]} WINS!`;
+  document.getElementById('winballs').textContent = reason;
+  document.getElementById('winov').classList.remove('hidden');
+  setMsg(`${names[w]} wins — ${reason}.`);
+  updateHUD();
+}
+
+// ---------- cue-ball placement (ball in hand) ----------
+function placementOK(x, y) {
+  if (x < R || x > TW - R || y < R || y > TH - R) return false;
+  for (const b of balls) {
+    if (b.pocketed || b.n === 0) continue;
+    if (Math.hypot(b.x - x, b.y - y) < 2 * R - 0.5) return false;
+  }
+  for (const p of POCKETS) if (Math.hypot(p.x - x, p.y - y) < p.cap + 2) return false;
+  return true;
+}
+function placeCueDefault() {
+  const cue = cueBall();
+  cue.pocketed = false; cue.vx = 0; cue.vy = 0;
+  const spots = [[HEAD_X, TH/2], [HEAD_X, TH/2 - 60], [HEAD_X, TH/2 + 60],
+                 [150, 150], [150, 350], [HEAD_X - 80, TH/2]];
+  for (const [x, y] of spots) if (placementOK(x, y)) { cue.x = x; cue.y = y; return; }
+  for (let x = 60; x < TW; x += 20) for (let y = 40; y < TH; y += 20)
+    if (placementOK(x, y)) { cue.x = x; cue.y = y; return; }
+}
+function aimAtSuggested() {
+  // face the nearest live object ball so the guideline starts somewhere sane
+  const cue = cueBall(); if (cue.pocketed) return;
+  let best = null, bd = 1e9;
+  for (const b of liveBalls()) {
+    if (b.n === 0) continue;
+    const d = Math.hypot(b.x - cue.x, b.y - cue.y);
+    if (d < bd) { bd = d; best = b; }
+  }
+  if (best) aimAngle = Math.atan2(best.y - cue.y, best.x - cue.x);
+}
+
+// =====================================================================
+// PIP — the house AI. Picks legal, sensible shots: her own group (any
+// non-8 ball on an open table, the 8 only when her group is cleared),
+// prefers makeable cuts and clear paths, avoids obvious scratches at
+// higher levels. Difficulty scales aim error + blunder rate.
+// =====================================================================
+const AI_LEVELS = {
+  rookie:  { sigma: 0.030, blunder: 0.20, powerVar: 0.25, seesScratch: false },
+  average: { sigma: 0.013, blunder: 0.07, powerVar: 0.14, seesScratch: true  },
+  pro:     { sigma: 0.005, blunder: 0.02, powerVar: 0.06, seesScratch: true  },
+};
+function gauss() {
+  let u = 0, v = 0;
+  while (!u) u = Math.random();
+  while (!v) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+function segClear(x1, y1, x2, y2, ignore, clearance) {
+  for (const b of balls) {
+    if (b.pocketed || b.n === 0 || ignore.includes(b.n)) continue;
+    // distance from ball center to segment
+    const ex = x2 - x1, ey = y2 - y1, L2 = ex * ex + ey * ey;
+    let t = L2 ? ((b.x - x1) * ex + (b.y - y1) * ey) / L2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    const d = Math.hypot(b.x - (x1 + ex * t), b.y - (y1 + ey * t));
+    if (d < clearance) return false;
+  }
+  return true;
+}
+function aiTargets(p) {
+  const live = liveBalls().filter(b => b.n !== 0);
+  if (!groups) return live.filter(b => b.n !== 8);
+  if (groupCleared(p)) return live.filter(b => b.n === 8);
+  return live.filter(b => groupOf(b.n) === groups[p]);
+}
+function pickAIShot(p) {
+  const L = AI_LEVELS[difficulty] || AI_LEVELS.average;
+  const cue = cueBall();
+  const targets = aiTargets(p);
+  if (!targets.length) return null;
+  let options = [];
+  for (const b of targets) {
+    for (const pk of POCKETS) {
+      const dbp = Math.hypot(pk.x - b.x, pk.y - b.y);
+      if (dbp < 2 * R) continue;
+      const ux = (pk.x - b.x) / dbp, uy = (pk.y - b.y) / dbp;   // ball -> pocket
+      const gx = b.x - ux * 2 * R, gy = b.y - uy * 2 * R;       // ghost ball
+      const dcg = Math.hypot(gx - cue.x, gy - cue.y);
+      if (dcg < 1) continue;
+      const ax = (gx - cue.x) / dcg, ay = (gy - cue.y) / dcg;   // cue -> ghost
+      const dot = ax * ux + ay * uy;
+      if (dot < 0.06) continue;                                // cut too thin
+      const cutDeg = Math.acos(Math.min(1, dot)) * 180 / Math.PI;
+      if (!segClear(cue.x, cue.y, gx, gy, [b.n], 2 * R - 2)) continue;
+      if (!segClear(b.x, b.y, pk.x, pk.y, [b.n], R * 1.7)) continue;
+      // scratch risk: cue deflection direction vs pockets
+      let risky = false;
+      const tx = ax - dot * ux, ty = ay - dot * uy;            // tangent dir
+      const tm = Math.hypot(tx, ty);
+      if (tm > 0.25) {
+        for (const q of POCKETS) {
+          const rx = q.x - gx, ry = q.y - gy;
+          const along = rx * (tx / tm) + ry * (ty / tm);
+          if (along > 0) {
+            const perp = Math.abs(rx * (-(ty / tm)) + ry * (tx / tm));
+            if (perp < 30 && along < 260) { risky = true; break; }
+          }
+        }
+      }
+      let score = 120 - cutDeg * 1.1 - dbp * 0.055 - dcg * 0.028;
+      if (risky && L.seesScratch) score -= 70;
+      options.push({ angle: Math.atan2(ay, ax), score,
+                     power: Math.max(0.32, Math.min(0.9, 0.34 + (dcg + dbp) / 1500)),
+                     cutDeg, target: b.n });
+    }
+  }
+  options.sort((a, b) => b.score - a.score);
+  let pick = options[0];
+  if (!pick || Math.random() < L.blunder) {
+    // blunder / no clean shot: play a contact shot at the nearest target
+    let b = targets[0], bd = 1e9;
+    for (const t of targets) {
+      const d = Math.hypot(t.x - cue.x, t.y - cue.y);
+      if (d < bd) { bd = d; b = t; }
+    }
+    pick = { angle: Math.atan2(b.y - cue.y, b.x - cue.x), power: 0.45, cutDeg: 0, target: b.n };
+    if (options.length && Math.random() < 0.5) pick = options[Math.floor(Math.random() * options.length)];
+  }
+  pick.angle += gauss() * L.sigma;
+  pick.power = Math.max(0.2, Math.min(0.95, pick.power * (1 + gauss() * L.powerVar)));
+  // spin: pros feather follow on near-straight shots; everyone else centers
+  pick.sx = 0; pick.sy = 0;
+  if (difficulty === 'pro' && pick.cutDeg < 18) pick.sy = 0.35;
+  if (difficulty === 'rookie' && Math.random() < 0.3) { pick.sx = gauss() * 0.3; pick.sy = gauss() * 0.3; }
+  return pick;
+}
+function aiPlaceBall(p) {
+  // try spots on the line behind a target toward a pocket, else defaults
+  const targets = aiTargets(p);
+  for (const b of targets) {
+    for (const pk of POCKETS) {
+      const dbp = Math.hypot(pk.x - b.x, pk.y - b.y); if (dbp < 1) continue;
+      const ux = (pk.x - b.x) / dbp, uy = (pk.y - b.y) / dbp;
+      for (const back of [170, 260, 360]) {
+        const x = b.x - ux * back, y = b.y - uy * back;
+        if (placementOK(x, y)) { cueBall().x = x; cueBall().y = y; return; }
+      }
+    }
+  }
+  placeCueDefault();
+}
+function maybeAI() {
+  if (mode !== 'ai' || turn !== 1 || phase !== 'aim' || winner >= 0) return;
+  const tok = ++aiToken;
+  setMsg('Pip is lining up…');
+  aiTimer = setTimeout(() => {
+    if (tok !== aiToken || phase !== 'aim' || paused) return;
+    if (ballInHand) { aiPlaceBall(1); ballInHand = false; }
+    const pick = pickAIShot(1);
+    if (!pick) return;
+    aimAngle = pick.angle; spinX = pick.sx; spinY = pick.sy;
+    drawSpinWidget();
+    // brief pull-back, then fire through the same shoot() as the player
+    charging = true; power = pick.power; updatePowerUI();
+    setTimeout(() => {
+      if (tok !== aiToken) return;
+      charging = false;
+      shoot(pick.power, pick.angle, pick.sx, pick.sy);
+      power = 0; updatePowerUI();
+    }, 420);
+  }, 850);
+}
+
+// =====================================================================
+// RENDERING — everything drawn in code; felt pre-rendered once.
+// =====================================================================
+const cv = document.getElementById('cv');
+const ctx = cv.getContext('2d');
+let feltCanvas = null;
+
+// ---------- table designs (owner: several tables; black + gold badge is
+// his spec, the other three are [draft] craft colorways) ----------
+const TABLE_THEMES = {
+  oak:    { felt: ['#1e7d43', '#176b37', '#0f5229'], cush: ['#176338', '#0f4a29', '#072a16'], cushBase: '#0c3d21',
+            wood: ['#8a5427', '#6e3f16', '#7c4a1e', '#5d3510'], print: 'ghost', dia: 'pearl' },
+  walnut: { felt: ['#22628f', '#174a73', '#0f3355'], cush: ['#1a4a70', '#123a5c', '#081f36'], cushBase: '#0d2f4a',
+            wood: ['#5d4030', '#463022', '#513828', '#38241a'], print: 'ghost', dia: 'pearl' },
+  cherry: { felt: ['#8c2836', '#6e1f2b', '#4d121e'], cush: ['#701f2c', '#571623', '#330a12'], cushBase: '#4d1420',
+            wood: ['#6e3226', '#52241a', '#5f2b20', '#401a12'], print: 'ghost', dia: 'pearl' },
+  onyx:   { felt: ['#2e2e33', '#1c1c20', '#101013'], cush: ['#34343a', '#232327', '#0c0c0e'], cushBase: '#17171a',
+            wood: ['#2b2320', '#1a1512', '#231c18', '#0f0c0a'], print: 'gold', dia: 'gold' },
+};
+let tableTheme = 'oak';
+try {
+  const saved = localStorage.getItem('angeles8ball.table');
+  if (saved && TABLE_THEMES[saved]) tableTheme = saved;
+} catch (e) { /* storage unavailable — default table stands */ }
+
+function buildFelt() {
+  feltCanvas = document.createElement('canvas');
+  feltCanvas.width = CW; feltCanvas.height = CH;
+  const g = feltCanvas.getContext('2d');
+  const P = TABLE_THEMES[tableTheme];
+  // deterministic grain so every load crafts the same table
+  let seed = 987654321;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed / 0x7fffffff; };
+
+  // ---------- wooden frame: grain, knots, bevels ----------
+  const wood = g.createLinearGradient(0, 0, CW * 0.4, CH);
+  wood.addColorStop(0, P.wood[0]); wood.addColorStop(0.45, P.wood[1]);
+  wood.addColorStop(0.75, P.wood[2]); wood.addColorStop(1, P.wood[3]);
+  g.fillStyle = wood; g.fillRect(0, 0, CW, CH);
+  for (let i = 0; i < 110; i++) {           // long grain, light and dark
+    const y = rnd() * CH, amp = 1.5 + rnd() * 4, dark = rnd() > 0.32;
+    g.strokeStyle = dark ? `rgba(38,18,3,${0.05 + rnd() * 0.11})` : `rgba(255,196,110,${0.03 + rnd() * 0.05})`;
+    g.lineWidth = 0.7 + rnd() * 1.9;
+    g.beginPath(); g.moveTo(-6, y);
+    for (let x = 0; x <= CW + 6; x += 90) g.lineTo(x, y + Math.sin(x * 0.01 + i) * amp);
+    g.stroke();
+  }
+  for (const [kx, ky] of [[150, 14], [CW - 190, CH - 13], [CW - 130, 15], [210, CH - 14]]) {  // knots on the rails
+    for (let r = 7; r > 1; r -= 2) {
+      g.beginPath(); g.ellipse(kx, ky, r * 1.7, r, 0.2, 0, 7);
+      g.strokeStyle = `rgba(30,14,2,${0.10 + (7 - r) * 0.03})`; g.lineWidth = 1.1; g.stroke();
+    }
+  }
+  const sheen = g.createLinearGradient(0, 0, 0, CH);   // soft sheen across the wood
+  sheen.addColorStop(0, 'rgba(255,230,170,0.10)'); sheen.addColorStop(0.5, 'rgba(255,230,170,0)');
+  sheen.addColorStop(1, 'rgba(0,0,0,0.16)');
+  g.fillStyle = sheen; g.fillRect(0, 0, CW, CH);
+  // bevels: dark outer edge, light kiss inside it, shadow where wood meets cushion
+  g.strokeStyle = 'rgba(0,0,0,0.65)'; g.lineWidth = 3; g.strokeRect(1.5, 1.5, CW - 3, CH - 3);
+  g.strokeStyle = 'rgba(255,224,160,0.20)'; g.lineWidth = 1; g.strokeRect(4.5, 4.5, CW - 9, CH - 9);
+  roundRect(g, RAIL - 19, RAIL - 19, TW + 38, TH + 38, 24);
+  g.strokeStyle = 'rgba(0,0,0,0.55)'; g.lineWidth = 2.5; g.stroke();
+  roundRect(g, RAIL - 21, RAIL - 21, TW + 42, TH + 42, 26);
+  g.strokeStyle = 'rgba(255,224,160,0.13)'; g.lineWidth = 1; g.stroke();
+  // brass corner castings tucked into the frame corners
+  for (const [cx, cy, fx, fy] of [[0, 0, 1, 1], [CW, 0, -1, 1], [0, CH, 1, -1], [CW, CH, -1, -1]]) {
+    const bg = g.createLinearGradient(cx, cy, cx + fx * 20, cy + fy * 20);
+    bg.addColorStop(0, '#e8c96a'); bg.addColorStop(0.6, '#a07d2c'); bg.addColorStop(1, '#6e5514');
+    g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + fx * 19, cy); g.lineTo(cx, cy + fy * 19); g.closePath();
+    g.fillStyle = bg; g.fill();
+    g.beginPath(); g.arc(cx + fx * 6.5, cy + fy * 6.5, 1.8, 0, 7); g.fillStyle = '#4a3808'; g.fill();
+  }
+
+  // ---------- cushions: shaped faces with a nose, not a flat ring -------
+  roundRect(g, RAIL - 17, RAIL - 17, TW + 34, TH + 34, 22);
+  g.fillStyle = P.cushBase; g.fill();
+  const cloth = makeNoiseTile(rnd);
+  g.save();
+  roundRect(g, RAIL - 17, RAIL - 17, TW + 34, TH + 34, 22); g.clip();
+  g.globalAlpha = 0.16; g.fillStyle = g.createPattern(cloth, 'repeat');
+  g.fillRect(RAIL - 17, RAIL - 17, TW + 34, TH + 34);
+  g.restore(); g.globalAlpha = 1;
+  const face = (pts, gx0, gy0, gx1, gy1) => {
+    const gr = g.createLinearGradient(gx0, gy0, gx1, gy1);
+    gr.addColorStop(0, P.cush[0]); gr.addColorStop(0.72, P.cush[1]); gr.addColorStop(1, P.cush[2]);
+    g.beginPath(); g.moveTo(pts[0], pts[1]);
+    for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]);
+    g.closePath(); g.fillStyle = gr; g.fill();
+    g.beginPath(); g.moveTo(pts[6], pts[7]); g.lineTo(pts[4], pts[5]);   // nose welt
+    g.strokeStyle = 'rgba(0,0,0,0.6)'; g.lineWidth = 2; g.stroke();
+    g.beginPath(); g.moveTo(pts[0], pts[1]); g.lineTo(pts[2], pts[3]);   // top highlight
+    g.strokeStyle = 'rgba(255,255,255,0.13)'; g.lineWidth = 1.2; g.stroke();
+  };
+  const X0 = RAIL, X1 = RAIL + TW, Y0 = RAIL, Y1 = RAIL + TH, O = 17;
+  face([X0 + 26, Y0 - O, X0 + 462, Y0 - O, X0 + 466, Y0 + 1, X0 + 34, Y0 + 1], 0, Y0 - O, 0, Y0 + 1);      // top L
+  face([X0 + 538, Y0 - O, X1 - 26, Y0 - O, X1 - 34, Y0 + 1, X0 + 534, Y0 + 1], 0, Y0 - O, 0, Y0 + 1);      // top R
+  face([X0 + 26, Y1 + O, X0 + 462, Y1 + O, X0 + 466, Y1 - 1, X0 + 34, Y1 - 1], 0, Y1 + O, 0, Y1 - 1);      // bottom L
+  face([X0 + 538, Y1 + O, X1 - 26, Y1 + O, X1 - 34, Y1 - 1, X0 + 534, Y1 - 1], 0, Y1 + O, 0, Y1 - 1);      // bottom R
+  face([X0 - O, Y0 + 26, X0 - O, Y1 - 26, X0 + 1, Y1 - 34, X0 + 1, Y0 + 34], X0 - O, 0, X0 + 1, 0);        // left
+  face([X1 + O, Y0 + 26, X1 + O, Y1 - 26, X1 - 1, Y1 - 34, X1 - 1, Y0 + 34], X1 + O, 0, X1 - 1, 0);        // right
+
+  // ---------- felt: woven cloth, center light pool, edge vignette -------
+  const felt = g.createRadialGradient(CW / 2, CH / 2, 110, CW / 2, CH / 2, 660);
+  felt.addColorStop(0, P.felt[0]); felt.addColorStop(0.62, P.felt[1]); felt.addColorStop(1, P.felt[2]);
+  g.fillStyle = felt; g.fillRect(RAIL, RAIL, TW, TH);
+  g.save(); g.beginPath(); g.rect(RAIL, RAIL, TW, TH); g.clip();
+  g.globalAlpha = 0.20; g.fillStyle = g.createPattern(cloth, 'repeat');
+  g.fillRect(RAIL, RAIL, TW, TH); g.globalAlpha = 1;
+  g.strokeStyle = 'rgba(255,255,255,0.020)'; g.lineWidth = 5;             // nap streaks
+  for (let i = 0; i < 26; i++) {
+    const y = RAIL + rnd() * TH;
+    g.beginPath(); g.moveTo(RAIL - 20, y); g.lineTo(RAIL + TW + 20, y - 60 - rnd() * 80); g.stroke();
+  }
+  // ---------- maker's print on the felt: woven in, not stuck on --------
+  // Drawn before the light pool and vignette so the room light plays over
+  // it exactly like the cloth around it — a sponsor print, not a sticker.
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (P.print === 'gold') {
+    // the black table carries a gold badge: ringed emblem at center felt
+    const cxp = CW / 2, cyp = CH / 2;
+    const gold = g.createLinearGradient(0, cyp - 78, 0, cyp + 78);
+    gold.addColorStop(0, '#f7e08a'); gold.addColorStop(0.5, '#caa22f'); gold.addColorStop(1, '#8a6a1d');
+    g.strokeStyle = gold; g.globalAlpha = 0.52; g.lineWidth = 3;
+    g.beginPath(); g.arc(cxp, cyp, 78, 0, 7); g.stroke();
+    g.globalAlpha = 0.38; g.lineWidth = 1;
+    g.beginPath(); g.arc(cxp, cyp, 69, 0, 7); g.stroke();
+    g.fillStyle = gold; g.globalAlpha = 0.60;
+    g.font = 'bold 33px Georgia, serif';
+    g.fillText('ANGELES', cxp, cyp - 13);
+    g.font = '15px Georgia, serif';
+    try { g.letterSpacing = '6px'; } catch (e) {}
+    g.fillText('PRODUCTIONS', cxp + 3, cyp + 17);
+    try { g.letterSpacing = '0px'; } catch (e) {}
+    g.globalAlpha = 0.55;
+    for (const sgn of [-1, 1]) {  // small diamonds flanking the name
+      const dxp = cxp + sgn * 62, dyp = cyp + 38;
+      g.beginPath(); g.moveTo(dxp, dyp - 5); g.lineTo(dxp + 4, dyp); g.lineTo(dxp, dyp + 5); g.lineTo(dxp - 4, dyp); g.closePath(); g.fill();
+    }
+    g.globalAlpha = 1;
+  } else {
+    // ghost print: a sheen difference in the cloth, tone on tone
+    const cxp = CW / 2, cyp = CH / 2;
+    g.font = 'bold 58px Georgia, serif';
+    try { g.letterSpacing = '10px'; } catch (e) {}
+    g.fillStyle = 'rgba(0,0,0,0.055)';
+    g.fillText('ANGELES', cxp + 2, cyp - 12);
+    g.fillStyle = 'rgba(255,255,255,0.052)';
+    g.fillText('ANGELES', cxp, cyp - 14);
+    g.font = '21px Georgia, serif';
+    try { g.letterSpacing = '13px'; } catch (e) {}
+    g.fillStyle = 'rgba(0,0,0,0.05)';
+    g.fillText('PRODUCTIONS', cxp + 7, cyp + 26);
+    g.fillStyle = 'rgba(255,255,255,0.048)';
+    g.fillText('PRODUCTIONS', cxp + 6, cyp + 25);
+    try { g.letterSpacing = '0px'; } catch (e) {}
+  }
+  const pool = g.createRadialGradient(CW / 2, CH / 2 - 16, 60, CW / 2, CH / 2 - 16, 430);
+  pool.addColorStop(0, 'rgba(255,252,215,0.13)'); pool.addColorStop(1, 'rgba(255,252,215,0)');
+  g.fillStyle = pool; g.fillRect(RAIL, RAIL, TW, TH);
+  const vig = g.createRadialGradient(CW / 2, CH / 2, 330, CW / 2, CH / 2, 760);
+  vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(0,0,0,0.30)');
+  g.fillStyle = vig; g.fillRect(RAIL, RAIL, TW, TH);
+  // cushion shadow falling onto the felt
+  const shT = g.createLinearGradient(0, RAIL, 0, RAIL + 15);
+  shT.addColorStop(0, 'rgba(0,0,0,0.38)'); shT.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = shT; g.fillRect(RAIL, RAIL, TW, 15);
+  const shB = g.createLinearGradient(0, RAIL + TH, 0, RAIL + TH - 15);
+  shB.addColorStop(0, 'rgba(0,0,0,0.38)'); shB.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = shB; g.fillRect(RAIL, RAIL + TH - 15, TW, 15);
+  const shL = g.createLinearGradient(RAIL, 0, RAIL + 15, 0);
+  shL.addColorStop(0, 'rgba(0,0,0,0.38)'); shL.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = shL; g.fillRect(RAIL, RAIL, 15, TH);
+  const shR = g.createLinearGradient(RAIL + TW, 0, RAIL + TW - 15, 0);
+  shR.addColorStop(0, 'rgba(0,0,0,0.38)'); shR.addColorStop(1, 'rgba(0,0,0,0)');
+  g.fillStyle = shR; g.fillRect(RAIL + TW - 15, RAIL, 15, TH);
+  g.restore();
+  // head string + spots
+  g.strokeStyle = 'rgba(255,255,255,0.09)'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(RAIL + HEAD_X, RAIL); g.lineTo(RAIL + HEAD_X, RAIL + TH); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,0.22)';
+  g.beginPath(); g.arc(RAIL + FOOT_X, RAIL + TH / 2, 3.5, 0, 7); g.fill();
+  g.beginPath(); g.arc(RAIL + HEAD_X, RAIL + TH / 2, 3.5, 0, 7); g.fill();
+
+  // ---------- diamond sights: mother-of-pearl inlay ---------------------
+  const dia = (x, y) => {
+    const dg = g.createLinearGradient(x - 5, y - 6, x + 5, y + 6);
+    if (P.dia === 'gold') { dg.addColorStop(0, '#fff2b0'); dg.addColorStop(0.5, '#d4af37'); dg.addColorStop(1, '#8a6a1d'); }
+    else { dg.addColorStop(0, '#ffffff'); dg.addColorStop(0.5, '#d7dee2'); dg.addColorStop(1, '#93a7b1'); }
+    g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 5, y); g.lineTo(x, y + 6); g.lineTo(x - 5, y); g.closePath();
+    g.fillStyle = dg; g.fill();
+    g.strokeStyle = 'rgba(20,10,0,0.55)'; g.lineWidth = 0.8; g.stroke();
+    g.beginPath(); g.arc(x - 1.2, y - 2.4, 1.1, 0, 7); g.fillStyle = 'rgba(255,255,255,0.95)'; g.fill();
+  };
+  for (let i = 1; i < 8; i++) { if (i === 4) continue; dia(RAIL + TW * i / 8, RAIL - 27); dia(RAIL + TW * i / 8, RAIL + TH + 27); }
+  for (let i = 1; i < 4; i++) { dia(RAIL - 27, RAIL + TH * i / 4); dia(RAIL + TW + 27, RAIL + TH * i / 4); }
+
+  // ---------- pockets: deep holes in leather and brass ------------------
+  for (const p of POCKETS) {
+    const x = RAIL + p.x, y = RAIL + p.y, rr = p.corner ? 25 : 23;
+    const cx = x + (CW / 2 - x) * 0.03, cy = y + (CH / 2 - y) * 0.03;   // shadow leans to the felt
+    const psh = g.createRadialGradient(cx, cy, 2, cx, cy, rr + 10);
+    psh.addColorStop(0, 'rgba(0,0,0,0.34)'); psh.addColorStop(1, 'rgba(0,0,0,0)');
+    g.beginPath(); g.arc(cx, cy, rr + 10, 0, 7); g.fillStyle = psh; g.fill();
+    const brass = g.createLinearGradient(x - rr, y - rr, x + rr, y + rr);
+    brass.addColorStop(0, '#8a6a1d'); brass.addColorStop(0.35, '#eeda8f');
+    brass.addColorStop(0.62, '#b98f2e'); brass.addColorStop(1, '#5f470e');
+    g.beginPath(); g.arc(x, y, rr + 2.5, 0, 7); g.strokeStyle = brass; g.lineWidth = 5; g.stroke();
+    g.beginPath(); g.arc(x, y, rr - 0.5, 0, 7); g.strokeStyle = '#2a1608'; g.lineWidth = 5; g.stroke();
+    g.setLineDash([4, 4]);                                              // stitching in the leather
+    g.beginPath(); g.arc(x, y, rr - 0.5, 0, 7); g.strokeStyle = 'rgba(232,199,122,0.55)'; g.lineWidth = 1.3; g.stroke();
+    g.setLineDash([]);
+    const hole = g.createRadialGradient(x - 3, y - 3, 1, x, y, rr - 2);
+    hole.addColorStop(0, '#000000'); hole.addColorStop(0.78, '#030303'); hole.addColorStop(1, '#17130c');
+    g.beginPath(); g.arc(x, y, rr - 2, 0, 7); g.fillStyle = hole; g.fill();
+    g.beginPath(); g.arc(x, y, rr - 3.5, Math.PI * 0.15, Math.PI * 0.85);  // light on the inner lip
+    g.strokeStyle = 'rgba(255,235,190,0.13)'; g.lineWidth = 2; g.stroke();
+  }
+}
+// tiny woven-cloth noise tile, reused by felt and cushions
+function makeNoiseTile(rnd) {
+  const c = document.createElement('canvas'); c.width = c.height = 96;
+  const g = c.getContext('2d');
+  const img = g.createImageData(96, 96);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 118 + Math.floor(rnd() * 60);
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  return c;
+}
+function roundRect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+
+// aim prediction: sweep the cue ball along the aim direction
+function predict() {
+  const cue = cueBall();
+  if (cue.pocketed) return null;
+  const dx = Math.cos(aimAngle), dy = Math.sin(aimAngle);
+  let bestT = 1e9, hitBall = null;
+  for (const b of balls) {
+    if (b.pocketed || b.n === 0) continue;
+    const rx = b.x - cue.x, ry = b.y - cue.y;
+    const proj = rx * dx + ry * dy;
+    if (proj <= 0) continue;
+    const perp2 = rx * rx + ry * ry - proj * proj;
+    const rr = 2 * R;
+    if (perp2 >= rr * rr) continue;
+    const t = proj - Math.sqrt(rr * rr - perp2);
+    if (t < bestT) { bestT = t; hitBall = b; }
+  }
+  // cushion hit distance
+  let tC = 1e9;
+  if (dx > 0) tC = Math.min(tC, (TW - R - cue.x) / dx); else if (dx < 0) tC = Math.min(tC, (R - cue.x) / dx);
+  if (dy > 0) tC = Math.min(tC, (TH - R - cue.y) / dy); else if (dy < 0) tC = Math.min(tC, (R - cue.y) / dy);
+  if (hitBall && bestT < tC) {
+    const gx = cue.x + dx * bestT, gy = cue.y + dy * bestT;
+    let nx = hitBall.x - gx, ny = hitBall.y - gy;
+    const nm = Math.hypot(nx, ny); nx /= nm; ny /= nm;
+    // cue deflection: tangent component of travel direction
+    const dot = dx * nx + dy * ny;
+    const tx = dx - dot * nx, ty = dy - dot * ny;
+    return { type: 'ball', ball: hitBall, gx, gy, nx, ny, tx, ty, dot };
+  }
+  const ex = cue.x + dx * Math.max(0, tC), ey = cue.y + dy * Math.max(0, tC);
+  return { type: 'rail', ex, ey };
+}
+
+// =====================================================================
+// BALL RENDERING — true rolling spheres. Each ball number gets an
+// equirectangular surface texture (stripe band / solid / number circles /
+// measles dots on the cue ball). Per frame, a ball's sprite is re-rendered
+// only when its orientation has moved: every pixel of the disc is
+// un-rotated through the ball's quaternion, sampled from the texture, and
+// shaded with a light that stays locked to the room — so the pattern
+// travels over the ball (stripes tip, numbers foreshorten at the limb)
+// while the highlight never moves. That is what rolling looks like.
+// =====================================================================
+const TEX_W = 160, TEX_H = 80;
+const SPR = 52, SPR_R = 24;             // sprite px: canvas size / disc radius
+const SPR_SCALE = (2 * R) / (2 * SPR_R);
+let ballTex = null;                     // per ball number: {data,w,h}
+let shadowSpr = null;
+
+function hexRGB(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+}
+function buildBallTextures() {
+  ballTex = [];
+  for (let n = 0; n <= 15; n++) {
+    const c = document.createElement('canvas'); c.width = TEX_W; c.height = TEX_H;
+    const g = c.getContext('2d');
+    const col = n === 0 ? '#f7f4ea' : BALL_COLORS[n];
+    // base
+    g.fillStyle = (n === 0 || isStripe(n)) ? '#f7f4ea' : col;
+    g.fillRect(0, 0, TEX_W, TEX_H);
+    if (isStripe(n)) {  // colored band around the equator (|lat| < ~0.62 rad)
+      g.fillStyle = col;
+      g.fillRect(0, TEX_H * 0.303, TEX_W, TEX_H * 0.394);
+    }
+    if (n === 0) {      // measles dots — six, at the octahedron points
+      g.fillStyle = '#c2262e';
+      const dot = (u, v, r) => { g.beginPath(); g.arc(u * TEX_W, v * TEX_H, r || 3.4, 0, 7); g.fill(); };
+      dot(0.5, 0.5); dot(0.0, 0.5); dot(1.0, 0.5); dot(0.25, 0.5); dot(0.75, 0.5);
+      dot(0.5, 0.0, 5); dot(0.5, 1.0, 5);
+    } else {            // number circles: facing viewer + opposite side
+      const numAt = (u) => {
+        g.beginPath(); g.arc(u * TEX_W, TEX_H / 2, 7.8, 0, 7);
+        g.fillStyle = '#f7f4ea'; g.fill();
+        g.fillStyle = '#191919'; g.font = 'bold 10.5px Verdana';
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.fillText(String(n), u * TEX_W, TEX_H / 2 + 0.5);
+      };
+      numAt(0.5); numAt(0.0); numAt(1.0);
+    }
+    ballTex[n] = g.getImageData(0, 0, TEX_W, TEX_H);
+  }
+  // soft round contact shadow sprite
+  const sc = document.createElement('canvas'); sc.width = sc.height = 64;
+  const sg = sc.getContext('2d');
+  const rg = sg.createRadialGradient(32, 32, 2, 32, 32, 30);
+  rg.addColorStop(0, 'rgba(0,0,0,0.42)'); rg.addColorStop(0.7, 'rgba(0,0,0,0.22)');
+  rg.addColorStop(1, 'rgba(0,0,0,0)');
+  sg.fillStyle = rg; sg.fillRect(0, 0, 64, 64);
+  shadowSpr = sc;
+}
+// rotate vector v by the INVERSE of unit quaternion q (world -> ball space)
+function qUnrotate(q, vx, vy, vz, out) {
+  const sx = -q.x, sy = -q.y, sz = -q.z, w = q.w;
+  const ix = 2 * (sy * vz - sz * vy), iy = 2 * (sz * vx - sx * vz), iz = 2 * (sx * vy - sy * vx);
+  out.x = vx + w * ix + (sy * iz - sz * iy);
+  out.y = vy + w * iy + (sz * ix - sx * iz);
+  out.z = vz + w * iz + (sx * iy - sy * ix);
+}
+const LIGHT = (() => { const l = Math.hypot(-0.42, -0.55, 0.72); return { x: -0.42 / l, y: -0.55 / l, z: 0.72 / l }; })();
+const _tv = { x: 0, y: 0, z: 0 };
+function renderBallSprite(b) {
+  if (!ballTex) buildBallTextures();
+  if (!b._spr) {
+    b._spr = document.createElement('canvas'); b._spr.width = b._spr.height = SPR;
+    b._sctx = b._spr.getContext('2d');
+    b._img = b._sctx.createImageData(SPR, SPR);
+    b._sq = null;
+  }
+  const q = b.q;
+  if (b._sq && Math.abs(q.x * b._sq.x + q.y * b._sq.y + q.z * b._sq.z + q.w * b._sq.w) > 0.9993) return;
+  b._sq = { x: q.x, y: q.y, z: q.z, w: q.w };
+  const tex = ballTex[b.n].data;
+  const img = b._img.data;
+  const pxPerUnit = SPR_R / R;
+  for (let j = 0; j < SPR; j++) {
+    const dy = (j + 0.5 - SPR / 2) / pxPerUnit;
+    for (let i = 0; i < SPR; i++) {
+      const dx = (i + 0.5 - SPR / 2) / pxPerUnit;
+      const o = (j * SPR + i) * 4;
+      const r2 = dx * dx + dy * dy;
+      if (r2 > (R + 0.9) * (R + 0.9)) { img[o + 3] = 0; continue; }
+      const rr = Math.sqrt(r2);
+      const z = Math.sqrt(Math.max(0, R * R - Math.min(r2, R * R)));
+      const nx = dx / R, ny = dy / R, nz = z / R;
+      qUnrotate(q, nx, ny, nz, _tv);
+      let u = Math.atan2(_tv.x, _tv.z) / (2 * Math.PI) + 0.5;
+      let v = Math.asin(Math.max(-1, Math.min(1, _tv.y))) / Math.PI + 0.5;
+      let tx = Math.floor(u * TEX_W) % TEX_W; if (tx < 0) tx += TEX_W;
+      let ty = Math.floor(v * TEX_H); if (ty < 0) ty = 0; if (ty >= TEX_H) ty = TEX_H - 1;
+      const to = (ty * TEX_W + tx) * 4;
+      // lighting: diffuse from the room light + a tight specular + limb falloff
+      const diff = Math.max(0, nx * LIGHT.x + ny * LIGHT.y + nz * LIGHT.z);
+      const hx = LIGHT.x, hy = LIGHT.y, hz = LIGHT.z + 1;
+      const hl = Math.hypot(hx, hy, hz);
+      const ndh = Math.max(0, (nx * hx + ny * hy + nz * hz) / hl);
+      const spec = Math.pow(ndh, 42) * 150;
+      const shade = (0.34 + 0.66 * diff) * (0.80 + 0.20 * nz);
+      img[o]     = Math.min(255, tex[to] * shade + spec);
+      img[o + 1] = Math.min(255, tex[to + 1] * shade + spec);
+      img[o + 2] = Math.min(255, tex[to + 2] * shade + spec);
+      img[o + 3] = rr <= R ? 255 : Math.max(0, 255 * (1 - (rr - R) / 0.9));
+    }
+  }
+  b._sctx.putImageData(b._img, 0, 0);
+}
+function drawBall(b) {
+  renderBallSprite(b);
+  const x = RAIL + b.x, y = RAIL + b.y;
+  // contact shadow: soft, offset away from the light, squashed to the felt
+  ctx.drawImage(shadowSpr, x - R * 1.15 + 3.5, y - R * 0.72 + 4.5, R * 2.3, R * 1.55);
+  const s = SPR * SPR_SCALE;
+  ctx.drawImage(b._spr, x - s / 2, y - s / 2, s, s);
+  if (b.n === 0 && phase === 'aim') {
+    // strike-point marker on the cue ball
+    ctx.beginPath(); ctx.arc(x + spinX * R * 0.55, y - spinY * R * 0.55, 2.2, 0, 7);
+    ctx.fillStyle = 'rgba(216,35,42,.85)'; ctx.fill();
+  }
+}
+
+function render(now) {
+  if (!feltCanvas) buildFelt();
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (viewRot) {
+    // mobile portrait: the whole table (felt print, pockets, balls, cue,
+    // aim lines) is drawn through a -90 deg view transform, so the long
+    // axis runs up the phone — rack at the top, head string at the
+    // bottom. Physics never sees this; it is view-only.
+    ctx.save();
+    ctx.translate(0, CW);
+    ctx.rotate(-Math.PI / 2);
+  }
+  ctx.drawImage(feltCanvas, 0, 0);
+  const cue = cueBall();
+  const aiming = phase === 'aim' && !paused && winner < 0;
+  const humanTurn = mode === '2p' || turn === 0;
+
+  if (aiming && cue && !cue.pocketed && !ballInHand) {
+    const pred = predict();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)'; ctx.lineWidth = 2;
+    ctx.setLineDash([9, 7]);
+    ctx.beginPath();
+    ctx.moveTo(RAIL + cue.x, RAIL + cue.y);
+    if (pred && pred.type === 'ball') ctx.lineTo(RAIL + pred.gx, RAIL + pred.gy);
+    else if (pred) ctx.lineTo(RAIL + pred.ex, RAIL + pred.ey);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (pred && pred.type === 'ball') {
+      // ghost ball
+      ctx.beginPath(); ctx.arc(RAIL + pred.gx, RAIL + pred.gy, R, 0, 7);
+      ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 1.5; ctx.stroke();
+      // object-ball direction
+      ctx.beginPath();
+      ctx.moveTo(RAIL + pred.ball.x, RAIL + pred.ball.y);
+      ctx.lineTo(RAIL + pred.ball.x + pred.nx * 120, RAIL + pred.ball.y + pred.ny * 120);
+      ctx.strokeStyle = 'rgba(242,193,78,0.9)'; ctx.lineWidth = 2.5; ctx.stroke();
+      // cue deflection hint
+      const tm = Math.hypot(pred.tx, pred.ty);
+      if (tm > 0.12) {
+        ctx.beginPath();
+        ctx.moveTo(RAIL + pred.gx, RAIL + pred.gy);
+        ctx.lineTo(RAIL + pred.gx + (pred.tx / tm) * 64 * tm, RAIL + pred.gy + (pred.ty / tm) * 64 * tm);
+        ctx.strokeStyle = 'rgba(140,200,255,0.75)'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    ctx.restore();
+    const pull = charging || chargeKey ? power : power * 0.6;
+    drawCueStick(aimAngle, 16 + pull * 170, 1);
+  }
+
+  for (const b of balls) if (!b.pocketed && b.n !== 0) drawBall(b);
+  if (cue && !cue.pocketed) {
+    if (ballInHand && phase === 'aim') {
+      ctx.save(); ctx.globalAlpha = 0.55; drawBall(cue); ctx.restore();
+      if (!placementOK(cue.x, cue.y)) {
+        ctx.beginPath(); ctx.arc(RAIL + cue.x, RAIL + cue.y, R + 5, 0, 7);
+        ctx.strokeStyle = '#ff5040'; ctx.lineWidth = 2.5; ctx.stroke();
+      }
+    } else drawBall(cue);
+  }
+
+  // strike-through: for a beat after the shot the cue follows through
+  // along its line and fades — the hit should feel struck, not vanished.
+  if (phase === 'shooting' && cueAnim && now !== undefined && cue && !cue.pocketed) {
+    const pr = (now - cueAnim.t0) / 170;
+    if (pr >= 0 && pr < 1) {
+      const e = 1 - (1 - pr) * (1 - pr);
+      drawCueStick(cueAnim.angle, cueAnim.gap0 * (1 - e) - 2 * e, 1 - pr * pr);
+    }
+  }
+  if (viewRot) ctx.restore();
+}
+
+// the cue: a tapered maple shaft with grain, ivory ferrule, leather tip,
+// brass joint collar and a wrapped butt — drawn as shaded quads with a
+// soft shadow on the felt, pulled back by the player's power drag.
+function drawCueStick(angle, gap, alpha) {
+  const cue = cueBall();
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  const px = -dy, py = dx;                                   // perpendicular
+  const tx = cue.x - dx * (R + gap), ty = cue.y - dy * (R + gap);  // tip point
+  const seg = (d0, d1, w0, w1, fill) => {
+    const ax = tx - dx * d0, ay = ty - dy * d0, bx = tx - dx * d1, by = ty - dy * d1;
+    ctx.beginPath();
+    ctx.moveTo(ax + px * w0, ay + py * w0); ctx.lineTo(bx + px * w1, by + py * w1);
+    ctx.lineTo(bx - px * w1, by - py * w1); ctx.lineTo(ax - px * w0, ay - py * w0);
+    ctx.closePath(); ctx.fillStyle = fill; ctx.fill();
+  };
+  ctx.save();
+  ctx.translate(RAIL, RAIL);
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = 'rgba(0,0,0,0.38)'; ctx.shadowBlur = 7;
+  ctx.shadowOffsetX = 5; ctx.shadowOffsetY = 8;
+  const shaftGrad = ctx.createLinearGradient(tx, ty, tx - dx * 268, ty - dy * 268);
+  shaftGrad.addColorStop(0, '#dcb57e'); shaftGrad.addColorStop(0.6, '#c49a58'); shaftGrad.addColorStop(1, '#a87c40');
+  seg(280, 396, 3.9, 5.4, '#3d2412');                        // butt (dark walnut)
+  seg(268, 280, 3.8, 3.9, '#c9a227');                       // brass joint collar
+  seg(14, 268, 2.7, 3.8, shaftGrad);                        // maple shaft
+  seg(4, 14, 2.45, 2.7, '#efe9dc');                         // ivory ferrule
+  seg(0, 4, 2.3, 2.45, '#2c4d9e');                          // leather tip
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 0;
+  // shaft grain + wrap rings on the butt
+  ctx.strokeStyle = 'rgba(90,55,15,0.35)'; ctx.lineWidth = 0.8;
+  for (const off of [-1.3, 1.3]) {
+    ctx.beginPath();
+    ctx.moveTo(tx - dx * 20 + px * off, ty - dy * 20 + py * off);
+    ctx.lineTo(tx - dx * 262 + px * off * 1.35, ty - dy * 262 + py * off * 1.35);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.6;
+  for (let d = 292; d < 392; d += 11) {
+    const w = 3.9 + (d - 280) / 116 * 1.5;
+    const cxp = tx - dx * d, cyp = ty - dy * d;
+    ctx.beginPath(); ctx.moveTo(cxp + px * w, cyp + py * w); ctx.lineTo(cxp - px * w, cyp - py * w); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// =====================================================================
+// HUD + messages
+// =====================================================================
+const msgEl = document.getElementById('msg');
+function setMsg(html, isHTML) {
+  if (isHTML) msgEl.innerHTML = html; else msgEl.textContent = html;
+}
+function updateHUD() {
+  document.getElementById('name0').textContent = names[0];
+  document.getElementById('name1').textContent = mode === 'ai' ? `PIP · ${difficulty.toUpperCase()}` : names[1];
+  for (let p = 0; p < 2; p++) {
+    document.getElementById('chip' + p).classList.toggle('active', turn === p && phase !== 'gameover');
+    const grpEl = document.getElementById('grp' + p);
+    grpEl.textContent = !groups ? (phase === 'title' ? '—' : 'OPEN TABLE')
+      : (groupCleared(p) ? 'ON THE 8-BALL' : groups[p].toUpperCase() + 'S');
+    const tray = document.getElementById('tray' + p);
+    tray.innerHTML = '';
+    if (groups) {
+      for (const b of balls) {
+        if (b.pocketed && groupOf(b.n) === groups[p]) {
+          const d = document.createElement('div');
+          d.className = 'tb ' + (isStripe(b.n) ? 'stripe' : 'solid');
+          d.style.setProperty('--c', BALL_COLORS[b.n]);
+          tray.appendChild(d);
+        }
+      }
+    }
+  }
+  document.getElementById('shootbtn').disabled = !(humanAiming() && !ballInHand);
+  document.getElementById('powerbar').classList.toggle('off',
+    !(humanAiming() && !ballInHand));
+}
+function updatePowerUI() {
+  document.getElementById('powerfill').style.width = (power * 100).toFixed(0) + '%';
+  document.getElementById('powerpct').textContent = Math.round(power * 100) + '%';
+  syncPowerBar();
+}
+
+// =====================================================================
+// SOUND — synthesized WebAudio clicks, no audio files.
+// =====================================================================
+let AC = null;
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+  if (AC && AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function sfx(type, v) {
+  const ac = audio(); if (!ac || v <= 0.01) return;
+  const t = ac.currentTime;
+  if (type === 'ball' || type === 'cue' || type === 'cushion') {
+    const dur = type === 'cushion' ? 0.07 : 0.045;
+    const buf = ac.createBuffer(1, ac.sampleRate * dur, ac.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = 'bandpass';
+    f.frequency.value = type === 'ball' ? 2400 : type === 'cue' ? 3200 : 700;
+    f.Q.value = 1.1;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(Math.min(0.5, 0.12 + v * 0.5), t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    src.connect(f); f.connect(g); g.connect(ac.destination); src.start();
+  } else if (type === 'pocket') {
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(340, t);
+    o.frequency.exponentialRampToValueAtTime(75, t + 0.16);
+    g.gain.setValueAtTime(0.22, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+    o.connect(g); g.connect(ac.destination); o.start(t); o.stop(t + 0.22);
+  }
+}
+
+// =====================================================================
+// INPUT — split by pointer type (owner playtest defect, 2026-11-19:
+// one touch drag used to both aim AND pull-to-shoot, and a charge
+// could not be cancelled — "it makes me shoot when i'm trying to
+// aim"). MOUSE keeps the original feel exactly: hover aims, drag
+// pulls down to charge, release fires; power track + SHOOT button
+// and SPACE hold are alternates. TOUCH is aim-only on the table:
+// a finger drag rotates the aim and NEVER charges or fires, in any
+// direction. Touch shooting lives on the dedicated POWER bar at the
+// table's right edge (see below) — pull down to charge, release to
+// fire, pull back up to zero to cancel.
+// =====================================================================
+function canvasPos(e) {
+  const r = cv.getBoundingClientRect();
+  const px = (e.clientX - r.left) * (cv.width / r.width);
+  const py = (e.clientY - r.top) * (cv.height / r.height);
+  // rotated view: device px are the table canvas turned -90 deg
+  // (device = (y, CW - x)); invert so a finger lands where it points.
+  if (viewRot) return { x: (CW - py) - RAIL, y: px - RAIL };
+  return { x: px - RAIL, y: py - RAIL };
+}
+let dragging = false, dragStart = null, dragStartScr = null, aiming = false;
+let dragTouch = false;                // current table drag is a finger: aim-only, never charges
+function humanAiming() {
+  if (phase !== 'aim' || paused) return false;
+  if (mode === '2p') return true;
+  if (mode === 'ai') return turn === 0;
+  // live: only on my turn, with my opponent actually at the table
+  if (mode === 'live') return !!net && net.phase === 'game' && net.oppPresent &&
+                              !net.replaying && turn === net.seat - 1;
+  // send-a-turn: only when the turn has been handed to me
+  if (mode === 'async') return !!asyncGame && asyncGame.state === 'mymove' &&
+                               turn === asyncGame.mySide;
+  return false;
+}
+
+cv.addEventListener('pointerdown', e => {
+  audio();
+  if (!humanAiming()) return;
+  const p = canvasPos(e);
+  if (ballInHand) {
+    if (placementOK(p.x, p.y)) {
+      cueBall().x = p.x; cueBall().y = p.y;
+      ballInHand = false;
+      setMsg(`${names[turn]} — ball placed. Take your shot.`);
+      updateHUD();
+    } else setMsg('Can\'t place there — overlapping or off the table.');
+    return;
+  }
+  dragging = true; dragStart = p; dragStartScr = { x: e.clientX, y: e.clientY }; charging = false;
+  dragTouch = e.pointerType === 'touch';
+  // a finger has no hover: the touch itself is the aim point, so a tap
+  // (or the start of an aim drag) points the cue where the finger is.
+  if (dragTouch && !fineActive()) aimAngle = Math.atan2(p.y - cueBall().y, p.x - cueBall().x);
+  cv.setPointerCapture(e.pointerId);
+});
+let lastPtr = null;                   // last pointer pos (canvas coords)
+let fineToggle = false;               // FINE button state
+function fineActive() { return fineToggle || !!keys['Shift']; }
+cv.addEventListener('pointermove', e => {
+  if (!humanAiming()) return;
+  // process every coalesced sub-event: high-rate mice and touch pens
+  // report several positions per frame — using them all keeps the aim
+  // smooth instead of stepping event-to-event.
+  const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+  for (const ev of evs) {
+    const p = canvasPos(ev);
+    const cue = cueBall();
+    if (ballInHand) { cue.x = p.x; cue.y = p.y; lastPtr = p; continue; }
+    if (dragging && dragStart && !dragTouch) {
+      // MOUSE ONLY — a touch drag skips this branch entirely and falls
+      // through to aiming below: a finger on the table can never
+      // charge a shot. Charge pull is measured in SCREEN space (scaled to canvas px):
+      // "pull down" charges on the device in your hand, whichever way
+      // the table is turned. Unrotated this is exactly the old table-
+      // space dy/dx — same numbers, same feel.
+      const r = cv.getBoundingClientRect();
+      const dy = (ev.clientY - dragStartScr.y) * (cv.height / r.height);
+      const dx = (ev.clientX - dragStartScr.x) * (cv.width / r.width);
+      const pullDist = Math.max(0, dy) + Math.abs(dx) * 0.25;
+      if (pullDist > 14) {
+        charging = true;
+        power = Math.min(1, pullDist / 230);
+        updatePowerUI();
+      }
+      lastPtr = p; continue;
+    }
+    if (fineActive()) {
+      // FINE AIM: relative slew — pointer motion nudges the angle at
+      // ~0.03 deg per pixel instead of pointing absolutely, so a player
+      // can dial in sub-degree adjustments the absolute pointer can't.
+      // (First move after entering just seeds the reference point.)
+      if (lastPtr) aimAngle += (p.x - lastPtr.x) * 0.00055;
+    } else {
+      // absolute aim: full float precision, no snapping anywhere
+      aimAngle = Math.atan2(p.y - cue.y, p.x - cue.x);
+    }
+    lastPtr = p;
+  }
+});
+cv.addEventListener('pointerdown', e => { lastPtr = canvasPos(e); });
+cv.addEventListener('pointerleave', () => { lastPtr = null; });
+// mouse wheel over the table: micro-adjust, ~0.026 deg per notch
+cv.addEventListener('wheel', e => {
+  if (!humanAiming() || ballInHand) return;
+  e.preventDefault();
+  aimAngle += Math.sign(e.deltaY) * 0.00045;
+}, { passive: false });
+function endDrag() {
+  // a finger lifting off the table ends an AIM drag — full stop. It
+  // never fires, whatever direction or distance the drag took.
+  if (dragTouch) { dragging = false; dragStart = null; dragTouch = false; return; }
+  if (dragging && charging && power > 0.04 && humanAiming()) {
+    const a = aimAngle, pw = power;
+    power = 0; updatePowerUI(); charging = false; dragging = false;
+    shoot(pw, a, spinX, spinY);
+    return;
+  }
+  dragging = false; charging = false;
+}
+cv.addEventListener('pointerup', endDrag);
+cv.addEventListener('pointercancel', endDrag);
+
+// power track
+const ptrack = document.getElementById('powertrack');
+let ptDrag = false;
+function ptSet(e) {
+  const r = ptrack.getBoundingClientRect();
+  power = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+  updatePowerUI();
+}
+ptrack.addEventListener('pointerdown', e => { ptDrag = true; ptSet(e); ptrack.setPointerCapture(e.pointerId); });
+ptrack.addEventListener('pointermove', e => { if (ptDrag) ptSet(e); });
+ptrack.addEventListener('pointerup', () => { ptDrag = false; });
+
+// ---------- touch power bar (mobile mode) ----------
+// THE way to shoot on a phone (the 8 Ball Pool pattern): a dedicated
+// vertical bar at the table's right edge, in screen space, upright in
+// both the rotated portrait view and landscape. Pull DOWN to charge —
+// `charging` is set, so the cue on the table pulls back with the
+// power — and release to fire. Pull back UP to zero and the release
+// fires NOTHING: the shot is cancelled and the turn is intact. A
+// release at/below FIRE_MIN is always a cancel, never a pea-roller.
+// While the finger is back in the start zone the bar shows it — fill
+// drained, hatched zone lit, "CANCEL — LET GO" — so the player can
+// SEE it is safe to let go before letting go.
+const FIRE_MIN = 0.04;                 // same fire threshold the mouse pull uses
+const pbar = document.getElementById('powerbar');
+const pbtrack = document.getElementById('pb-track');
+const pbfill = document.getElementById('pb-fill');
+const pbpct = document.getElementById('pb-pct');
+const pbstate = document.getElementById('pb-state');
+let pbDrag = null;                     // { id, y, max } while a finger holds the bar
+function syncPowerBar() {
+  pbfill.style.height = (power * 100).toFixed(0) + '%';
+  pbpct.textContent = Math.round(power * 100) + '%';
+  const cancel = !!pbDrag && power <= FIRE_MIN;
+  pbar.classList.toggle('cancel', cancel);
+  pbstate.textContent = !pbDrag ? 'PULL DOWN ▼'
+    : (cancel ? '✕ CANCEL — LET GO' : 'RELEASE TO SHOOT');
+  // the gutter is 15px now (owner 20:27) — its labels run vertical, so
+  // the full cancel signal ALSO rides the message line while a charge
+  // is being dragged: unmissable, and never an overlay over the cloth.
+  if (pbDrag) {
+    if (cancel) setMsg('✕ CANCEL — LET GO — nothing will fire.');
+    else setMsg(`POWER ${Math.round(power * 100)}% — release to shoot · pull back up to cancel.`);
+  }
+}
+function pbUsable() { return apMode === 'mobile' && humanAiming() && !ballInHand; }
+pbar.addEventListener('pointerdown', e => {
+  audio();
+  if (!pbUsable()) return;
+  e.preventDefault();
+  pbDrag = { id: e.pointerId, y: e.clientY, max: 0 };
+  charging = true; power = 0;
+  pbar.setPointerCapture(e.pointerId);
+  updatePowerUI();
+});
+function pbRange() { return Math.max(120, pbtrack.clientHeight * 0.9); }
+pbar.addEventListener('pointermove', e => {
+  if (!pbDrag || e.pointerId !== pbDrag.id) return;
+  power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbRange()));
+  if (power > pbDrag.max) pbDrag.max = power;
+  updatePowerUI();
+});
+function pbEnd(e) {
+  if (!pbDrag || (e && e.pointerId !== undefined && e.pointerId !== pbDrag.id)) return;
+  const wasCharged = pbDrag.max > FIRE_MIN;
+  // the RELEASE POINT is the truth: recompute power from where the
+  // finger actually let go, so a charge dragged back to the start
+  // cancels even if the last move event was coalesced or dropped.
+  if (e && typeof e.clientY === 'number')
+    power = Math.max(0, Math.min(1, (e.clientY - pbDrag.y) / pbRange()));
+  pbDrag = null;
+  charging = false;
+  const pw = power;
+  power = 0; updatePowerUI();
+  if (pbUsable() && pw > FIRE_MIN) shoot(pw, aimAngle, spinX, spinY);
+  else if (wasCharged && humanAiming())
+    setMsg('Shot cancelled — pull the POWER bar down when you\'re ready.');
+}
+pbar.addEventListener('pointerup', pbEnd);
+pbar.addEventListener('pointercancel', pbEnd);
+
+document.getElementById('shootbtn').addEventListener('click', () => {
+  if (!humanAiming() || ballInHand) return;
+  const pw = Math.max(power, 0.35);
+  power = 0; updatePowerUI();
+  shoot(pw, aimAngle, spinX, spinY);
+});
+
+// fine aim buttons (hold to keep nudging)
+function holdBtn(id, fn) {
+  const el = document.getElementById(id);
+  let iv = null;
+  const start = e => { e.preventDefault(); fn(); iv = setInterval(fn, 50); };
+  const stop = () => { if (iv) clearInterval(iv); iv = null; };
+  el.addEventListener('pointerdown', start);
+  el.addEventListener('pointerup', stop); el.addEventListener('pointerleave', stop);
+}
+// nudge buttons: one tap = 0.04 deg; holding slews at ~0.9 deg/s
+holdBtn('fineL', () => { if (humanAiming() && !ballInHand) aimAngle -= 0.0007; });
+holdBtn('fineR', () => { if (humanAiming() && !ballInHand) aimAngle += 0.0007; });
+// FINE toggle: switches table drags to relative fine aim (touch-friendly)
+document.getElementById('finebtn').addEventListener('click', () => {
+  fineToggle = !fineToggle;
+  document.getElementById('finebtn').classList.toggle('sel', fineToggle);
+  setMsg(fineToggle ? 'Fine aim ON — drag gently to dial the angle.' : 'Fine aim off.');
+});
+
+// keyboard
+const keys = {};
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { togglePause(); return; }
+  keys[e.key] = true;
+  if (e.key === ' ' && humanAiming() && !ballInHand && !chargeKey) {
+    chargeKey = true; power = 0; e.preventDefault();
+  }
+  if (e.key === 'ArrowLeft' && humanAiming()) { aimAngle -= 0.0008; e.preventDefault(); }
+  if (e.key === 'ArrowRight' && humanAiming()) { aimAngle += 0.0008; e.preventDefault(); }
+});
+window.addEventListener('keyup', e => {
+  keys[e.key] = false;
+  if (e.key === ' ' && chargeKey) {
+    chargeKey = false;
+    if (humanAiming() && power > 0.04) { const pw = power; power = 0; updatePowerUI(); shoot(pw, aimAngle, spinX, spinY); }
+    else { power = 0; updatePowerUI(); }
+  }
+});
+
+// ---------- spin widget ----------
+const spincv = document.getElementById('spincv');
+const sctx = spincv.getContext('2d');
+const _spinBall = { n: 0, q: { x: 0, y: 0, z: 0, w: 1 } };
+function drawSpinWidget() {
+  const S = 168, c = S / 2;
+  sctx.clearRect(0, 0, S, S);
+  renderBallSprite(_spinBall);
+  // contact shadow, then the same shaded cue-ball sphere the table uses
+  sctx.beginPath(); sctx.ellipse(c + 4, c + 62, 58, 13, 0, 0, 7);
+  sctx.fillStyle = 'rgba(0,0,0,0.35)'; sctx.fill();
+  const s = 148;
+  sctx.drawImage(_spinBall._spr, c - s / 2, c - s / 2, s, s);
+  sctx.strokeStyle = 'rgba(20,20,20,.14)'; sctx.lineWidth = 1.5;
+  sctx.beginPath(); sctx.moveTo(c - 58, c); sctx.lineTo(c + 58, c); sctx.stroke();
+  sctx.beginPath(); sctx.moveTo(c, c - 58); sctx.lineTo(c, c + 58); sctx.stroke();
+  const dx = c + spinX * 58, dy = c - spinY * 58;
+  sctx.beginPath(); sctx.arc(dx, dy, 11, 0, 7); sctx.fillStyle = '#d8232a'; sctx.fill();
+  sctx.beginPath(); sctx.arc(dx, dy, 11, 0, 7); sctx.strokeStyle = '#7d1216'; sctx.lineWidth = 2; sctx.stroke();
+  sctx.beginPath(); sctx.arc(dx - 3.5, dy - 3.5, 3.4, 0, 7); sctx.fillStyle = 'rgba(255,255,255,.55)'; sctx.fill();
+}
+// title-screen decoration: a glossy rack of all fifteen balls, each
+// rendered through the same sphere renderer at a resting orientation.
+function drawRackDecor() {
+  const el = document.getElementById('rackcv');
+  if (!el) return;
+  const g = el.getContext('2d');
+  const size = 37, dxs = 30, dys = 35, x0 = 270, y0 = 96;
+  const order = [1, 9, 2, 10, 8, 3, 4, 11, 5, 12, 6, 13, 7, 14, 15];
+  let k = 0;
+  for (let row = 0; row < 5; row++) {
+    for (let i = 0; i <= row; i++) {
+      const n = order[k++];
+      const cx = x0 + row * dxs, cy = y0 + (i - row / 2) * dys;
+      const fake = { n, q: randomQuat() };
+      renderBallSprite(fake);
+      g.beginPath(); g.ellipse(cx + 2, cy + 15, 15, 5, 0, 0, 7);
+      g.fillStyle = 'rgba(0,0,0,0.4)'; g.fill();
+      g.drawImage(fake._spr, cx - size / 2, cy - size / 2, size, size);
+    }
+  }
+}
+let spinDrag = false;
+function spinSet(e) {
+  const r = spincv.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (168 / r.width) - 84;
+  const y = (e.clientY - r.top) * (168 / r.height) - 84;
+  const m = Math.hypot(x, y), max = 74 * 0.78;
+  const cl = m > max ? max / m : 1;
+  spinX = (x * cl) / (74 * 0.78) * 0.95;
+  spinY = -(y * cl) / (74 * 0.78) * 0.95;
+  drawSpinWidget();
+}
+spincv.addEventListener('pointerdown', e => { spinDrag = true; spinSet(e); spincv.setPointerCapture(e.pointerId); });
+spincv.addEventListener('pointermove', e => { if (spinDrag) spinSet(e); });
+spincv.addEventListener('pointerup', () => { spinDrag = false; });
+spincv.addEventListener('dblclick', () => { spinX = 0; spinY = 0; drawSpinWidget(); });
+
+// ---------- overlays / flow ----------
+function startGame() {
+  aiToken++;
+  rack();
+  phase = 'aim';
+  document.getElementById('loadov').classList.add('hidden');
+  if (!apMode) { apMode = 'pc'; window.__apMode = 'pc'; updateView(); }
+  document.getElementById('titleov').classList.add('hidden');
+  document.getElementById('winov').classList.add('hidden');
+  document.getElementById('pauseov').classList.add('hidden');
+  paused = false;
+  setMsg(apMode === 'mobile'
+    ? (mode === 'ai' ? 'Your break — drag to aim · POWER bar to shoot.'
+                     : 'Player 1 breaks — drag to aim · POWER bar to shoot.')
+    : (mode === 'ai' ? 'Your break — drag to aim, pull down and release to shoot.'
+                     : 'Player 1 breaks — drag to aim, pull down and release to shoot.'));
+  updateHUD(); updatePowerUI(); drawSpinWidget();
+}
+function toTitle() {
+  aiToken++;
+  // leaving the table ends any friend session cleanly
+  if (net && net.ws) {
+    netSend({ t: 'leave' });
+    try { net.ws.close(); } catch (e) {}
+  }
+  net = null; asyncGame = null;
+  netForgetRoom();
+  showPingBar(false);
+  if (mode === 'live' || mode === 'async') {
+    mode = 'ai';
+    document.getElementById('modeai').classList.add('sel');
+    document.getElementById('mode2p').classList.remove('sel');
+    document.getElementById('modefriend').classList.remove('sel');
+  }
+  names[0] = 'PLAYER 1'; names[1] = 'PLAYER 2';
+  phase = 'title'; paused = false;
+  document.getElementById('titleov').classList.remove('hidden');
+  document.getElementById('winov').classList.add('hidden');
+  document.getElementById('pauseov').classList.add('hidden');
+  document.getElementById('friendov').classList.add('hidden');
+  document.getElementById('asyncov').classList.add('hidden');
+  rack(); phase = 'title';
+  updateHUD();
+}
+function togglePause() {
+  if (phase === 'title' || phase === 'gameover') return;
+  paused = !paused;
+  document.getElementById('pauseov').classList.toggle('hidden', !paused);
+}
+document.getElementById('mode2p').addEventListener('click', () => {
+  mode = '2p';
+  document.getElementById('mode2p').classList.add('sel');
+  document.getElementById('modeai').classList.remove('sel');
+  document.getElementById('modefriend').classList.remove('sel');
+  document.getElementById('friendov').classList.add('hidden');
+});
+document.getElementById('modeai').addEventListener('click', () => {
+  mode = 'ai';
+  document.getElementById('modeai').classList.add('sel');
+  document.getElementById('mode2p').classList.remove('sel');
+  document.getElementById('modefriend').classList.remove('sel');
+  document.getElementById('friendov').classList.add('hidden');
+});
+document.getElementById('modefriend').addEventListener('click', () => {
+  document.getElementById('modefriend').classList.add('sel');
+  document.getElementById('mode2p').classList.remove('sel');
+  document.getElementById('modeai').classList.remove('sel');
+  document.getElementById('friendov').classList.remove('hidden');
+});
+document.getElementById('diffseg').addEventListener('click', e => {
+  const b = e.target.closest('.seg'); if (!b) return;
+  difficulty = b.dataset.d;
+  for (const s of document.querySelectorAll('#diffseg .seg')) s.classList.toggle('sel', s === b);
+});
+function syncTableSeg() {
+  for (const s of document.querySelectorAll('#tableseg .seg'))
+    s.classList.toggle('sel', s.dataset.t === tableTheme);
+}
+document.getElementById('tableseg').addEventListener('click', e => {
+  const b = e.target.closest('.seg'); if (!b) return;
+  tableTheme = b.dataset.t;
+  try { localStorage.setItem('angeles8ball.table', tableTheme); } catch (err) {}
+  feltCanvas = null;                       // rebuild the table in its new clothes
+  syncTableSeg();
+});
+document.getElementById('startbtn').addEventListener('click', startGame);
+document.getElementById('againbtn').addEventListener('click', () => {
+  if (mode === 'live' && net && net.phase === 'game') {
+    // rematch: I rack fresh and ship the new table — my opponent's
+    // client starts the new game off the same state message.
+    rack();
+    const snap = snapState();
+    netSend({ t: 'state', state: { phase: 'game', table: tableTheme, breakSeat: net.seat,
+                                   names: { 1: names[0], 2: names[1] }, snap } });
+    enterTable(tableTheme);
+    applySnap(snap);
+    showPingBar(true);
+    setMsg('Rematch — you break.');
+    updateHUD();
+  } else if (mode === 'async') {
+    startAsyncGame();   // a fresh turn game, new link chain, I break
+  } else {
+    startGame();
+  }
+});
+
+// ---------- play-a-friend UI wiring ----------
+document.getElementById('fback').addEventListener('click', () => {
+  document.getElementById('friendov').classList.add('hidden');
+});
+document.getElementById('fname').addEventListener('change', e => {
+  try { localStorage.setItem('angeles8ball.name', e.target.value.trim()); } catch (err) {}
+});
+document.getElementById('fserver').addEventListener('change', e => {
+  try { localStorage.setItem('angeles8ball.server', e.target.value.trim()); } catch (err) {}
+});
+document.getElementById('fcreate').addEventListener('click', friendCreate);
+document.getElementById('fjoin').addEventListener('click', () =>
+  friendJoin(document.getElementById('fjoincode').value));
+document.getElementById('fcopy').addEventListener('click', () =>
+  copyText(document.getElementById('flink').value, 'Invite link copied — send it to your friend.', fstatus));
+document.getElementById('fshare').addEventListener('click', () =>
+  shareLink(document.getElementById('flink').value, 'Invite link copied — send it to your friend.', fstatus));
+document.getElementById('fasyncstart').addEventListener('click', startAsyncGame);
+document.getElementById('fasyncopen').addEventListener('click', () => {
+  try { asyncOpenPayload(asyncOpenString(document.getElementById('fpaste').value)); }
+  catch (e) { fastatus('That code could not be read — check you pasted the whole thing.'); }
+});
+document.getElementById('asyncshare').addEventListener('click', () =>
+  shareLink(document.getElementById('asynclink').value, 'Turn link copied — send it to your friend.',
+            t => { document.getElementById('asyncstatus').textContent = t; }));
+document.getElementById('asynccopy').addEventListener('click', () =>
+  copyText(document.getElementById('asynclink').value, 'Turn link copied — send it to your friend.',
+            t => { document.getElementById('asyncstatus').textContent = t; }));
+document.getElementById('asynccopycode').addEventListener('click', () =>
+  copyText(document.getElementById('asynccode').value, 'Turn code copied — send it to your friend.',
+            t => { document.getElementById('asyncstatus').textContent = t; }));
+document.getElementById('asyncdone').addEventListener('click', toTitle);
+document.getElementById('pingbar').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b || !net) return;
+  netSend({ t: 'ping_msg', kind: b.dataset.k });
+  setMsg(`You: ${PING_TEXT[b.dataset.k] || b.dataset.k}`);
+});
+document.getElementById('wintitlebtn').addEventListener('click', toTitle);
+document.getElementById('pausebtn').addEventListener('click', togglePause);
+document.getElementById('resumebtn').addEventListener('click', togglePause);
+document.getElementById('pausetitlebtn').addEventListener('click', toTitle);
+
+// =====================================================================
+// MAIN LOOP — fixed-step physics accumulator (720 Hz sim).
+// =====================================================================
+let lastT = performance.now(), acc = 0;
+function frame(now) {
+  requestAnimationFrame(frame);
+  let dt = (now - lastT) / 1000; lastT = now;
+  if (dt > 0.1) dt = 0.1;
+  if (chargeKey && humanAiming()) {
+    power = Math.min(1, power + dt * 0.9);
+    updatePowerUI();
+  }
+  if (!paused && phase === 'shooting') {
+    acc += dt * timeScale;
+    let n = 0;
+    while (acc >= STEP && n < 20000) {
+      stepPhysics(STEP);
+      acc -= STEP; n++;
+      if (!anyMoving()) { finishShot(); netAfterSettle(); break; }
+    }
+    if (n >= 20000) acc = 0;
+  }
+  render(now);
+}
+
+/* =====================================================================
+   LAUNCH MODE + VIEW — the arcade pattern (same as Kaboom): the
+   homepage chooser passes ?mode=pc | ?mode=mobile; a standalone visit
+   gets the same NOW LOADING chooser in-game, before the title screen.
+   The choice is per-launch and never persisted. PC mode is the
+   original experience, untouched. PHONE mode on a portrait screen
+   rotates the TABLE 90 deg — a view transform in render() plus the
+   inverse mapping in canvasPos(); physics, rules and AI never see it.
+   Landscape phones and PC mode never rotate. HUD and controls are DOM
+   and always stay upright.
+   ===================================================================== */
+const _modeParam = new URLSearchParams(location.search).get('mode');
+let apMode = _modeParam === 'mobile' ? 'mobile' : (_modeParam ? 'pc' : null);
+window.__apMode = apMode || 'pc';
+let viewRot = false;
+function updateView() {
+  const rot = apMode === 'mobile' && window.innerHeight > window.innerWidth;
+  document.body.classList.toggle('rot', rot);
+  document.body.classList.toggle('mobile', apMode === 'mobile');
+  if (rot === viewRot) return;
+  viewRot = rot;
+  cv.width = rot ? CH : CW;      // swapping the backing store clears it;
+  cv.height = rot ? CW : CH;     // render() redraws everything per frame
+}
+window.addEventListener('resize', updateView);
+window.addEventListener('orientationchange', () => setTimeout(updateView, 60));
+function chooseMode(m) {
+  apMode = m; window.__apMode = m;
+  document.getElementById('loadov').classList.add('hidden');
+  updateView();
+}
+document.getElementById('apPc').addEventListener('click', () => chooseMode('pc'));
+document.getElementById('apPhone').addEventListener('click', () => chooseMode('mobile'));
+
+// ---------- boot ----------
+if (apMode) document.getElementById('loadov').classList.add('hidden');
+updateView();
+rack();
+aimAngle = 0;
+updateHUD(); updatePowerUI(); drawSpinWidget(); drawRackDecor(); syncTableSeg();
+requestAnimationFrame(frame);
+
+
+// =====================================================================
+// PLAY A FRIEND — snapshots, the LIVE relay client, and SEND-A-TURN.
+// Both modes reuse the same physics and rules wholesale; the shooter's
+// client is always authoritative. A snapshot is the whole table in one
+// tight object: ball positions/pocketed (0.1 precision), groups, turn,
+// ball-in-hand, break flag, winner.
+// =====================================================================
+function r1(v) { return Math.round(v * 10) / 10; }
+function snapState() {
+  return {
+    balls: balls.map(b => [b.n, r1(b.x), r1(b.y), b.pocketed ? 1 : 0]),
+    groups: groups ? [groups[0], groups[1]] : null,
+    turn, bih: ballInHand ? 1 : 0, brk: breakShot ? 1 : 0,
+    winner, winReason,
+  };
+}
+function applySnap(s) {
+  if (!s || !s.balls) return;
+  for (const row of s.balls) {
+    const b = ballByNum(row[0]); if (!b) continue;
+    b.x = row[1]; b.y = row[2]; b.pocketed = !!row[3];
+    b.vx = 0; b.vy = 0; b.spin.x = 0; b.spin.y = 0; b.sz = 0;
+  }
+  groups = s.groups ? { 0: s.groups[0], 1: s.groups[1] } : null;
+  turn = s.turn || 0;
+  ballInHand = !!s.bih; breakShot = !!s.brk;
+  winner = (s.winner === undefined || s.winner === null) ? -1 : s.winner;
+  winReason = s.winReason || '';
+  spinX = 0; spinY = 0; power = 0; updatePowerUI(); drawSpinWidget();
+  if (winner >= 0) {
+    phase = 'gameover';
+    document.getElementById('wintext').textContent = `${names[winner]} WINS!`;
+    document.getElementById('winballs').textContent = winReason;
+    document.getElementById('winov').classList.remove('hidden');
+  } else {
+    phase = 'aim';
+    aimAtSuggested();
+  }
+  updateHUD();
+}
+// leave every menu overlay behind and sit down at the table (the launch
+// chooser, if it is still up, stays — it resolves on its own first).
+function enterTable(tableKey) {
+  if (tableKey && TABLE_THEMES[tableKey] && tableKey !== tableTheme) {
+    tableTheme = tableKey; feltCanvas = null; syncTableSeg();
+    try { localStorage.setItem('angeles8ball.table', tableTheme); } catch (e) {}
+  }
+  for (const id of ['titleov', 'friendov', 'asyncov', 'winov', 'pauseov'])
+    document.getElementById(id).classList.add('hidden');
+  paused = false;
+}
+function showPingBar(on) {
+  document.getElementById('pingbar').classList.toggle('hidden',
+    !(on && mode === 'live'));
+}
+
+// ---------------- shared bits ----------------
+function myPid() {
+  try {
+    let p = localStorage.getItem('angeles8ball.pid');
+    if (!p) {
+      p = 'p' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+      localStorage.setItem('angeles8ball.pid', p);
+    }
+    return p;
+  } catch (e) { return 'p' + Math.random().toString(36).slice(2, 10); }
+}
+function myName() {
+  const v = (document.getElementById('fname').value || '').trim();
+  return v ? v.toUpperCase().slice(0, 14) : 'PLAYER 1';
+}
+function defaultServerURL() {
+  if (location.protocol === 'https:') return 'wss://' + location.host;
+  if (location.protocol === 'http:') return 'ws://' + location.host;
+  return 'ws://localhost:8903';
+}
+function serverURL() {
+  const v = (document.getElementById('fserver').value || '').trim();
+  return v || defaultServerURL();
+}
+function fstatus(t) { document.getElementById('fstatus').textContent = t; }
+function fastatus(t) { document.getElementById('fastatus').textContent = t; }
+async function copyText(txt, okMsg, statusFn) {
+  try { await navigator.clipboard.writeText(txt); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e2) {}
+    ta.remove();
+  }
+  if (statusFn) statusFn(okMsg);
+}
+async function shareLink(url, okMsg, statusFn) {
+  if (navigator.share) {
+    try { await navigator.share({ title: 'Angeles 8 Ball', text: 'Your table is ready — tap to join my game:', url }); return; }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  copyText(url, okMsg, statusFn);
+}
+function inviteLink() {
+  const u = new URL(location.href);
+  u.hash = '';
+  u.searchParams.set('join', net ? net.code : '');
+  return u.toString();
+}
+
+// =====================================================================
+// LIVE — the relay client (contract: server/PROTOCOL.md). The server
+// holds no rules: my shots go out as params, my settled table follows
+// as the authority; my opponent's shots replay on my table, then snap.
+// =====================================================================
+function freshNet() {
+  return { ws: null, seat: 0, code: null, phase: 'idle', oppPresent: false,
+           replaying: false, pendingSettled: null, pendingState: null };
+}
+function netSend(o) {
+  if (net && net.ws && net.ws.readyState === 1) {
+    try { net.ws.send(JSON.stringify(o)); } catch (e) {}
+  }
+}
+function netCurrentState() {
+  const st = { phase: winner >= 0 ? 'over' : (net.phase === 'game' ? 'game' : 'lobby'),
+               table: tableTheme, breakSeat: 1,
+               names: { 1: names[0], 2: names[1] } };
+  if (net.phase === 'game') st.snap = snapState();
+  return st;
+}
+function netConnect(onOpen) {
+  let ws;
+  try { ws = new WebSocket(serverURL()); }
+  catch (e) { fstatus('Could not open a connection to the server.'); return; }
+  net.ws = ws;
+  ws.onopen = () => { if (onOpen) onOpen(); };
+  ws.onmessage = ev => {
+    let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+    netHandle(m);
+  };
+  ws.onerror = () => { fstatus('Server connection failed — check the server address.'); };
+  ws.onclose = () => {
+    if (net && net.ws === ws && net.phase === 'game') {
+      net.oppPresent = false;
+      setMsg('⚠ Connection to the server dropped — reload this page to rejoin your room.');
+      updateHUD();
+    }
+  };
+}
+function friendCreate() {
+  mode = 'live';
+  net = freshNet(); net.phase = 'connecting';
+  names[0] = myName(); names[1] = 'PLAYER 2';
+  document.getElementById('flobby').classList.add('hidden');
+  fstatus('Connecting to ' + serverURL() + ' …');
+  netConnect(() => netSend({ t: 'create', pid: myPid(), name: myName(),
+    state: { phase: 'lobby', table: tableTheme, breakSeat: 1, names: { 1: names[0] } } }));
+}
+function friendJoin(code) {
+  code = (code || '').trim().toUpperCase();
+  if (!code) { fstatus('Type the room code first.'); return; }
+  mode = 'live';
+  net = freshNet(); net.phase = 'connecting';
+  names[1] = myName();
+  fstatus('Connecting to ' + serverURL() + ' …');
+  netConnect(() => netSend({ t: 'join', code, pid: myPid(), name: myName() }));
+}
+function netRememberRoom() {
+  try { sessionStorage.setItem('angeles8ball.rejoin', net.code); } catch (e) {}
+}
+function netForgetRoom() {
+  try { sessionStorage.removeItem('angeles8ball.rejoin'); } catch (e) {}
+}
+function netApplyState(st) {
+  if (!st) return;
+  if (st.names) {
+    if (st.names[1]) names[0] = st.names[1];
+    if (st.names[2]) names[1] = st.names[2];
+  }
+  if ((st.phase === 'game' || st.phase === 'over') && st.snap) {
+    if (phase === 'shooting') { net.pendingState = st; return; }
+    enterTable(st.table || tableTheme);
+    net.phase = 'game'; net.oppPresent = true;
+    applySnap(st.snap);
+    showPingBar(true);
+    if (winner < 0) setMsg(turn === net.seat - 1 ? 'Your shot.' : `${names[turn]} to shoot.`);
+    updateHUD();
+  }
+}
+const PING_TEXT = { gg: 'GG!', nice: 'Nice shot!', unlucky: 'Unlucky!',
+                    rematch: 'Rematch?', hi: 'Hi! 👋', wp: 'Well played!' };
+function netHandle(m) {
+  if (!net) return;
+  switch (m.t) {
+    case 'created': {
+      net.seat = 1; net.code = m.code; net.phase = 'lobby';
+      netRememberRoom();
+      document.getElementById('fcode').textContent = m.code;
+      document.getElementById('flink').value = inviteLink();
+      document.getElementById('flobby').classList.remove('hidden');
+      fstatus('Room ready — send the link (or read the code) to your friend. Waiting for your guest…');
+      break;
+    }
+    case 'joined': {
+      net.seat = m.seat; net.code = m.code;
+      netRememberRoom();
+      names[net.seat - 1] = myName();
+      if (m.opponent && m.opponent.name) names[net.seat === 2 ? 0 : 1] = m.opponent.name;
+      net.oppPresent = !!(m.opponent && m.opponent.present);
+      if (net.phase === 'connecting') net.phase = 'lobby';
+      if (m.state) netApplyState(m.state);
+      if (net.phase !== 'game' && m.lastSettled && m.lastSettled.snap) {
+        enterTable(tableTheme);
+        net.phase = 'game'; net.oppPresent = true;
+        applySnap(m.lastSettled.snap);
+        showPingBar(true);
+      }
+      if (net.phase === 'game') {
+        if (m.resumed) setMsg('Welcome back — you are all caught up.');
+        updateHUD();
+      } else {
+        fstatus(m.resumed ? 'Back in the room — waiting for the host…'
+                          : 'You are in! Waiting for the host to rack \'em…');
+        document.getElementById('friendov').classList.remove('hidden');
+      }
+      break;
+    }
+    case 'guest_arrived': {
+      names[1] = (m.name || 'PLAYER 2').toUpperCase();
+      net.oppPresent = true;
+      fstatus(`${names[1]} is here — racking 'em!`);
+      setTimeout(() => {
+        if (!net || net.phase !== 'lobby' || net.seat !== 1) return;
+        rack();
+        net.phase = 'game';
+        const snap = snapState();
+        netSend({ t: 'state', state: { phase: 'game', table: tableTheme, breakSeat: 1,
+                                       names: { 1: names[0], 2: names[1] }, snap } });
+        enterTable(tableTheme);
+        applySnap(snap);
+        showPingBar(true);
+        setMsg(`You break — good luck, ${names[0]}.`);
+        updateHUD();
+      }, 900);
+      break;
+    }
+    case 'state_request': {
+      netSend({ t: 'state', state: netCurrentState() });
+      break;
+    }
+    case 'state': {
+      netApplyState(m.state);
+      break;
+    }
+    case 'shot': {
+      if (net.phase !== 'game' || phase !== 'aim') break;
+      net.replaying = true;
+      if (m.cue) {
+        const c = cueBall();
+        c.pocketed = false; c.x = m.cue.x; c.y = m.cue.y;
+        ballInHand = false;
+      }
+      spinX = m.spin ? m.spin.x : 0; spinY = m.spin ? m.spin.y : 0;
+      aimAngle = m.angle; drawSpinWidget();
+      firingRemote = true;
+      shoot(m.power, m.angle, spinX, spinY);
+      firingRemote = false;
+      setMsg(`${names[turn]} is shooting…`);
+      break;
+    }
+    case 'settled': {
+      if (phase === 'shooting') { net.pendingSettled = m; break; }
+      if (m.snap) { applySnap(m.snap); updateHUD(); }
+      break;
+    }
+    case 'ping_msg': {
+      const who = names[net.seat === 1 ? 1 : 0];
+      setMsg(`${who}: ${PING_TEXT[m.kind] || m.kind}`);
+      if (m.kind === 'rematch' && phase === 'gameover')
+        setMsg(`${who} wants a rematch — tap RACK AGAIN to accept.`);
+      break;
+    }
+    case 'opponent_disconnected': {
+      net.oppPresent = false;
+      const mins = Math.round((m.graceSec || 300) / 60);
+      setMsg(`⚠ ${names[net.seat === 1 ? 1 : 0]} lost connection — their seat is held for ${mins} min. Waiting…`);
+      updateHUD();
+      break;
+    }
+    case 'opponent_rejoined': {
+      net.oppPresent = true;
+      setMsg(`${names[net.seat === 1 ? 1 : 0]} is back!`);
+      // push my table so a reloaded opponent converges on the truth
+      if (net.phase === 'game') netSend({ t: 'state', state: netCurrentState() });
+      updateHUD();
+      break;
+    }
+    case 'opponent_left': {
+      net.oppPresent = false;
+      net.phase = 'lobby';
+      showPingBar(false);
+      fstatus(m.reason === 'timeout'
+        ? 'Your guest never came back — the seat is free. Share the link to invite someone else.'
+        : 'Your guest left. Share the link to invite someone else.');
+      document.getElementById('friendov').classList.remove('hidden');
+      setMsg('Your guest left the room.');
+      break;
+    }
+    case 'room_closed': {
+      const why = { host_left: 'the host left', host_gone: 'the host never came back',
+                    expired: 'the room expired' }[m.reason] || m.reason;
+      net.phase = 'idle'; net.oppPresent = false;
+      showPingBar(false);
+      netForgetRoom();
+      fstatus(`The room closed — ${why}. Create a new room to play again.`);
+      document.getElementById('friendov').classList.remove('hidden');
+      setMsg(`Room closed — ${why}.`);
+      break;
+    }
+    case 'error': {
+      fstatus(m.msg || ('Error: ' + m.err));
+      setMsg(m.msg || ('Error: ' + m.err));
+      if (net.phase === 'connecting' || net.phase === 'idle') {
+        netForgetRoom();
+        document.getElementById('friendov').classList.remove('hidden');
+      }
+      break;
+    }
+  }
+}
+// called from the frame loop right after finishShot(), every settle
+function netAfterSettle() {
+  if (mode === 'live' && net && net.phase === 'game') {
+    if (lastShotLocal) {
+      const snap = snapState();
+      netSend({ t: 'settled', snap, balls: snap.balls,
+                pocketed: snap.balls.filter(b => b[3]).map(b => b[0]),
+                foul: lastShotFoul, outcome: winner >= 0 ? 'win' : 'continue' });
+      netSend({ t: 'state', state: netCurrentState() });
+      net.pendingState = null;   // my table is the newest truth — never rewind it
+    } else {
+      net.replaying = false;
+      if (net.pendingSettled) {
+        const m = net.pendingSettled; net.pendingSettled = null;
+        if (m.snap) applySnap(m.snap);
+      }
+      if (net.pendingState) {
+        const st = net.pendingState; net.pendingState = null;
+        netApplyState(st);
+      }
+      if (phase === 'aim' && winner < 0)
+        setMsg(turn === net.seat - 1 ? 'Your shot.' : `${names[turn]} to shoot.`);
+    }
+    updateHUD();
+  }
+  if (mode === 'async' && asyncGame) {
+    if (lastShotLocal && asyncGame.state === 'mymove') {
+      const post = snapState();
+      // send-a-turn alternates PEOPLE, one shot per link (the owner's
+      // flow: I move, send; you move, send) — so the incoming player
+      // always takes the next shot, even if the pool turn-keeping rule
+      // would have kept it with the shooter. Groups, fouls and
+      // ball-in-hand all ride along in the snapshot as they fell.
+      post.turn = 1 - asyncGame.mySide;
+      const p = {
+        v: 1, g: asyncGame.id, tbl: tableTheme, nm: [names[0], names[1]],
+        pre: shotPreSnap, post,
+        turn: post.turn, from: asyncGame.mySide, win: winner, wr: winReason,
+        shot: { a: shotParams.angle, p: shotParams.power,
+                sx: shotParams.sx, sy: shotParams.sy, cue: shotCuePos },
+      };
+      asyncGame.lastPayload = p;
+      asyncGame.state = 'sent';
+      showAsyncSend(p);
+    } else if (asyncGame.state === 'replay' && asyncGame.incoming) {
+      asyncTurnHandover(asyncGame.incoming);
+    }
+    updateHUD();
+  }
+}
+
+// =====================================================================
+// SEND-A-TURN — the whole game rides inside a link (#g=…) or the same
+// payload as a paste-able code. The payload carries the table BEFORE
+// the shot and AFTER it: the receiver loads the "before", watches the
+// shot replay through the real physics, then snaps to the "after" and
+// takes their turn. No server anywhere in the loop.
+// =====================================================================
+function b64encodeStr(s) {
+  return btoa(unescape(encodeURIComponent(s)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64decodeStr(s) {
+  s = (s || '').trim().replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  return decodeURIComponent(escape(atob(s)));
+}
+function asyncEncode(p) { return b64encodeStr(JSON.stringify(p)); }
+function asyncDecode(s) { return JSON.parse(b64decodeStr(s)); }
+function asyncLink(p) {
+  const u = new URL(location.href);
+  u.searchParams.delete('join');
+  u.hash = 'g=' + asyncEncode(p);
+  return u.toString();
+}
+function asyncStoredSide(g) {
+  try {
+    const m = JSON.parse(localStorage.getItem('angeles8ball.async') || '{}');
+    return (g in m) ? m[g] : null;
+  } catch (e) { return null; }
+}
+function asyncStoreSide(g, s) {
+  try {
+    const m = JSON.parse(localStorage.getItem('angeles8ball.async') || '{}');
+    m[g] = s;
+    localStorage.setItem('angeles8ball.async', JSON.stringify(m));
+  } catch (e) {}
+}
+function startAsyncGame() {
+  mode = 'async';
+  const id = 'g' + Math.random().toString(36).slice(2, 8);
+  asyncGame = { id, mySide: 0, state: 'mymove', incoming: null, lastPayload: null };
+  names[0] = myName(); names[1] = 'FRIEND';
+  asyncStoreSide(id, 0);
+  enterTable(tableTheme);
+  rack();
+  phase = 'aim';
+  setMsg(apMode === 'mobile'
+    ? 'Your break — drag to aim · POWER bar to shoot. Then SEND TURN.'
+    : 'Your break — take your shot, then SEND TURN.');
+  updateHUD(); updatePowerUI(); drawSpinWidget();
+}
+function showAsyncSend(p) {
+  const link = asyncLink(p);
+  document.getElementById('asynclink').value = link;
+  document.getElementById('asynccode').value = asyncEncode(p);
+  document.getElementById('asyncovt').textContent =
+    p.win >= 0 ? (p.win === asyncGame.mySide ? '🏆 YOU WIN — SEND THE FINAL TURN'
+                                              : 'GAME OVER — SEND THE FINAL TURN')
+               : 'YOUR SHOT IS IN — SEND YOUR TURN';
+  document.getElementById('asyncovp').textContent =
+    'This link carries the whole table — and your shot. Send it to your friend: ' +
+    'they open it, watch your shot, take theirs, and send it back.';
+  document.getElementById('asyncsend').style.display = '';
+  document.getElementById('asyncstatus').textContent = '';
+  document.getElementById('winov').classList.add('hidden');
+  document.getElementById('asyncov').classList.remove('hidden');
+}
+function showAsyncWaiting() {
+  document.getElementById('asyncovt').textContent = '⏳ WAITING ON YOUR FRIEND';
+  document.getElementById('asyncovp').textContent =
+    'You already sent this turn — the table below is frozen as you left it. ' +
+    'Your own link can\'t move twice; when your friend answers, their link brings the game back to you.';
+  document.getElementById('asyncsend').style.display = 'none';
+  document.getElementById('asyncstatus').textContent = '';
+  document.getElementById('asyncov').classList.remove('hidden');
+}
+function asyncTurnHandover(p) {
+  applySnap(p.post);
+  if (p.win >= 0) {
+    asyncGame.state = 'over';
+    setMsg(`${names[p.win]} wins the game!`);
+  } else {
+    asyncGame.state = 'mymove';
+    setMsg(`Your move, ${names[asyncGame.mySide]} — take your shot, then SEND TURN.`);
+  }
+  updateHUD();
+}
+function asyncOpenPayload(p) {
+  if (!p || !p.pre || !p.post || !p.g) throw new Error('bad payload');
+  mode = 'async';
+  asyncGame = { id: p.g, mySide: 0, state: 'replay', incoming: p, lastPayload: null };
+  names[0] = p.nm ? p.nm[0] : 'PLAYER 1';
+  names[1] = p.nm ? p.nm[1] : 'PLAYER 2';
+  enterTable(p.tbl || tableTheme);
+  const stored = asyncStoredSide(p.g);
+  if (stored !== null && stored === p.from) {
+    // my own sent link, opened on my own device: frozen, no double move
+    asyncGame.mySide = stored;
+    asyncGame.state = 'waiting';
+    applySnap(p.post);
+    showAsyncWaiting();
+    updateHUD();
+    return;
+  }
+  asyncGame.mySide = (stored !== null) ? stored : (1 - p.from);
+  asyncStoreSide(p.g, asyncGame.mySide);
+  const fn = (document.getElementById('fname').value || '').trim();
+  if (fn) names[asyncGame.mySide] = fn.toUpperCase().slice(0, 14);
+  applySnap(p.pre);
+  turn = p.from;
+  if (p.shot) {
+    if (p.shot.cue) {
+      const c = cueBall();
+      c.pocketed = false; c.x = p.shot.cue.x; c.y = p.shot.cue.y;
+      ballInHand = false;
+    }
+    spinX = p.shot.sx || 0; spinY = p.shot.sy || 0;
+    aimAngle = p.shot.a; drawSpinWidget();
+    setMsg(`Watching ${names[p.from]}'s shot…`);
+    firingRemote = true;
+    shoot(p.shot.p, p.shot.a, spinX, spinY);
+    firingRemote = false;
+  } else {
+    asyncTurnHandover(p);
+  }
+  updateHUD();
+}
+function asyncOpenString(str) {
+  let s = (str || '').trim();
+  if (s.includes('#g=')) s = s.split('#g=')[1];
+  else if (s.includes('g=')) s = s.split('g=')[1];
+  s = s.split(/[\s&]/)[0];
+  return asyncDecode(s);
+}
+
+// =====================================================================
+// TEST / DEBUG API — used by the scripted verification lane. All shots
+// go through the same shoot() the player's controls use.
+// =====================================================================
+window.GAME = {
+  startGame: (m, d) => { if (m) mode = m; if (d) difficulty = d; startGame(); },
+  toTitle,
+  shoot: (angleDeg, powerVal, sx, sy) => shoot(powerVal, angleDeg * Math.PI / 180, sx || 0, sy || 0),
+  aiShot: () => {
+    if (phase !== 'aim') return false;
+    if (ballInHand) { aiPlaceBall(turn); ballInHand = false; }
+    const pick = pickAIShot(turn);
+    if (!pick) return false;
+    return shoot(pick.power, pick.angle, pick.sx, pick.sy);
+  },
+  place: (list) => { // list of {n,x,y} — test setups only
+    for (const it of list) {
+      const b = ballByNum(it.n); if (!b) continue;
+      if (it.x !== undefined) b.x = it.x;   // omitted coords keep the
+      if (it.y !== undefined) b.y = it.y;   // ball where it lies
+      b.vx = 0; b.vy = 0;
+      b.pocketed = it.pocketed !== undefined ? !!it.pocketed : false;
+      b.spin.x = 0; b.spin.y = 0; b.sz = 0;
+    }
+  },
+  setGroups: (g0) => { groups = g0 ? { 0: g0, 1: g0 === 'solid' ? 'stripe' : 'solid' } : null; },
+  setTurn: (t) => { turn = t; },
+  setBreak: (v) => { breakShot = v; },
+  setTimeScale: (v) => { timeScale = v; },
+  net: {
+    create: () => friendCreate(),
+    join: (code) => friendJoin(code),
+    state: () => net ? { phase: net.phase, seat: net.seat, code: net.code,
+                         oppPresent: net.oppPresent, replaying: net.replaying } : null,
+    disconnect: () => { if (net && net.ws) { const w = net.ws; net.ws = null; w.close(); } },
+    link: () => net && net.code ? inviteLink() : null,
+  },
+  async: {
+    start: () => startAsyncGame(),
+    state: () => asyncGame ? { id: asyncGame.id, mySide: asyncGame.mySide,
+                               state: asyncGame.state } : null,
+    link: () => asyncGame && asyncGame.lastPayload ? asyncLink(asyncGame.lastPayload) : null,
+    code: () => asyncGame && asyncGame.lastPayload ? asyncEncode(asyncGame.lastPayload) : null,
+    open: (str) => asyncOpenPayload(asyncOpenString(str)),
+  },
+  state: () => ({
+    phase, turn, mode, difficulty, groups, ballInHand, breakShot, winner, winReason,
+    netPhase: net ? net.phase : null, netSeat: net ? net.seat : null,
+    oppPresent: net ? net.oppPresent : null,
+    asyncState: asyncGame ? asyncGame.state : null,
+    mySide: asyncGame ? asyncGame.mySide : (net ? net.seat - 1 : null),
+    names: [...names],
+    apMode: apMode || 'chooser', viewRot,
+    aimDeg: +(aimAngle * 180 / Math.PI).toFixed(4),
+    power: +power.toFixed(3), charging, pbCharging: !!pbDrag,
+    spin: { x: spinX, y: spinY }, tableTheme,
+    msg: msgEl.textContent,
+    lastShotStats: { ...lastShotStats },
+    balls: balls.map(b => ({ n: b.n, x: +b.x.toFixed(1), y: +b.y.toFixed(1),
+      vx: +b.vx.toFixed(1), vy: +b.vy.toFixed(1), pocketed: b.pocketed })),
+  }),
+  constants: { R, TW, TH, REST_BALL, REST_CUSH, PHYS_HZ, MAX_SPEED },
+};
+
+// ---------- play-a-friend boot: saved fields, invite link, turn link --
+// Runs LAST, after every module above is initialized: opening a link
+// exercises the whole friend stack (codecs, snapshots, overlays).
+try {
+  const nm = localStorage.getItem('angeles8ball.name');
+  if (nm) document.getElementById('fname').value = nm;
+  const sv = localStorage.getItem('angeles8ball.server');
+  document.getElementById('fserver').value = sv || defaultServerURL();
+} catch (e) {}
+(function friendBoot() {
+  // a turn link (#g=…) opens the send-a-turn game it carries
+  if (location.hash.startsWith('#g=')) {
+    try { asyncOpenPayload(asyncOpenString(location.hash.slice(3))); return; }
+    catch (e) { setMsg('That turn link could not be read.'); }
+  }
+  // an invite link (?join=CODE) walks straight into the room, and a
+  // plain reload rejoins the room this tab was in (same pid = my seat)
+  const joinCode = new URLSearchParams(location.search).get('join');
+  let rejoin = null;
+  try { rejoin = sessionStorage.getItem('angeles8ball.rejoin'); } catch (e) {}
+  const code = joinCode || rejoin;
+  if (code) {
+    document.getElementById('modefriend').classList.add('sel');
+    document.getElementById('mode2p').classList.remove('sel');
+    document.getElementById('modeai').classList.remove('sel');
+    document.getElementById('friendov').classList.remove('hidden');
+    friendJoin(code);
+  }
+})();
+</script>
+</body>
+</html>
