@@ -1,0 +1,1299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>Zombie Smack Says</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Creepster&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;height:100%;background:#05060c;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+  canvas{display:block;margin:0 auto;background:#05060c;cursor:pointer}
+  #ui{position:fixed;left:50%;bottom:12px;transform:translateX(-50%);display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;
+      background:rgba(12,14,10,.92);border:1px solid #3d5a2a;border-radius:14px;padding:8px 10px;font:600 14px system-ui,sans-serif;color:#e6f2d8;max-width:calc(100vw - 32px);box-sizing:border-box}
+  #ui button,#ui .btn{background:#1c2a14;color:#e6f2d8;border:1px solid #5f8a3c;border-radius:10px;padding:8px 12px;font:inherit;cursor:pointer}
+  #ui button:hover,#ui .btn:hover{background:#2a3d1d}
+  #ui{flex-direction:column}
+  #ui .r{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center}
+  #ui .lbl{opacity:.8;font-size:13px}
+  .zslot{position:relative;width:44px;height:44px;border-radius:50%;border:3px solid;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;background:#1c2a14;overflow:hidden;font:700 16px system-ui,sans-serif;box-sizing:border-box}
+  .zslot img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+  .zslot.has img{display:block}
+  .zslot:focus-within{outline:2px solid #e6f2d8;outline-offset:2px}
+  #facePrev{width:40px;height:40px;border-radius:50%;object-fit:cover;border:2px solid #8fd16a;display:none}
+  #cam{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:5;font:600 15px system-ui,sans-serif;color:#e6f2d8}
+  #cam .box{text-align:center;padding:16px;max-width:calc(100vw - 32px)}
+  #cam .view{position:relative;width:min(320px,80vw);aspect-ratio:1;margin:0 auto;border-radius:50%;overflow:hidden;border:4px solid #8fd16a;background:#111}
+  #vid{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  #count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:96px;color:#fff;text-shadow:0 0 20px #000}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0}
+  #cam .row{display:flex;gap:10px;justify-content:center;margin-top:14px}
+  #cam button{background:#1c2a14;color:#e6f2d8;border:1px solid #5f8a3c;border-radius:10px;padding:10px 18px;font:inherit;cursor:pointer}
+  #snap{background:#b3121b!important;border-color:#b3121b!important}
+  #camMsg{color:#facc15;max-width:340px;margin:12px auto 0}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div class="r">
+  <img id="facePrev" alt="Your fighter">
+  <button id="camBtn">📸 Take my photo</button>
+  <label class="btn">🖼️ Use a photo<input id="fileIn" type="file" accept="image/*" hidden></label>
+  <button id="clearFace" style="display:none">Remove photo</button>
+  <button id="sndBtn">🔊 Sound on</button>
+  </div>
+  <div class="r">
+    <span class="lbl">🧟 Zombie faces:</span>
+    <label class="zslot" data-i="0" style="border-color:#4ade80;color:#4ade80" title="Photo for zombie 1"><img alt="">1<input type="file" accept="image/*" data-i="0" hidden></label>
+    <label class="zslot" data-i="1" style="border-color:#f87171;color:#f87171" title="Photo for zombie 2"><img alt="">2<input type="file" accept="image/*" data-i="1" hidden></label>
+    <label class="zslot" data-i="2" style="border-color:#60a5fa;color:#60a5fa" title="Photo for zombie 3"><img alt="">3<input type="file" accept="image/*" data-i="2" hidden></label>
+    <label class="zslot" data-i="3" style="border-color:#facc15;color:#facc15" title="Photo for zombie 4"><img alt="">4<input type="file" accept="image/*" data-i="3" hidden></label>
+    <button id="clearZ" style="display:none">Clear zombie faces</button>
+  </div>
+</div>
+<div id="cam"><div class="box">
+  <div>Line your face up in the circle</div><br>
+  <div class="view"><video id="vid" playsinline muted></video><div id="count"></div><div id="flash"></div></div>
+  <div class="row"><button id="snap">Snap!</button><button id="camCancel">Cancel</button></div>
+  <p id="camMsg"></p>
+</div></div>
+<script>
+"use strict";
+const cv = document.getElementById('c'); let ctx = cv.getContext('2d', { alpha: false }); const mainCtx = ctx;
+const W = 960, H = 640;
+let scale = 1;
+const dpr = Math.min(window.devicePixelRatio || 1, (window.matchMedia && matchMedia('(pointer: coarse)').matches) ? 1.25 : 2);
+function resize() {
+  const s = Math.min(innerWidth / W, innerHeight / H);
+  cv.style.width = W * s + 'px'; cv.style.height = H * s + 'px';
+  cv.style.marginTop = Math.max(0, (innerHeight - H * s) / 2) + 'px';
+  cv.width = Math.round(W * s * dpr); cv.height = Math.round(H * s * dpr);
+  scale = s * dpr;
+}
+addEventListener('resize', resize); resize();
+
+const rnd = (a, b) => a + Math.random() * (b - a);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const SPOOKY = "'Creepster', Impact, 'Arial Black', sans-serif";
+const PLAIN = "system-ui, sans-serif";
+
+let best = 0;
+try { best = +localStorage.getItem('zsmashBest') || 0; } catch (e) {}
+
+// ================= AUDIO =================
+let AC = null, master, sfxGain, musicGain, noiseBuf, muted = false;
+try { muted = localStorage.getItem('zsmashMute') === '1'; } catch (e) {}
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+  AC = new C();
+  master = AC.createGain(); master.gain.value = muted ? 0 : 0.85; master.connect(AC.destination);
+  sfxGain = AC.createGain(); sfxGain.connect(master);
+  musicGain = AC.createGain(); musicGain.gain.value = 0.0; musicGain.connect(master);
+  noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+  const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  // creepy drone
+  const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260; lp.connect(musicGain);
+  for (const f of [55, 55.6, 82.4]) { const o = AC.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; const g = AC.createGain(); g.gain.value = 0.12; o.connect(g); g.connect(lp); o.start(); }
+  const lfo = AC.createOscillator(), lg = AC.createGain(); lfo.frequency.value = 0.15; lg.gain.value = 120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+  musicGain.gain.setTargetAtTime(0.35, AC.currentTime, 1);
+}
+function osc(t, f, dur, type, vol, f2) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(sfxGain); o.start(t); o.stop(t + dur + 0.02);
+}
+function nz(t, dur, vol, freq, type = 'lowpass', q = 1) {
+  const s = AC.createBufferSource(); s.buffer = noiseBuf;
+  const f = AC.createBiquadFilter(); f.type = type; f.frequency.setValueAtTime(freq, t); f.Q.value = q;
+  const g = AC.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(f); f.connect(g); g.connect(sfxGain); s.start(t, Math.random() * 0.5); s.stop(t + dur + 0.02);
+}
+const can = () => AC && !muted;
+const NOTE = [110, 147, 185, 220];
+const SFX = {
+  groan(i, dur) {
+    if (!can()) return;
+    const t = AC.currentTime, base = NOTE[i];
+    const o = AC.createOscillator(), o2 = AC.createOscillator(), f = AC.createBiquadFilter(), g = AC.createGain();
+    const lfo = AC.createOscillator(), lg = AC.createGain();
+    o.type = 'sawtooth'; o2.type = 'square';
+    o.frequency.setValueAtTime(base * 1.12, t); o.frequency.exponentialRampToValueAtTime(base * 0.86, t + dur);
+    o2.frequency.setValueAtTime(base * 0.5, t);
+    lfo.frequency.value = 7; lg.gain.value = base * 0.04; lfo.connect(lg); lg.connect(o.frequency);
+    f.type = 'bandpass'; f.Q.value = 3; f.frequency.setValueAtTime(450, t); f.frequency.linearRampToValueAtTime(1100, t + dur * 0.4); f.frequency.linearRampToValueAtTime(380, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.5, t + 0.04); g.gain.setValueAtTime(0.5, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.08);
+    const g2 = AC.createGain(); g2.gain.value = 0.25; o2.connect(g2); g2.connect(f);
+    o.connect(f); f.connect(g); g.connect(sfxGain);
+    for (const n of [o, o2, lfo]) { n.start(t); n.stop(t + dur + 0.12); }
+  },
+  punch() { if (!can()) return; const t = AC.currentTime; osc(t, 150, 0.16, 'sine', 0.7, 38); nz(t, 0.09, 0.6, 1800); nz(t + 0.015, 0.22, 0.4, 700, 'bandpass', 2); },
+  splat() { if (!can()) return; const t = AC.currentTime; nz(t, 0.3, 0.25, 1100, 'bandpass', 3); nz(t + 0.05, 0.2, 0.15, 500, 'bandpass', 4); },
+  pop() { if (!can()) return; osc(AC.currentTime, 500, 0.07, 'sine', 0.12, 1300); },
+  buzz() { if (!can()) return; const t = AC.currentTime; osc(t, 92, 0.45, 'sawtooth', 0.22); osc(t, 97, 0.45, 'square', 0.12); },
+  laugh() {
+    if (!can()) return; const t = AC.currentTime;
+    for (let k = 0; k < 5; k++) { osc(t + 0.12 + k * 0.13, 240 - k * 14, 0.09, 'sawtooth', 0.12, 160 - k * 10); nz(t + 0.12 + k * 0.13, 0.08, 0.08, 900, 'bandpass', 2); }
+  },
+  win() { if (!can()) return; const t = AC.currentTime; [392, 523, 659, 784].forEach((f, i) => osc(t + i * 0.07, f, 0.2, 'triangle', 0.14)); },
+  over() { if (!can()) return; const t = AC.currentTime; [220, 185, 147, 110].forEach((f, i) => osc(t + i * 0.3, f, 0.45, 'sawtooth', 0.12, f * 0.9)); },
+  click() { if (!can()) return; osc(AC.currentTime, 1200, 0.03, 'square', 0.03); },
+};
+
+// voice announcer
+const synth = window.speechSynthesis || null;
+// ---- commentary: a booth of eight announcers, each with their own voice and personality.
+// On claude.ai the page uses Claude's natural voices (tts capability); anywhere else, the best voices the device has.
+const CAST = {
+  rex:    { name: 'Rex "Thunder" Malone', tts: 'rounded', rate: 1.3,  pitch: 0.85 },  // booming play-by-play hype man
+  mags:   { name: 'Mags',                 tts: 'airy',    rate: 1.25, pitch: 1.2 }, // sarcastic, still loving it
+  ivy:    { name: 'Dr. Ivy Thornwood',    tts: 'glassy',  rate: 1.4,  pitch: 1.35 },  // giddy forensic doctor
+  earl:   { name: 'Grandpa Earl',         tts: 'buttery', rate: 1.05, pitch: 0.65 },  // old-timer, back in my day
+  chad:   { name: 'Chad Blitz',           tts: 'rounded', rate: 1.5,  pitch: 1.1 }, // gym bro, maximum hype
+  pixie:  { name: 'Pixie Sparkles',       tts: 'airy',    rate: 1.5,  pitch: 1.8 },  // sugary kids-show host
+  hammer: { name: 'Coach Hammer',         tts: 'buttery', rate: 1.45, pitch: 0.75 },  // screaming drill coach
+  zed:    { name: 'Zed',                  tts: 'glassy',  rate: 0.9,  pitch: 0.5 }, // a zombie who loves this show
+};
+const WHO = Object.keys(CAST);
+let tts = null, ttsBusy = false, lastTalkAt = 0;
+const sysVoices = {};
+try {
+  const u = window.claude && window.claude.use && window.claude.use('tts');
+  if (u && u.then) u.then(t => { if (!t) return; tts = t; try { t.onState(({ state }) => { ttsBusy = state === 'speaking' || state === 'paused'; }); } catch (e) {} }).catch(() => {});
+} catch (e) {}
+function pickVoice() {
+  const vs = synth ? synth.getVoices().filter(v => /^en/i.test(v.lang)) : [];
+  const score = v => (/natural|neural|enhanced|premium|online|siri|google/i.test(v.name) ? 2 : 0) + (v.localService ? 0 : 1);
+  vs.sort((x, y) => score(y) - score(x));
+  const seen = new Set(), uniq = vs.filter(v => { const k = v.name.split(/[\s(]/)[0]; if (seen.has(k)) return false; seen.add(k); return true; });
+  const pool = uniq.length ? uniq : vs;
+  WHO.forEach((w, k) => { sysVoices[w] = pool.length ? pool[k % pool.length] : null; });
+}
+if (synth) { pickVoice(); synth.onvoiceschanged = pickVoice; }
+function talk(lines, priority = false) {
+  if (muted || !lines || !lines.length) return;
+  if (!priority && performance.now() - lastTalkAt < 900) return; // iOS speech-synth jank guard: cap booth chatter
+  lastTalkAt = performance.now();
+  if (tts) {
+    if (ttsBusy && !priority) return;
+    ttsBusy = true;
+    tts.speak(lines.map(([w, t]) => ({ text: t, voice: CAST[w].tts, rate: clamp(CAST[w].rate, 0.7, 1.5) })))
+      .then(() => { ttsBusy = false; })
+      .catch(e => { ttsBusy = false; if (e && e.code === 'not_granted') tts = null; });
+    return;
+  }
+  if (!synth) return;
+  if (state !== 'title' && state !== 'over') return; // device speech voices churn the audio session and stall the game on phones — on this path the booth only calls the start and the game over, never mid-run
+  try {
+    if (synth.speaking || synth.pending) { if (!priority) return; synth.cancel(); }
+    for (const [w, t] of lines) {
+      const u = new SpeechSynthesisUtterance(t), c = CAST[w];
+      if (sysVoices[w]) u.voice = sysVoices[w];
+      u.pitch = clamp(c.pitch, 0.1, 2); u.rate = clamp(c.rate, 0.5, 2); synth.speak(u);
+    }
+  } catch (e) {}
+}
+function say(t, priority = false) { talk([[pick(['rex', 'chad', 'hammer', 'pixie']), t]], priority); }
+const chance = p => Math.random() < p;
+const others = (...not) => WHO.filter(w => !not.includes(w));
+// every line cranked to the max. Lines are assembled from parts: [opener] + reaction + [follow-up]
+const BANK = {
+  rex: {
+    pre: ["OH MY GOODNESS!", "HOLY SMOKES!", "ARE YOU KIDDING ME?!", "UNBELIEVABLE!", "HERE IT COMES!", "WHAT ON EARTH!", "OH BABY!", "GOOD GRAVY!", "STOP THE PRESSES!", "LADIES AND GENTLEMEN!", "I AM LOSING MY MIND!", "MERCY ME!", "OH, OH, OH!", "WOULD YOU LOOK AT THAT!"],
+    hit: ["WHAT A COMBINATION!", "TEXTBOOK! ABSOLUTELY TEXTBOOK!", "HE NAILED EVERY SINGLE ONE!", "BANG, BANG, BANG! PERFECT SEQUENCE!", "THAT IS A FLAWLESS PATTERN!", "HE REMEMBERED IT ALL AND PUNCHED IT ALL!", "HISTORY IS BEING MADE IN THIS GRAVEYARD!", "THAT WAS POETRY WITH KNUCKLES!", "NOT A SINGLE MISTAKE! NOT ONE!", "HE IS ON FIRE! SOMEBODY CALL THE FIRE DEPARTMENT!", "THE MEMORY OF AN ELEPHANT AND THE FISTS OF A FREIGHT TRAIN!", "RIGHT ON THE MONEY!", "THAT IS A HIGHLIGHT REEL PATTERN!", "HE MADE IT LOOK EASY!", "PERFECTION! PURE PERFECTION!", "THAT IS THE BEST PUNCHING I HAVE SEEN ALL SEASON!"],
+    post: ["THE CROWD IS ON ITS FEET!", "THIS PLACE IS SHAKING!", "I HAVE GOOSEBUMPS ON MY GOOSEBUMPS!", "WHAT A TIME TO BE ALIVE!", "AND THE GRAVEYARD ERUPTS!", "I SPILLED MY COFFEE EVERYWHERE!", "SOMEBODY HOLD ME!", "THE FANS ARE GOING ABSOLUTELY BANANAS!", "I NEED A MINUTE! I NEED A MINUTE!", "TELL YOUR FRIENDS! TELL EVERYBODY!"],
+    wrong: ["WRONG HEAD! WRONG HEAD!", "THAT IS NOT THE PATTERN, FOLKS!", "HE SWUNG AT THE WRONG ZOMBIE!", "A TERRIBLE, TERRIBLE MISTAKE!", "THE PATTERN SLIPPED RIGHT OUT OF HIS HEAD!", "OH THE AGONY! WRONG ONE!", "HE HAD IT AND HE LOST IT!", "THAT IS GOING TO COST HIM A BRAIN!", "DISASTER IN THE GRAVEYARD!", "HE PUNCHED THE WRONG FACE!"],
+    postWrong: ["THE CROWD GROANS!", "YOU COULD HEAR A PIN DROP!", "I CANNOT WATCH!", "SAY IT IS NOT SO!", "HEARTBREAK! PURE HEARTBREAK!", "SHAKE IT OFF, CHAMP!"],
+    punch: ["BOOM!", "POW!", "THERE IT IS!", "RIGHT ON!", "YES!", "HUGE!", "CONNECTS!", "BIG SHOT!", "WHAM!", "GOT HIM!", "KAPOW!", "DIRECT HIT!"],
+    intro: ["LADIES AND GENTLEMEN, BOYS AND GHOULS, WELCOME TO THE GRAVEYARD! FOUR FRESH FACES TONIGHT AND I CANNOT WAIT!", "IT IS FIGHT NIGHT IN THE CEMETERY! WATCH THE PATTERN, THROW THE PUNCHES, AND LET US GO!", "GOOD EVENING, GRAVEYARD! THE MOON IS FULL, THE FISTS ARE READY, AND I AM SCREAMING!", "WELCOME BACK TO THE MOST VIOLENT MEMORY GAME ON EARTH! LET THE PUNCHING BEGIN!"],
+    over: ["AND THAT IS THE MATCH! WHAT A NIGHT! WHAT A FIGHT!", "IT IS ALL OVER! THE GRAVEYARD GOES QUIET!", "THE FINAL BELL HAS RUNG! WHAT A PERFORMANCE!", "AND THE BRAINS HAVE LEFT THE BUILDING!", "THAT IS ALL SHE WROTE, FOLKS!"],
+  },
+  mags: {
+    pre: ["Oh, wow.", "Okay, okay, okay!", "Honestly?", "Rex. REX.", "Ooh, honey!", "Well, well, well!", "Hold on!", "Listen!", "Excuse me?!"],
+    hit: ["That is going to leave a mark. I LOVE it!", "Somebody call his dentist. Call ALL the dentists!", "Beautiful form. Disgusting results. Ten out of ten!", "That face just got rearranged. Like furniture!", "I would pay money to see that again. Lots of money!", "Okay fine, that was incredible. Do not tell anyone I said that!", "He hit that pattern like it owed him rent!", "That zombie is going to need a new face. And a new agent!", "I came for the violence and I am NOT disappointed!", "Somebody frame that punch and hang it in a museum!", "Gorgeous! Gruesome! Gorgeous AND gruesome!", "That was so clean I could eat off it. I will not, but I could!"],
+    post: ["Chef's kiss!", "Iconic. Truly iconic!", "I am obsessed!", "Put it on a T-shirt!", "I am telling my mother about this!", "Unreal. Simply unreal!"],
+    wrong: ["Rookie mistake! I have seen goldfish with better memory!", "The zombies are laughing at you. The ZOMBIES, champ!", "Wrong face, sweetie! Wrong face!", "Did you forget the pattern or did the pattern forget you?", "Bold strategy. Terrible, but bold!", "Oh, that was embarrassing. For everyone. Especially me!", "That zombie did not even groan, champ!"],
+    postWrong: ["Yikes!", "Oof. Big oof!", "I need to look away!", "Somebody get this man a notepad!"],
+    punch: ["Ooh!", "Nice!", "Yes, ma'am!", "Smack!", "Get him!", "Spicy!", "Love it!", "Crunch!"],
+    intro: ["Fresh faces, Rex. Gorgeous. Give it three rounds and they will look like a dropped lasagna!", "Look at those pretty faces. Enjoy them, everybody! They will not last!", "I did my hair for this, Rex. I did my HAIR. Let us make it worth it!"],
+    over: ["Somebody get a mop. Get TWO mops!", "Well, that was a mess. A GLORIOUS mess!", "Same time next week? Please say yes!", "I laughed, I cried, I got splattered. Five stars!"],
+  },
+  ivy: {
+    pre: ["Oh, fascinating!", "Remarkable!", "Oh my stars!", "For science!", "Clinically speaking,", "Oh, goodie!", "How marvelous!", "Wow, wow, wow!"],
+    hit: ["A textbook orbital fracture! I need to write this down!", "Did you hear that crunch? That was a jaw! How EXCITING!", "That was MAGNIFICENT trauma!", "I count at least three loose molars! THREE!", "The cheekbone just relocated to the forehead! Wonderful!", "That is the cleanest concussion I have ever documented!", "My clipboard is shaking with joy!", "Blunt force perfection! I am going to publish a paper!", "The swelling is coming up beautifully!", "I have not been this happy since medical school!", "That bruise is going to be SO purple!", "Look at that blood spatter pattern! Textbook! Gorgeous!"],
+    post: ["Somebody hand me my forceps!", "I am giving this a gold star!", "Nurse! NURSE! Did you see that?", "This is going in my scrapbook!", "Peer review will be THRILLED!"],
+    wrong: ["Oh dear, the patient remains un-punched! Clinically tragic!", "Wrong patient! Wrong patient! Check the chart!", "That was a misdiagnosis! A violent misdiagnosis!", "The wrong head! My heart rate just spiked, and not in the fun way!", "Short-term memory failure! I am taking notes!"],
+    postWrong: ["Tragic!", "I need a sedative!", "Let us run that test again!"],
+    punch: ["Fracture!", "Contusion!", "Oh, lovely!", "Bruising!", "Crunchy!", "Splendid!", "Delicious data!"],
+    intro: ["Dr. Ivy Thornwood here, and I have brought my clipboard, my forceps, and SO much excitement!", "Good evening! Tonight's specimens look healthy. I simply cannot wait to change that!"],
+    over: ["Time of defeat, right now! What a case study! I am THRILLED!", "Autopsy at dawn! I will bring donuts!", "Fascinating match! I filled four notebooks!"],
+    stage: { 3: "Look at that discoloration! Grade two contusions! MARVELOUS!", 6: "The optic nerve is holding that eye by a THREAD! I have never been so happy!", 9: "Necrosis is setting in! The green! The GREEN! Wonderful!", 12: "Full undead status confirmed! Somebody fetch my camera!" },
+  },
+  earl: {
+    pre: ["Hot diggity!", "Whoo-ee!", "Land sakes!", "Well, butter my biscuit!", "Holy moly!", "Gosh darn it!", "Hoo boy!", "Good golly!", "Yee-haw!"],
+    hit: ["Now THAT is how we did it in nineteen fifty-two!", "That boy has got a mean right hook!", "I have not seen punching like that since the great graveyard brawl of sixty-eight!", "That is better than my wedding day! Do not tell Martha!", "My hip just popped out from the excitement!", "Back in my day we only had two zombies and one fist!", "That youngster punches like a tornado in a pie shop!", "I am so excited my teeth fell out! Oh wait, those are his!", "Now that is what I call good, honest, old-fashioned punching!", "Somebody give that kid a medal! A big shiny one!", "I fought in the zombie war and I NEVER saw a combo like that!"],
+    post: ["Whoo! My pacemaker is going wild!", "I am gonna need my heart pills!", "Martha, come look at this!", "That is going in my diary!", "I feel forty years younger!"],
+    wrong: ["Wrong head, sonny! Even my dentures remember better than that!", "Pay attention, youngster!", "That was the wrong one! I may be old but I am not blind!", "Back in my day, wrong punches got you sent to your room!", "Ohh, now you have gone and done it!"],
+    postWrong: ["Kids these days!", "Tsk, tsk, tsk!", "Shake it off, sonny!"],
+    punch: ["Whoo!", "Attaboy!", "Yeehaw!", "Hot dog!", "There ya go!", "Pow, pow!", "Sock it to him!"],
+    intro: ["Back in my day we punched zombies uphill, both ways, in the snow! And we LOVED it!", "Grandpa Earl here! I brought a thermos of coffee and a whole lot of yelling!"],
+    over: ["Well shucks, that is the ballgame! Somebody help me up, I got too excited!", "That was the best show since the moon landing! Whoo!", "Time for my nap! But wow, what a fight!"],
+  },
+  chad: {
+    pre: ["BRO!", "YO!", "BROOO!", "LET'S GO!", "NO WAY!", "SHEEESH!", "BRO, BRO, BRO!", "YOOOO!", "DUDE!"],
+    hit: ["THAT IS CRAZY, BRO!", "ABSOLUTE GAINS!", "THAT IS WHAT I AM TALKING ABOUT! NO DAYS OFF!", "HE HITS HARDER THAN MY PRE-WORKOUT!", "THAT IS A PERSONAL RECORD, BRO!", "ONE MORE REP! ONE MORE REP!", "THAT PATTERN JUST GOT DESTROYED!", "PROTEIN SHAKES FOR EVERYBODY!", "HE IS BUILT DIFFERENT, BRO! BUILT DIFFERENT!", "THAT WAS ELITE! ELITE, BRO!", "I AM LITERALLY SHAKING RIGHT NOW!", "THE PUMP IS UNREAL!"],
+    post: ["LET'S GOOOO!", "WE ARE SO BACK!", "RESPECT THE GRIND!", "ABSOLUTE BEAST MODE!", "I NEED TO HIT THE GYM RIGHT NOW!", "BEST DAY OF MY LIFE!"],
+    wrong: ["NOOO BRO! WRONG HEAD!", "BRO, WHAT WAS THAT? FOCUS UP, KING!", "THAT IS A SKIPPED LEG DAY, BRO!", "BRO FORGOT THE PATTERN! BRO FORGOT!", "THAT WAS NOT IT, CHIEF!", "YOU ARE BETTER THAN THAT, BRO!"],
+    postWrong: ["SHAKE IT OFF, KING!", "BOUNCE BACK, BRO!", "IT IS OKAY, WE GO AGAIN!"],
+    punch: ["SHEEESH!", "LET'S GO!", "GAINS!", "BOOM, BRO!", "YEAH BUDDY!", "HUGE!", "RIPPED!", "BEAST!"],
+    turn: ["GO GO GO! YOUR TURN, KING!", "NOW, BRO! NOW!", "YOUR SET, BRO! HIT IT!"],
+    intro: ["YO! CHAD BLITZ IN THE BOOTH! IT IS PUNCH DAY, BABY! LET'S GOOOO!", "WHAT IS UP, GRAVEYARD! I DID CHEST AND BACK TODAY AND I AM READY TO YELL!"],
+    over: ["GG BRO! GG! RESPECT THE GRIND! RUN IT BACK!", "BRO, THAT WAS A WORKOUT! I AM SWEATING!", "RUN IT BACK, KING! ONE MORE SET!"],
+  },
+  pixie: {
+    pre: ["Yaaay!", "Ooh!", "Wheee!", "Oh my gosh!", "Hiii!", "Super duper!", "Golly gee!", "Teehee!", "Wowie!"],
+    hit: ["Great job, friend! You get a sticker! A BLOODY sticker!", "So many sparkles! Oh wait, that is teeth! Wheee!", "Super duper punching! Give yourself a hug!", "That was the best memory game EVER! Can you say punch? PUNCH!", "You did it, friend! I am so proud I could explode!", "Let us all clap our hands! Clap, clap, clap!", "That zombie is seeing stars! Can you count the stars? I can't!", "Wow! That was more fun than a bouncy castle full of puppies!", "You remembered all the colors! Green! Red! Blue! Yellow! OUCH!", "Gold star! Gold star! Gold star for you!", "Friendship is magic, but punching is MORE magic!"],
+    post: ["Yaaay!", "Rainbows everywhere!", "Best friend forever!", "I am so happy I could cry!", "Hugs and punches for everyone!"],
+    wrong: ["Oopsie daisy! That was the wrong friend!", "Uh oh! Mistakes help us learn, friend!", "Wrong color, silly goose!", "Oh no! The zombies are giggling at us!", "Let us try again, friend! I believe in you!"],
+    postWrong: ["It is okay, friend!", "Big breath in, big breath out!", "You can do it!"],
+    punch: ["Wheee!", "Bonk!", "Yay!", "Boop!", "Oh my!", "Ouchie!", "Sparkly!"],
+    photo: ["Ooh, a new friend! Hello, new friend! You look so squishy! Yaaay!", "A new face to play with! I just KNOW we will be best friends!"],
+    intro: ["Hiii friends! It is Pixie Sparkles, and today we are learning about COLORS and PUNCHING! Yaaay!", "Hello, boys and girls! Who is ready to remember patterns and punch some faces? ME!"],
+    over: ["Bye bye, friends! Remember to brush your teeth! If you still have any!", "That was SO fun! Let us do it again and again and again!", "Nap time, friends! Sweet dreams of punching!"],
+  },
+  hammer: {
+    pre: ["LISTEN UP!", "HOOAH!", "ATTENTION!", "ON YOUR FEET!", "MOVE IT!", "I SAID!", "HUP, HUP!", "SOUND OFF!"],
+    hit: ["OUTSTANDING! THAT IS WHAT I CALL DISCIPLINE!", "NOW DO IT AGAIN, FASTER!", "THAT IS MY FIGHTER! GIVE ME TWENTY MORE!", "TEXTBOOK EXECUTION, SOLDIER!", "THAT PATTERN NEVER STOOD A CHANCE!", "YOU MAKE THIS OLD COACH PROUD!", "THAT IS HOW WE DO IT IN THE ZOMBIE CORPS!", "CRISP! CLEAN! DEADLY!", "I HAVE TRAINED THOUSANDS AND YOU ARE THE BEST!", "MISSION ACCOMPLISHED! NEXT MISSION!"],
+    post: ["DO NOT GET COMFORTABLE!", "STAY HUNGRY!", "EYES FRONT!", "NO RETREAT!", "AGAIN! AGAIN!"],
+    wrong: ["WHAT WAS THAT? DROP AND GIVE ME FIFTY!", "WRONG HEAD! MY GRANDMOTHER REMEMBERS BETTER AND SHE IS A ZOMBIE!", "DID I TELL YOU TO PUNCH THAT ONE? DID I?", "SLOPPY! SLOPPY! SLOPPY!", "THAT IS NOT THE ORDER, SOLDIER!", "YOU ARE EMBARRASSING THE WHOLE PLATOON!"],
+    postWrong: ["TWENTY LAPS!", "RUN IT AGAIN!", "FOCUS!"],
+    punch: ["HIT!", "AGAIN!", "GOOD!", "MOVE!", "HUP!", "STRIKE!", "YES SIR!"],
+    speed: ["THE PATTERN IS SPEEDING UP! EYES FRONT! NO BLINKING!", "DOUBLE TIME, SOLDIER! DOUBLE TIME!", "FASTER! FASTER! THE ZOMBIES ARE NOT WAITING FOR YOU!"],
+    turn: ["YOUR TURN! GO GO GO!", "PUNCH, SOLDIER! NOW!"],
+    intro: ["LISTEN UP, MAGGOT! WATCH THE HEADS! REMEMBER THE ORDER! PUNCH LIKE YOU MEAN IT!", "COACH HAMMER IN THE BOOTH! NO EXCUSES TONIGHT! MOVE MOVE MOVE!"],
+    over: ["YOU CALL THAT A FIGHT? GET BACK OUT THERE AND RUN IT AGAIN!", "DISMISSED! NOW GET BACK IN THERE!", "THAT WAS ADEQUATE! AND ADEQUATE IS NOT ENOUGH! AGAIN!"],
+  },
+  zed: {
+    pre: ["Braaaains!", "Ooooh.", "Mmmmm.", "Uuuurgh!", "Hnnnngh.", "Grrraaah!"],
+    hit: ["Beautiful. Brains everywhere. Braaaavo!", "That was my cousin. He deserved it!", "So much splatter. Zed is so happy!", "That face is falling off. Like mine!", "Ooooh. That one made a squishy noise. Zed loves squishy noises!", "Big punch. Bigger crunch. Braaains!", "Zed is clapping. Zed's hand fell off. Still clapping!", "Even zombies cannot remember that good!", "Ten out of ten. Would get punched again!"],
+    post: ["Braaaains!", "Hungry now!", "Zed is crying happy tears. They are green!", "Zed approves!"],
+    wrong: ["Heh heh heh. Wrong head. Zombies win!", "Zed forgets things too. Zed forgot his legs!", "Wrong one! Zed is laughing! Zed's jaw fell off!", "Hee hee. Silly human!"],
+    postWrong: ["Braaaains!", "Heh heh heh!", "Zombies one, humans zero!"],
+    punch: ["Braaains!", "Squish!", "Ooooh!", "Crunch!", "Yummy!", "Splat!"],
+    photo: ["Ooooh. New face. Looks tasty. Braaaains!", "Fresh one! Zed wants to be friends! And then eat!"],
+    intro: ["Braaaains. Zed here. Big fan of the show. Huge fan. Braaains!", "Zed is ready! Zed brought snacks! The snacks are brains!"],
+    over: ["Game over. Now we eat. Braaaaains!", "Good show. Zed is tired. Zed is always tired. Braaains!"],
+  },
+};
+const linesFor = (w, ev) => (BANK[w] && BANK[w][ev]) || null;
+function speakerWith(ev, ...not) { const pool = others(...not).filter(w => linesFor(w, ev)); return pick(pool); }
+function build(w, ev) { // [opener] + reaction + [follow-up], so lines rarely repeat
+  const B = BANK[w];
+  let t = pick(B[ev]);
+  if ((ev === 'hit' || ev === 'wrong') && B.pre && chance(0.6)) t = pick(B.pre) + ' ' + t;
+  if (ev === 'hit' && B.post && chance(0.55)) t += ' ' + pick(B.post);
+  if (ev === 'wrong' && B.postWrong && chance(0.5)) t += ' ' + pick(B.postWrong);
+  return t;
+}
+function crowd(ev, n, ...not) { const out = [], used = [...not]; for (let k = 0; k < n; k++) { const w = speakerWith(ev, ...used); if (!w) break; used.push(w); out.push([w, build(w, ev)]); } return out; }
+function commentate(ev, arg) {
+  if (ev === 'start') { talk([['rex', pick(BANK.rex.intro)], ...crowd('intro', 2, 'rex')], true); return; }
+  if (ev === 'hit') { talk(crowd('hit', chance(0.35) ? 3 : 2), true); return; }
+  if (ev === 'punch') { if (!tts) return; const w = speakerWith('punch'); talk([[w, pick(BANK[w].punch)]]); return; } // device speech-synth stutters the game on phones when it fires mid-combo — per-punch lines only on the smooth TTS path; the booth still calls round starts, wins, misses and game over
+  if (ev === 'wrong' || ev === 'extra') {
+    const a = speakerWith('wrong');
+    const first = ev === 'extra' ? pick(['TOO MANY PUNCHES! THE PATTERN WAS ALREADY OVER!', 'HE KEPT SWINGING AFTER THE BELL! TOO MANY!', 'ONE PUNCH TOO MANY! ONE TOO MANY!'])
+      : (chance(0.3) ? 'WRONG HEAD! THAT SHOULD HAVE BEEN ' + arg + '!' : build(a, 'wrong'));
+    talk([[a, first], ...crowd('wrong', chance(0.4) ? 2 : 1, a)], true); return;
+  }
+  if (ev === 'over') { talk([['rex', pick(BANK.rex.over) + ' LEVEL ' + arg + '!'], ...crowd('over', 2, 'rex')], true); return; }
+  if (ev === 'stage') { const w = speakerWith('hit', 'rex', 'ivy'); talk([['rex', { 3: 'LOOK AT THOSE BRUISES COMING UP!', 6: 'OH MY! IS THAT AN EYE COMING LOOSE?', 9: 'THEY ARE TURNING, FOLKS! THEY ARE TURNING!', 12: 'FULL ZOMBIE! WE ARE IN UNCHARTED TERRITORY!' }[arg]], ['ivy', BANK.ivy.stage[arg]], [w, pick(BANK[w].post || BANK[w].punch)]], true); return; }
+  if (ev === 'speed') { talk([['hammer', pick(BANK.hammer.speed)], [pick(['chad', 'earl', 'pixie', 'rex']), 'LEVEL ' + arg + '! HERE WE GO!']], true); return; }
+  if (ev === 'turn') { const w = pick(['chad', 'hammer']); talk([[w, pick(BANK[w].turn)]]); return; }
+  if (ev === 'photo') { const w = pick(['pixie', 'zed']); talk([['rex', 'A NEW CHALLENGER ENTERS THE GRAVEYARD!'], [w, pick(BANK[w].photo)]], true); return; }
+  if (ev === 'me') { talk([[pick(['pixie', 'chad']), pick(['Looking sharp, cartoon champ! Yaaay!', 'YO, CARTOON KING! LOOKING SHREDDED, BRO!'])]], true); return; }
+}
+const $ = id => document.getElementById(id);
+const sndBtn = $('sndBtn');
+// phones only start audio from a completed tap (touchend/click), so unlock it there too
+try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {} // iPhone: play even with the silent switch on
+let audioUnlocked = false;
+function unlockAudio() {
+  initAudio();
+  if (!AC) return;
+  if (AC.state !== 'running') AC.resume().catch(() => {});
+  if (audioUnlocked) return;
+  try { const b = AC.createBuffer(1, 1, 22050), s = AC.createBufferSource(); s.buffer = b; s.connect(AC.destination); s.start(0); } catch (e) {}
+  try { if (synth) { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; synth.speak(u); } } catch (e) {}
+  audioUnlocked = AC.state === 'running';
+}
+['touchend', 'pointerup', 'click', 'keydown'].forEach(ev => addEventListener(ev, unlockAudio, { capture: true, passive: true }));
+document.addEventListener('visibilitychange', () => { if (!document.hidden && AC && AC.state !== 'running') AC.resume().catch(() => {}); });
+function toggleMute() {
+  muted = !muted;
+  try { localStorage.setItem('zsmashMute', muted ? '1' : '0'); } catch (e) {}
+  if (master) master.gain.value = muted ? 0 : 0.85;
+  if (muted && synth) synth.cancel();
+  if (muted && tts) { try { tts.stop(); } catch (e) {} }
+  sndBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+}
+sndBtn.textContent = muted ? '🔇 Sound off' : '🔊 Sound on';
+
+// ================= YOUR FACE =================
+let face = null;
+const facePrev = $('facePrev'), camBox = $('cam'), vid = $('vid'), camMsg = $('camMsg');
+function setFace(src) {
+  if (!src) { face = null; facePrev.style.display = 'none'; $('clearFace').style.display = 'none'; return; }
+  const img = new Image();
+  img.onload = () => { face = img; facePrev.src = src; facePrev.style.display = 'block'; $('clearFace').style.display = ''; };
+  img.src = src;
+}
+try { setFace(localStorage.getItem('zsmashFace')); } catch (e) {}
+// ---- photo filters (run in the browser; nothing is uploaded) ----
+// cartoon: edge-preserving smoothing (Kuwahara) + fewer colour levels + ink outlines.
+// zombie (tint given): the cartoon, rotted toward that zombie's skin colour, with sunken eyes and a dark vignette.
+function filterPhoto(source, sw, sh, mirror, tint) {
+  const N = 160, c = document.createElement('canvas'); c.width = c.height = N;
+  const g = c.getContext('2d', { willReadFrequently: true });
+  const s = Math.min(sw, sh) * (mirror ? 0.75 : 1);
+  if (mirror) { g.translate(N, 0); g.scale(-1, 1); }
+  g.drawImage(source, (sw - s) / 2, (sh - s) / 2, s, s, 0, 0, N, N);
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  const img = g.getImageData(0, 0, N, N), d = img.data, S = N + 1;
+  const I = [0, 1, 2, 3, 4].map(() => new Float64Array(S * S));
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const p = (y * N + x) * 4, L = 0.299 * d[p] + 0.587 * d[p + 1] + 0.114 * d[p + 2], v = [d[p], d[p + 1], d[p + 2], L, L * L], q = (y + 1) * S + x + 1;
+    for (let k = 0; k < 5; k++) I[k][q] = v[k] + I[k][q - 1] + I[k][q - S] - I[k][q - S - 1];
+  }
+  const box = (k, x0, y0, x1, y1) => I[k][(y1 + 1) * S + x1 + 1] - I[k][y0 * S + x1 + 1] - I[k][(y1 + 1) * S + x0] + I[k][y0 * S + x0];
+  const sm = new Float32Array(N * N * 3), lum = new Float32Array(N * N), r = 3;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let best = 1e18, o = [0, 0, 0];
+    for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+      const x0 = clamp(dx < 0 ? x - r : x, 0, N - 1), x1 = clamp(dx < 0 ? x : x + r, 0, N - 1), y0 = clamp(dy < 0 ? y - r : y, 0, N - 1), y1 = clamp(dy < 0 ? y : y + r, 0, N - 1);
+      const n = (x1 - x0 + 1) * (y1 - y0 + 1), mL = box(3, x0, y0, x1, y1) / n, v = box(4, x0, y0, x1, y1) / n - mL * mL;
+      if (v < best) { best = v; o = [box(0, x0, y0, x1, y1) / n, box(1, x0, y0, x1, y1) / n, box(2, x0, y0, x1, y1) / n]; }
+    }
+    const q = y * N + x; sm[q * 3] = o[0]; sm[q * 3 + 1] = o[1]; sm[q * 3 + 2] = o[2];
+    lum[q] = 0.299 * o[0] + 0.587 * o[1] + 0.114 * o[2];
+  }
+  const T = tint ? [parseInt(tint.slice(1, 3), 16), parseInt(tint.slice(3, 5), 16), parseInt(tint.slice(5, 7), 16)] : null;
+  const lev = 6, post = v => Math.round(clamp(v, 0, 255) / 255 * lev) / lev * 255;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    const q = y * N + x, p = q * 4, L = lum[q];
+    let R_ = sm[q * 3], G = sm[q * 3 + 1], B = sm[q * 3 + 2];
+    if (!T) { R_ = L + (R_ - L) * 1.4; G = L + (G - L) * 1.4; B = L + (B - L) * 1.4; }
+    else {
+      const l = L / 255;
+      R_ = R_ * 0.2 + T[0] * l * 1.15 * 0.8; G = G * 0.2 + T[1] * l * 1.2 * 0.8; B = B * 0.2 + T[2] * l * 1.05 * 0.8;
+      if (L < 90) { const k = 0.55 + L / 90 * 0.45; R_ *= k * 1.05; G *= k; B *= k * 1.1; }
+      for (const ex of [0.34, 0.66]) { const dd = Math.hypot((x / N - ex) / 0.13, (y / N - 0.43) / 0.08); if (dd < 1.6) { const k = 0.55 + Math.min(1, dd / 1.6) * 0.45; R_ *= k; G *= k * 0.95; B *= k * 1.05; } }
+      const vg = Math.hypot(x / N - 0.5, y / N - 0.5) / 0.71, k2 = 1 - Math.max(0, vg - 0.45) * 0.9;
+      R_ *= k2; G *= k2; B *= k2;
+    }
+    // Sobel edges on the smoothed luminance -> ink lines
+    let mag = 0;
+    if (x > 0 && y > 0 && x < N - 1 && y < N - 1) {
+      const a = (xx, yy) => lum[yy * N + xx];
+      const gx = -a(x - 1, y - 1) - 2 * a(x - 1, y) - a(x - 1, y + 1) + a(x + 1, y - 1) + 2 * a(x + 1, y) + a(x + 1, y + 1);
+      const gy = -a(x - 1, y - 1) - 2 * a(x, y - 1) - a(x + 1, y - 1) + a(x - 1, y + 1) + 2 * a(x, y + 1) + a(x + 1, y + 1);
+      mag = Math.hypot(gx, gy);
+    }
+    const ink = clamp((mag - 60) / 70, 0, 1) * 0.9, inkC = T ? [14, 20, 8] : [20, 12, 8];
+    d[p] = post(R_) * (1 - ink) + inkC[0] * ink; d[p + 1] = post(G) * (1 - ink) + inkC[1] * ink; d[p + 2] = post(B) * (1 - ink) + inkC[2] * ink; d[p + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  if (T) { // a few rot blotches and a blood trickle from the hairline
+    for (let k = 0; k < 6; k++) { g.fillStyle = 'rgba(30,45,10,0.3)'; g.beginPath(); g.arc(rnd(20, 140), rnd(15, 145), rnd(4, 11), 0, 6.283); g.fill(); }
+    g.fillStyle = 'rgba(120,6,12,0.85)'; const bx = rnd(50, 110); g.beginPath(); g.moveTo(bx - 4, 0); g.lineTo(bx + 4, 0); g.lineTo(bx + 2, rnd(30, 55)); g.arc(bx, 45, 3.5, 0, Math.PI); g.lineTo(bx - 3, 0); g.fill();
+  }
+  return c.toDataURL('image/jpeg', 0.88);
+}
+function cropToFace(source, sw, sh, mirror) {
+  const url = filterPhoto(source, sw, sh, mirror, null);
+  try { localStorage.setItem('zsmashFace', url); } catch (e) {}
+  setFace(url);
+}
+let stream = null, camOpen = false, counting = false;
+function closeCam() { camOpen = false; counting = false; camBox.style.display = 'none'; if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; } vid.srcObject = null; }
+$('camBtn').onclick = async () => {
+  initAudio(); SFX.click();
+  camOpen = true; camMsg.textContent = ''; $('count').textContent = ''; camBox.style.display = 'flex'; $('snap').disabled = true;
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error('This browser blocks the camera for this page');
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false });
+    if (!camOpen) { stream.getTracks().forEach(t => t.stop()); stream = null; return; }
+    vid.srcObject = stream; await vid.play(); $('snap').disabled = false;
+  } catch (err) {
+    camMsg.textContent = "Couldn't open the camera (" + (err.name === 'NotAllowedError' ? 'permission denied' : err.message || err.name) + "). Tap Cancel and use \"Use a photo\" instead.";
+  }
+};
+$('snap').onclick = () => {
+  if (counting || !stream) return;
+  counting = true; let n = 3; const cnt = $('count');
+  const tick = () => {
+    if (!camOpen) return;
+    if (n > 0) { cnt.textContent = n; if (can()) osc(AC.currentTime, 880, 0.08, 'square', 0.05); n--; setTimeout(tick, 700); return; }
+    cnt.textContent = ''; if (can()) nz(AC.currentTime, 0.08, 0.4, 6000);
+    const fl = $('flash'); fl.style.transition = 'none'; fl.style.opacity = 1;
+    requestAnimationFrame(() => { fl.style.transition = 'opacity .4s'; fl.style.opacity = 0; });
+    cropToFace(vid, vid.videoWidth, vid.videoHeight, true);
+    commentate('me');
+    setTimeout(closeCam, 450);
+  };
+  tick();
+};
+$('camCancel').onclick = closeCam;
+$('fileIn').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  const url = URL.createObjectURL(f), img = new Image();
+  img.onload = () => { cropToFace(img, img.naturalWidth, img.naturalHeight, false); URL.revokeObjectURL(url); initAudio(); commentate('me'); };
+  img.src = url; e.target.value = '';
+};
+// zombie faces: a human cartoon (early rounds) and a zombie version (blended in as they get beaten up)
+const zfaces = [null, null, null, null], hfaces = [null, null, null, null];
+function loadImg(src, cb) { const im = new Image(); im.onload = () => cb(im); im.src = src; }
+function setZFace(i, zsrc, hsrc) {
+  const slot = document.querySelector('.zslot[data-i="' + i + '"]');
+  if (!zsrc) { zfaces[i] = hfaces[i] = null; slot.classList.remove('has'); updateClearZ(); return; }
+  loadImg(zsrc, im => { zfaces[i] = im; updateClearZ(); });
+  if (hsrc) loadImg(hsrc, im => { hfaces[i] = im; });
+  slot.querySelector('img').src = hsrc || zsrc; slot.classList.add('has');
+}
+function updateClearZ() { $('clearZ').style.display = document.querySelector('.zslot.has') ? '' : 'none'; }
+for (let i = 0; i < 4; i++) { try { const z = localStorage.getItem('zsmashZ' + i); if (z) setZFace(i, z, localStorage.getItem('zsmashH' + i)); } catch (e) {} }
+document.querySelectorAll('.zslot input').forEach(inp => {
+  inp.onchange = e => {
+    const i = +inp.dataset.i, f = e.target.files && e.target.files[0]; if (!f) return;
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const z = filterPhoto(img, img.naturalWidth, img.naturalHeight, false, SKIN[i]);
+      const hm = filterPhoto(img, img.naturalWidth, img.naturalHeight, false, null);
+      URL.revokeObjectURL(url);
+      try { localStorage.setItem('zsmashZ' + i, z); localStorage.setItem('zsmashH' + i, hm); } catch (e2) {}
+      setZFace(i, z, hm);
+      initAudio(); heads[i].lit = 0.9; SFX.groan(i, 0.8);
+      commentate('photo');
+    };
+    img.src = url; e.target.value = '';
+  };
+});
+$('clearZ').onclick = () => { for (let i = 0; i < 4; i++) { try { localStorage.removeItem('zsmashZ' + i); localStorage.removeItem('zsmashH' + i); } catch (e) {} setZFace(i, null); } };
+$('clearFace').onclick = () => { try { localStorage.removeItem('zsmashFace'); } catch (e) {} setFace(null); };
+sndBtn.onclick = () => { initAudio(); toggleMute(); };
+document.querySelectorAll('#ui button, #cam button').forEach(b => b.addEventListener('click', () => b.blur()));
+const isUI = e => e.target && e.target.closest && e.target.closest('#ui,#cam');
+
+// ================= DRAW HELPERS =================
+function offscreen(w, h, fn) { const c = document.createElement('canvas'); c.width = w * 2; c.height = h * 2; const g = c.getContext('2d'); g.scale(2, 2); fn(g); return c; }
+const glowCache = {};
+function glowSprite(col) {
+  if (glowCache[col]) return glowCache[col];
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, col + 'ff'); gr.addColorStop(0.2, col + 'aa'); gr.addColorStop(0.55, col + '33'); gr.addColorStop(1, col + '00');
+  g.fillStyle = gr; g.fillRect(0, 0, 128, 128); return (glowCache[col] = c);
+}
+function glowAt(x, y, col, r, a = 1) { if (a <= 0 || r <= 0) return; ctx.globalAlpha = Math.min(1, a); ctx.drawImage(glowSprite(col), x - r, y - r, r * 2, r * 2); ctx.globalAlpha = 1; }
+function lighter(fn) { ctx.globalCompositeOperation = 'lighter'; fn(); ctx.globalCompositeOperation = 'source-over'; }
+function shade(hex, amt) {
+  const n = parseInt(hex.slice(1), 16);
+  const r = clamp((n >> 16) + amt, 0, 255), g = clamp(((n >> 8) & 255) + amt, 0, 255), b = clamp((n & 255) + amt, 0, 255);
+  return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+function text(t, x, y, size, col, align = 'center', font = SPOOKY, stroke = true) {
+  ctx.font = `${font === PLAIN ? '600 ' : ''}${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = 'middle';
+  if (stroke) { ctx.lineWidth = Math.max(3, size / 8); ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineJoin = 'round'; ctx.strokeText(t, x, y); }
+  ctx.fillStyle = col; ctx.fillText(t, x, y);
+}
+
+// ================= SCENE =================
+const HR = 58, SC = 1.86, HRD = HR * SC;          // head drawn ~108px radius
+const CX = W / 2, CY = 334, GAP = 8, TOP = 50, BOT = 616, HUB = 72;
+const TILES = [
+  { x0: 12, y0: TOP, x1: CX - GAP, y1: CY - GAP }, { x0: CX + GAP, y0: TOP, x1: W - 12, y1: CY - GAP },
+  { x0: 12, y0: CY + GAP, x1: CX - GAP, y1: BOT }, { x0: CX + GAP, y0: CY + GAP, x1: W - 12, y1: BOT },
+];
+const ZCOL = ['#4ade80', '#f87171', '#60a5fa', '#facc15'];
+const ZNAME = ['GREEN', 'RED', 'BLUE', 'YELLOW'];
+const SKIN = ['#8fbf6a', '#9fae8c', '#86a3b5', '#b9ab6c'];
+const KEYS = [['Digit1', 'Numpad1', 'KeyQ'], ['Digit2', 'Numpad2', 'KeyW'], ['Digit3', 'Numpad3', 'KeyA'], ['Digit4', 'Numpad4', 'KeyS']];
+const KEYHINT = ['Q', 'W', 'A', 'S'];
+
+const bg = offscreen(W, H, g => {
+  const sky = g.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#070a18'); sky.addColorStop(0.55, '#24193a'); sky.addColorStop(1, '#3a2340');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  for (let i = 0; i < 160; i++) { g.fillStyle = `rgba(255,255,240,${Math.random() * 0.7})`; g.fillRect(Math.random() * W, Math.random() * 300, 1.2, 1.2); }
+  const mg = g.createRadialGradient(780, 110, 10, 780, 110, 160); mg.addColorStop(0, 'rgba(255,245,200,0.5)'); mg.addColorStop(1, 'rgba(255,245,200,0)');
+  g.fillStyle = mg; g.fillRect(560, 0, 400, 300);
+  g.fillStyle = '#f3ecc8'; g.beginPath(); g.arc(780, 110, 52, 0, 6.283); g.fill();
+  g.fillStyle = 'rgba(160,150,110,0.35)'; [[765, 95, 10], [800, 125, 13], [790, 92, 6]].forEach(([x, y, r]) => { g.beginPath(); g.arc(x, y, r, 0, 6.283); g.fill(); });
+  // hills
+  g.fillStyle = '#140f22'; g.beginPath(); g.moveTo(0, 330);
+  for (let x = 0; x <= W; x += 40) g.lineTo(x, 320 - Math.sin(x / 140) * 35 - Math.sin(x / 57) * 10);
+  g.lineTo(W, H); g.lineTo(0, H); g.fill();
+  // dead trees
+  function tree(x, y, s) {
+    g.strokeStyle = '#0b0814'; g.lineCap = 'round';
+    const br = (x1, y1, a, len, w, d) => { if (d > 5) return; const x2 = x1 + Math.cos(a) * len, y2 = y1 + Math.sin(a) * len; g.lineWidth = w; g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); br(x2, y2, a - 0.5 + Math.random() * 0.3, len * 0.7, w * 0.65, d + 1); br(x2, y2, a + 0.4 + Math.random() * 0.3, len * 0.65, w * 0.65, d + 1); };
+    br(x, y, -1.57, 70 * s, 12 * s, 0);
+  }
+  tree(60, 360, 1.2); tree(905, 370, 1.0); tree(480, 330, 0.7);
+  // ground
+  const gr = g.createLinearGradient(0, 380, 0, H); gr.addColorStop(0, '#1d1a12'); gr.addColorStop(1, '#0c0a07');
+  g.fillStyle = gr; g.beginPath(); g.moveTo(0, 400); for (let x = 0; x <= W; x += 30) g.lineTo(x, 395 + Math.sin(x / 70) * 6); g.lineTo(W, H); g.lineTo(0, H); g.fill();
+  // tombstones between graves
+  for (const [x, y, w, h] of [[265, 405, 46, 62], [480, 400, 52, 70], [695, 405, 46, 60], [40, 420, 40, 55], [925, 418, 40, 55]]) {
+    const tg = g.createLinearGradient(x - w / 2, 0, x + w / 2, 0); tg.addColorStop(0, '#4a4a52'); tg.addColorStop(1, '#25252b');
+    g.fillStyle = tg; g.beginPath(); g.moveTo(x - w / 2, y); g.lineTo(x - w / 2, y - h + w / 2); g.arc(x, y - h + w / 2, w / 2, Math.PI, 0); g.lineTo(x + w / 2, y); g.fill();
+    g.fillStyle = 'rgba(0,0,0,0.35)'; g.fillRect(x - w * 0.3, y - h * 0.55, w * 0.6, 3); g.fillRect(x - w * 0.25, y - h * 0.45, w * 0.5, 3);
+    g.fillStyle = 'rgba(90,140,60,0.4)'; g.fillRect(x - w / 2, y - 6, w, 6);
+  }
+  // grass tufts
+  g.strokeStyle = '#2b3a1a'; g.lineWidth = 1.5;
+  for (let i = 0; i < 220; i++) { const x = Math.random() * W, y = rnd(400, H); g.beginPath(); g.moveTo(x, y); g.lineTo(x + rnd(-4, 4), y - rnd(4, 10)); g.stroke(); }
+});
+const decal = document.createElement('canvas'); decal.width = W * 2; decal.height = H * 2;
+const dg = decal.getContext('2d'); dg.scale(2, 2);
+function clearDecals() { dg.clearRect(0, 0, W, H); }
+function stamp(x, y, r, vx = 0, vy = 0) {
+  dg.fillStyle = `rgba(${110 + Math.random() * 40 | 0},6,10,0.9)`;
+  dg.beginPath(); dg.ellipse(x, y, r * 1.3, r * 0.75, 0, 0, 6.283); dg.fill();
+  for (let k = 0; k < 4; k++) { const a = Math.random() * 6.283, d = r * rnd(1.4, 2.6); dg.beginPath(); dg.arc(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.6, r * rnd(0.15, 0.4), 0, 6.283); dg.fill(); }
+  if (Math.hypot(vx, vy) > 300) { dg.beginPath(); dg.ellipse(x + vx * 0.01, y, r * 2.2, r * 0.35, 0, 0, 6.283); dg.fill(); }
+}
+
+// heads
+let seed = 3; const srand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+const heads = TILES.map((t, i) => ({
+  i, x: (t.x0 + t.x1) / 2, y: (t.y0 + t.y1) / 2 - 10, t, ox: 0, oy: 0, vx: 0, vy: 0, ang: 0, av: 0, phase: 'rest', pt: 0, sx: 0, sy: 0, sang: 0,
+  lit: 0, glow: 0, lift: 0, hit: 0, laugh: 0, mouth: 0, blink: rnd(1, 4), lookX: 0, lookY: 0,
+  spots: Array.from({ length: 5 }, () => ({ x: (srand() - 0.5) * HR * 1.3, y: (srand() - 0.5) * HR * 1.4, r: HR * (0.06 + srand() * 0.1) })),
+  missing: Math.floor(srand() * 5),
+  dmg: 0, sk: '#f1c9a5',
+  marks: {
+    bruises: Array.from({ length: 6 }, (_, k) => ({ x: (srand() - 0.5) * HR * 1.2, y: (srand() - 0.5) * HR * 1.3, r: HR * (0.12 + srand() * 0.12), th: 0.06 + k * 0.12 })),
+    cuts: Array.from({ length: 4 }, (_, k) => ({ x: (srand() - 0.5) * HR, y: (srand() - 0.6) * HR, a: srand() * 3, len: HR * (0.2 + srand() * 0.25), th: 0.14 + k * 0.17 })),
+    blackEye: srand() < 0.5 ? -1 : 1, popEye: srand() < 0.5 ? -1 : 1,
+  },
+}));
+// how beaten up the heads are: 0 = fresh human at level 1, 1 = full zombie by level 12
+const HUMAN = ['#f1c9a5', '#d9a273', '#b9805a', '#8a5a3c'];
+const HAIR = ['#2a1a10', '#5a3a1e', '#1e1a14', '#c9a35a'];
+const IRIS = ['#3b6ea5', '#5a3a1e', '#2f7a4a', '#6b4a2a'];
+function mixHex(a, b, t) {
+  const pa = parseInt(a.slice(1), 16), pb = parseInt(b.slice(1), 16), m = (sh) => Math.round(((pa >> sh) & 255) * (1 - t) + ((pb >> sh) & 255) * t);
+  return '#' + ((1 << 24) + (m(16) << 16) + (m(8) << 8) + m(0)).toString(16).slice(1);
+}
+const targetDamage = () => state === 'title' ? 0 : clamp((level - 1) / 11, 0, 1);
+
+// ================= STATE =================
+let state = 'title', seq = [], idx = 0, level = 0, lives = 3, score = 0, newBest = false;
+let showK = 0, showT = 0, showLit = false, stateT = 0, bannerT = 0, bannerText = '', statusFlash = 0;
+let drops = [], chunks = [], poofs = [], screenSplats = [], bursts = [], floaters = [];
+let arm = null, shake = 0, redFlash = 0, time = 0, fadeT = 0;
+
+const onTime = () => Math.max(0.2, 0.6 - level * 0.028);
+const gapTime = () => Math.max(0.08, onTime() * 0.45);
+
+function startGame() {
+  initAudio();
+  seq = []; level = 0; lives = 3; score = 0; newBest = false;
+  for (const h of heads) { h.dmg = 0; h.sk = HUMAN[h.i]; } // fresh faces for the new game
+  drops = []; chunks = []; screenSplats = []; clearDecals();
+  commentate('start');
+  [0, 1, 3, 2].forEach((k, j) => setTimeout(() => { heads[k].lit = 0.14; SFX.groan(k, 0.14); }, 150 + j * 130));
+  nextLevel(1.6);
+}
+function nextLevel(delay = 0.7) {
+  level++;
+  seq.push(Math.floor(Math.random() * 4));
+  bannerText = 'LEVEL ' + level; bannerT = 1.3;
+  const lines = { 3: 'They are starting to bruise.', 6: 'Ooh. That eye is coming loose.', 9: 'They are turning! Keep punching!', 12: 'Full zombie. No mercy.' };
+  if ([3, 6, 9, 12].includes(level)) commentate('stage', level);
+  else if (level > 1 && level % 5 === 0) commentate('speed', level);
+  beginShow(delay);
+}
+function beginShow(delay) { state = 'show'; showK = 0; showT = -delay; showLit = false; idx = 0; }
+
+function updateShow(dt) {
+  showT += dt;
+  if (showT < 0) return;
+  const on = onTime(), gap = gapTime();
+  if (!showLit) {
+    const h = heads[seq[showK]]; h.lit = on; SFX.groan(seq[showK], on); showLit = true;
+    // your turn starts the moment the last zombie lights up, so a quick first punch is never thrown away
+    if (showK === seq.length - 1) { state = 'input'; stateT = 0; idx = 0; if (level <= 2) commentate('turn'); return; }
+  }
+  if (showT >= on + gap) {
+    showK++; showT = 0; showLit = false;
+    if (showK >= seq.length) { state = 'input'; stateT = 0; if (level <= 2) commentate('turn'); }
+  }
+}
+
+function tryPunch(i) {
+  if (state === 'title') { startGame(); return; }
+  if (state === 'over') { if (stateT > 1.2) startGame(); return; }
+  if (state !== 'input' && state !== 'good') { punchHead(i, true); statusFlash = 0.6; return; } // zombies still showing the pattern: doesn't count
+  const extra = state === 'good'; // pattern already finished: any extra punch is a mistake
+  punchHead(i, false);
+  if (!extra && i === seq[idx]) {
+    idx++;
+    const pts = 10 * level; score += pts;
+    if (idx < seq.length && chance(0.55)) commentate('punch');
+    floaters.push({ x: heads[i].x, y: heads[i].y - HRD - 6, t: 0.9, text: '+' + pts, col: ZCOL[i] });
+    if (idx === seq.length) {
+      state = 'good'; stateT = 0; SFX.win();
+      if (level > best) { best = level; newBest = true; try { localStorage.setItem('zsmashBest', best); } catch (e) {} }
+      commentate('hit');
+    }
+  } else {
+    lives--; SFX.buzz(); redFlash = 0.6; shake = 14;
+    for (const h of heads) h.laugh = 1.3;
+    setTimeout(() => SFX.laugh(), 120);
+    if (lives <= 0) {
+      state = 'over'; stateT = 0; SFX.over();
+      for (const hh of heads) hh.lit = 0.6;
+      commentate('over', level);
+    } else {
+      state = 'oops'; stateT = 0;
+      commentate(extra ? 'extra' : 'wrong', ZNAME[seq[idx]]);
+    }
+  }
+}
+
+function punchHead(i, light) {
+  const h = heads[i];
+  const tx = h.x + h.ox, ty = h.y + h.oy - h.lift;
+  arm = { i, t: 0, tx, ty };
+  h.lit = Math.max(h.lit, 0.16); // the punched panel lights up
+  const dir = h.x < CX ? -1 : 1, up = h.y < CY;
+  h.phase = 'fly'; h.pt = light ? 0.16 : 0.24;
+  h.vx = dir * rnd(300, 620); h.vy = up ? rnd(-1000, -700) : rnd(-650, -350); h.av = dir * rnd(12, 22); h.hit = 0.45;
+  for (let k = 0; k < (light ? 10 : 20); k++) {
+    const a = rnd(-3.0, -0.1), s = rnd(150, 620);
+    drops.push({ x: tx + rnd(-50, 50), y: ty + rnd(-30, 50), vx: Math.cos(a) * s * 1.3, vy: Math.sin(a) * s * 1.2, r: rnd(3, 8), land: rnd(Math.min(ty + 60, BOT - 20), BOT) });
+  }
+  if (!light && Math.random() < 0.6) for (let k = 0; k < 1 + (Math.random() * 2 | 0); k++)
+    chunks.push({ x: tx, y: ty + 20, vx: rnd(-250, 250), vy: rnd(-600, -300), rot: 0, vr: rnd(-15, 15), type: Math.random() < 0.8 ? 'tooth' : 'eye', life: 1.4, land: rnd(Math.min(ty + 80, BOT - 10), BOT) });
+  if (!light && Math.random() < 0.4) screenSplat();
+  bursts.push({ x: tx, y: ty + 20, t: 0.28, word: pick(['POW!', 'SPLAT!', 'BONK!', 'SMACK!', 'CRUNCH!', 'WHAM!']), col: ZCOL[i], rot: rnd(-0.3, 0.3) });
+  shake = Math.max(shake, light ? 4 : 9);
+  SFX.punch(); setTimeout(() => SFX.splat(), 40);
+  SFX.groan(i, 0.22);
+}
+function screenSplat() {
+  const x = rnd(120, W - 120), y = rnd(90, 360), r = rnd(30, 70);
+  screenSplats.push({ x, y, r, t: 1.3, blobs: Array.from({ length: 7 }, () => ({ a: Math.random() * 6.283, d: r * rnd(0.6, 1.4), r: r * rnd(0.12, 0.35) })), drips: Array.from({ length: 3 }, () => ({ x: rnd(-r * 0.7, r * 0.7), w: rnd(4, 9), sp: rnd(40, 110) })) });
+}
+
+// ================= INPUT =================
+function columnAt(x, y) { if (Math.hypot(x - CX, y - CY) < 44) return -1; if (y < TOP - 10) return -1; return (y < CY ? 0 : 2) + (x < CX ? 0 : 1); }
+function toGame(cx, cy) { const r = cv.getBoundingClientRect(); return { x: (cx - r.left) / r.width * W, y: (cy - r.top) / r.height * H }; }
+function pointer(cx, cy) {
+  const p = toGame(cx, cy);
+  if (state === 'title') { startGame(); return; }
+  if (state === 'over') { if (stateT > 1.2) startGame(); return; }
+  const i = columnAt(p.x, p.y);
+  if (i >= 0) tryPunch(i);
+}
+addEventListener('keydown', e => {
+  if (window.__apHold && window.__apHold()) return;
+  if (camOpen) { if (e.code === 'Escape') closeCam(); return; }
+  if (['Space', 'ArrowUp', 'ArrowDown'].includes(e.code)) e.preventDefault();
+  initAudio();
+  if (e.repeat) return;
+  if (e.code === 'KeyM') { toggleMute(); return; }
+  if (e.code === 'Enter' || e.code === 'Space') { if (state === 'title' || (state === 'over' && stateT > 1.2)) startGame(); return; }
+  const i = KEYS.findIndex(k => k.includes(e.code));
+  if (i >= 0) tryPunch(i);
+});
+addEventListener('mousedown', e => { if (window.__apHold && window.__apHold()) return; if (isUI(e) || camOpen) return; initAudio(); pointer(e.clientX, e.clientY); });
+addEventListener('touchstart', e => {
+  if (window.__apHold && window.__apHold()) return;
+  if (isUI(e) || camOpen) return;
+  initAudio(); e.preventDefault();
+  for (const t of e.changedTouches) pointer(t.clientX, t.clientY);
+}, { passive: false });
+addEventListener('touchmove', e => { if (!isUI(e)) e.preventDefault(); }, { passive: false });
+
+// ================= UPDATE =================
+function updateHead(h, dt) {
+  // decay only builds up during a game; it resets only when a new game starts (see startGame)
+  const td = targetDamage();
+  if (td > h.dmg) h.dmg += (td - h.dmg) * Math.min(1, dt * 3); else if (state === 'title') h.dmg = td;
+  h.sk = mixHex(HUMAN[h.i], SKIN[h.i], clamp(h.dmg * 1.25, 0, 1));
+  h.lit = Math.max(0, h.lit - dt); h.hit = Math.max(0, h.hit - dt); h.laugh = Math.max(0, h.laugh - dt);
+  h.blink -= dt; if (h.blink < -0.13) h.blink = rnd(1.5, 5);
+  const k = Math.min(1, dt * 16);
+  h.glow = h.lit > 0 ? 1 : Math.max(0, h.glow - dt * 7); // snaps on, fades off fast
+  h.lift += ((h.lit > 0 ? 16 : 0) - h.lift) * k;
+  h.mouth += ((h.lit > 0 || h.laugh > 0 ? (h.laugh > 0 ? 0.6 + Math.abs(Math.sin(time * 18)) * 0.4 : 1) : h.hit > 0 ? 0.8 : 0.08) - h.mouth) * Math.min(1, dt * 20);
+  const tgt = arm ? { x: arm.tx, y: arm.ty } : { x: CX, y: CY };
+  const lx = tgt.x - h.x, ly = tgt.y - h.y, ll = Math.hypot(lx, ly) || 1;
+  h.lookX += (lx / ll - h.lookX) * k; h.lookY += (ly / ll - h.lookY) * k;
+  if (h.phase === 'fly') {
+    h.pt -= dt; h.vy += 1900 * dt; h.ox += h.vx * dt; h.oy += h.vy * dt; h.ang += h.av * dt;
+    if (Math.random() < dt * 70) drops.push({ x: h.x + rnd(-12, 12), y: h.t.y1 - 40, vx: rnd(-160, 160), vy: rnd(-560, -280), r: rnd(3, 6), land: rnd(h.t.y1 - 30, Math.min(BOT, h.t.y1 + 40)) });
+    if (h.pt <= 0) { h.phase = 'ret'; h.pt = 0.12; h.sx = h.ox; h.sy = h.oy; h.sang = h.ang; }
+  } else if (h.phase === 'ret') {
+    h.pt -= dt; const e = Math.max(0, h.pt / 0.12) ** 2;
+    h.ox = h.sx * e; h.oy = h.sy * e; h.ang = h.sang * e;
+    if (h.pt <= 0) {
+      h.phase = 'rest'; h.ox = h.oy = h.ang = 0; h.vx = h.vy = 0; h.av = (Math.random() < 0.5 ? -1 : 1) * 5; h.vy = 120;
+      for (let n = 0; n < 8; n++) { const a = Math.random() * 6.283; poofs.push({ x: h.x + Math.cos(a) * 80, y: h.y + Math.sin(a) * 80, vx: Math.cos(a) * 120, vy: Math.sin(a) * 120, r: rnd(10, 20), t: 0.35 }); }
+      SFX.pop();
+    }
+  } else {
+    h.vx += (-260 * h.ox - 11 * h.vx) * dt; h.vy += (-260 * h.oy - 11 * h.vy) * dt;
+    h.ox += h.vx * dt; h.oy += h.vy * dt;
+    h.av += (-170 * h.ang - 7 * h.av) * dt; h.ang += h.av * dt;
+  }
+}
+
+function update(dt) {
+  time += dt; stateT += dt;
+  for (const h of heads) updateHead(h, dt);
+  if (state === 'show') updateShow(dt);
+  else if (state === 'good' && stateT > 0.85) nextLevel();
+  else if (state === 'oops' && stateT > 1.5) beginShow(0.2);
+  else if (state === 'title' && Math.random() < dt * 0.9) { const i = Math.floor(Math.random() * 4); heads[i].lit = 0.45; }
+
+  for (const d of drops) {
+    d.vy += 1500 * dt; d.x += d.vx * dt; d.y += d.vy * dt;
+    if (d.vy > 0 && d.y >= d.land) { stamp(d.x, d.y, d.r, d.vx, d.vy); d.dead = true; }
+    if (d.x < -50 || d.x > W + 50 || d.y > H + 50) d.dead = true;
+  }
+  drops = drops.filter(d => !d.dead);
+  for (const c of chunks) {
+    c.life -= dt;
+    if (c.y < c.land || c.vy < 0) { c.vy += 1500 * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.rot += c.vr * dt; }
+    else { c.y = c.land; if (Math.abs(c.vy) > 120) { c.vy *= -0.35; c.vx *= 0.6; c.y -= 1; } else { c.vy = 0; c.vx *= 0.9; c.vr *= 0.9; c.x += c.vx * dt; } }
+  }
+  chunks = chunks.filter(c => c.life > 0);
+  for (const p of poofs) { p.x += p.vx * dt; p.y += p.vy * dt; p.r += 30 * dt; p.t -= dt; }
+  poofs = poofs.filter(p => p.t > 0);
+  for (const s of screenSplats) s.t -= dt;
+  screenSplats = screenSplats.filter(s => s.t > 0);
+  for (const b of bursts) b.t -= dt;
+  bursts = bursts.filter(b => b.t > 0);
+  for (const f of floaters) { f.t -= dt; f.y -= 40 * dt; }
+  floaters = floaters.filter(f => f.t > 0);
+  if (arm) { arm.t += dt; if (arm.t > 0.22) arm = null; }
+  shake = Math.max(0, shake - dt * 40);
+  redFlash = Math.max(0, redFlash - dt);
+  bannerT = Math.max(0, bannerT - dt);
+  statusFlash = Math.max(0, statusFlash - dt);
+  fadeT += dt;
+  if (fadeT > 0.1) { fadeT = 0; dg.globalCompositeOperation = 'destination-out'; dg.fillStyle = 'rgba(0,0,0,0.02)'; dg.fillRect(0, 0, W, H); dg.globalCompositeOperation = 'source-over'; }
+}
+
+// ================= DRAW =================
+const fog = offscreen(W, 160, g => {
+  for (let i = 0; i < 16; i++) {
+    const x = Math.random() * W, y = rnd(40, 120), r = rnd(60, 140);
+    const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, 'rgba(200,210,230,0.16)'); gr.addColorStop(1, 'rgba(200,210,230,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, W, 160);
+  }
+});
+
+function tilePath(t, r = 26) {
+  ctx.beginPath(); ctx.moveTo(t.x0 + r, t.y0); ctx.arcTo(t.x1, t.y0, t.x1, t.y1, r); ctx.arcTo(t.x1, t.y1, t.x0, t.y1, r); ctx.arcTo(t.x0, t.y1, t.x0, t.y0, r); ctx.arcTo(t.x0, t.y0, t.x1, t.y0, r); ctx.closePath();
+}
+const hexA = a => Math.round(clamp(a, 0, 1) * 255).toString(16).padStart(2, '0');
+function drawTileArt(h) {
+  const t = h.t, c = ZCOL[h.i], gl = h.glow;
+  // unlit: dark coloured plastic. lit: the whole panel blazes in its colour with a white-hot centre
+  tilePath(t);
+  ctx.fillStyle = 'rgba(6,8,6,0.8)'; ctx.fill();
+  const dim = shade(c, -115);
+  const g = ctx.createRadialGradient(h.x, h.y - 20, 10, h.x, h.y, 340);
+  g.addColorStop(0, mixHex(mixHex(dim, c, 0.35), '#ffffff', gl * 0.6) + hexA(0.5 + gl * 0.5));
+  g.addColorStop(0.45, mixHex(dim, c, gl) + hexA(0.42 + gl * 0.55));
+  g.addColorStop(1, mixHex(shade(dim, -25), c, gl * 0.85) + hexA(0.35 + gl * 0.6));
+  ctx.fillStyle = g; ctx.fill();
+  ctx.save(); ctx.clip();
+  const sh = ctx.createLinearGradient(0, t.y0, 0, t.y1);
+  sh.addColorStop(0, 'rgba(255,255,255,0.12)'); sh.addColorStop(0.3, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,0.25)');
+  ctx.fillStyle = sh; ctx.fillRect(t.x0, t.y0, t.x1 - t.x0, t.y1 - t.y0);
+  ctx.restore();
+  tilePath(t);
+  ctx.lineWidth = 9; ctx.strokeStyle = '#050607'; ctx.stroke();
+  if (gl > 0.02) lighter(() => { ctx.lineWidth = 10; ctx.strokeStyle = c + hexA(gl * 0.5); ctx.stroke(); });
+  ctx.lineWidth = 2.5; ctx.strokeStyle = mixHex(shade(c, -40), '#ffffff', gl * 0.5) + hexA(0.4 + gl * 0.6); ctx.stroke();
+  // corner badge (outer corner)
+  const bx = h.i % 2 ? t.x1 - 38 : t.x0 + 38, by = h.i < 2 ? t.y0 + 32 : t.y1 - 32;
+  lighter(() => glowAt(bx, by, c, 40, 0.25 + gl * 0.75));
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.beginPath(); ctx.arc(bx, by, 20, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = c; ctx.lineWidth = 2; ctx.stroke();
+  text(String(h.i + 1), bx, by + 1, 24, c, 'center', SPOOKY, false);
+  text('or ' + KEYHINT[h.i], bx + (h.i % 2 ? -34 : 34), by, 13, c + 'aa', h.i % 2 ? 'right' : 'left', PLAIN, false);
+}
+const tileCache = {};
+function drawTile(h, sx, sy) {
+  const t = h.t, step = Math.round(h.glow * 4) / 4;
+  let c = tileCache[h.i];
+  if (!c || c.step !== step || c.scale !== scale) {
+    if (!c) { c = tileCache[h.i] = { cv: document.createElement('canvas') }; }
+    c.cv.width = Math.max(2, Math.round((t.x1 - t.x0) * scale));
+    c.cv.height = Math.max(2, Math.round((t.y1 - t.y0) * scale));
+    const g = c.cv.getContext('2d');
+    g.setTransform(scale, 0, 0, scale, -t.x0 * scale, -t.y0 * scale);
+    const old = ctx, og = h.glow;
+    ctx = g; h.glow = step;
+    try { drawTileArt(h); } finally { ctx = old; h.glow = og; }
+    c.step = step; c.scale = scale;
+  }
+  ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(c.cv, Math.round((t.x0 + (sx || 0)) * scale), Math.round((t.y0 + (sy || 0)) * scale));
+  ctx.restore();
+}
+function drawNeck(h) {
+  const sk = h.sk, base = h.t.y1 - 4, nw = HRD * 0.52;
+  const hx = h.x + h.ox, hy = h.y + h.oy - h.lift;
+  ctx.save(); tilePath(h.t); ctx.clip();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = shade(sk, -30); ctx.lineWidth = nw;
+  if (h.phase === 'fly') {
+    ctx.beginPath(); ctx.moveTo(h.x, base + 20); ctx.lineTo(h.x, base - 36); ctx.stroke();
+    ctx.fillStyle = '#8a0c12'; ctx.beginPath(); ctx.ellipse(h.x, base - 40, nw * 0.5, 11, 0, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#e8e0c0'; ctx.beginPath(); ctx.arc(h.x, base - 40, 7, 0, 6.283); ctx.fill();
+  } else {
+    ctx.beginPath(); ctx.moveTo(h.x, base + 20); ctx.quadraticCurveTo(h.x, (base + hy) / 2, hx, hy + HRD * 0.75); ctx.stroke();
+  }
+  ctx.fillStyle = '#3b3346'; ctx.beginPath(); ctx.ellipse(h.x, base, nw * 0.95, 16, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#2a2433'; for (let k = -2; k <= 2; k++) { ctx.beginPath(); ctx.moveTo(h.x + k * 18, base - 8); ctx.lineTo(h.x + k * 18 + 6, base + 10); ctx.lineTo(h.x + k * 18 - 6, base + 10); ctx.fill(); }
+  ctx.restore();
+}
+
+// ---- head base cache: everything about a head that only changes with damage
+// (skin, photo, spots, bruises, cuts, lump, exposed brain, stitches, black eye,
+// nose) is painted once per damage step into an offscreen; the live draw blits
+// it and paints only the animated parts (eyes, mouth, brows, hair sway) on top.
+const HEAD_EXT = HR * 1.55;
+const headBaseCache = {};
+function paintHeadBase(h) {
+  const i = h.i, R = HR, D = h.dmg, sk = h.sk, M = h.marks;
+  const hp = hfaces[i], zp = zfaces[i], photo = !!(hp || zp);
+  const pops = D > (i === 1 ? 0.5 : 0.8), brain = i === 3 && D > 0.75;
+  const head = () => { ctx.beginPath(); ctx.ellipse(0, 0, R * 0.9, R, 0, 0, 6.283); };
+  const g = ctx.createRadialGradient(-R * 0.3, -R * 0.35, R * 0.1, 0, 0, R * 1.05);
+  g.addColorStop(0, shade(sk, 35)); g.addColorStop(0.65, sk); g.addColorStop(1, shade(sk, -55));
+  ctx.fillStyle = g; head(); ctx.fill();
+  ctx.save(); head(); ctx.clip();
+  if (photo) {
+    if (hp) ctx.drawImage(hp, -R, -R, R * 2, R * 2);
+    if (zp) { ctx.globalAlpha = hp ? clamp(D * 1.15, 0, 1) : 1; ctx.drawImage(zp, -R, -R, R * 2, R * 2); ctx.globalAlpha = 1; }
+  } else {
+    for (const s2 of h.spots) { ctx.fillStyle = `rgba(40,60,20,${D * 0.38})`; ctx.beginPath(); ctx.arc(s2.x, s2.y, s2.r, 0, 6.283); ctx.fill(); }
+    if (i !== 2 && !brain) { ctx.globalAlpha = 1 - D * 0.7; ctx.fillStyle = HAIR[i]; ctx.beginPath(); ctx.ellipse(0, -R * 0.98, R * 1.0, R * 0.5, 0, 0, 6.283); ctx.fill(); ctx.globalAlpha = 1; }
+  }
+  for (const b of M.bruises) if (D > b.th) {
+    const a = Math.min(1, (D - b.th) * 4) * 0.6, bg = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
+    bg.addColorStop(0, `rgba(85,30,95,${a})`); bg.addColorStop(0.6, `rgba(110,40,80,${a * 0.6})`); bg.addColorStop(1, 'rgba(85,30,95,0)');
+    ctx.fillStyle = bg; ctx.fillRect(b.x - b.r, b.y - b.r, b.r * 2, b.r * 2);
+  }
+  for (const c of M.cuts) if (D > c.th) {
+    const dx = Math.cos(c.a) * c.len / 2, dy = Math.sin(c.a) * c.len / 2;
+    ctx.strokeStyle = '#6a0a10'; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(c.x - dx, c.y - dy); ctx.lineTo(c.x + dx, c.y + dy); ctx.stroke();
+    ctx.fillStyle = '#8a0c12'; ctx.fillRect(c.x - 1.5, c.y, 3, Math.min(18, (D - c.th) * 40));
+  }
+  ctx.restore();
+  head(); ctx.lineWidth = 3; ctx.strokeStyle = '#17210f'; ctx.stroke();
+  if (D > 0.4) { // swollen lump
+    const a = Math.min(1, (D - 0.4) * 4);
+    ctx.fillStyle = mixHex(sk, '#b04050', 0.4); ctx.beginPath(); ctx.arc(R * 0.55, -R * 0.62, R * 0.18 * a, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#17210f'; ctx.lineWidth = 2; ctx.stroke();
+  }
+  if (brain) {
+    const a = Math.min(1, (D - 0.75) * 5);
+    ctx.save(); head(); ctx.clip(); ctx.globalAlpha = a;
+    ctx.fillStyle = '#e88aa0'; ctx.beginPath(); ctx.ellipse(-R * 0.15, -R * 0.82, R * 0.55, R * 0.32, -0.2, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#b4566e'; ctx.lineWidth = 2;
+    for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.moveTo(-R * 0.55 + k * R * 0.22, -R * 0.95); ctx.quadraticCurveTo(-R * 0.45 + k * R * 0.22, -R * 0.7, -R * 0.5 + k * R * 0.24, -R * 0.62); ctx.stroke(); }
+    ctx.restore();
+    ctx.globalAlpha = a; ctx.strokeStyle = '#17210f'; ctx.lineWidth = 2.5; ctx.beginPath();
+    ctx.moveTo(-R * 0.68, -R * 0.62); for (let k = 0; k <= 8; k++) ctx.lineTo(-R * 0.68 + k * R * 0.14, -R * 0.55 + (k % 2 ? -6 : 4)); ctx.stroke(); ctx.globalAlpha = 1;
+  }
+  if (i === 0 && D > 0.5) { // stitches
+    ctx.globalAlpha = Math.min(1, (D - 0.5) * 5);
+    ctx.strokeStyle = '#1b1410'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-R * 0.55, -R * 0.5); ctx.quadraticCurveTo(0, -R * 0.72, R * 0.5, -R * 0.56); ctx.stroke();
+    ctx.lineWidth = 2; for (let k = 0; k < 6; k++) { const t = k / 5, sx2 = -R * 0.5 + t * R * 0.95, sy2 = -R * 0.53 - Math.sin(t * Math.PI) * R * 0.1; ctx.beginPath(); ctx.moveTo(sx2 - 3, sy2 - 6); ctx.lineTo(sx2 + 3, sy2 + 6); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  // black eye (the eye itself stays live; the bruise ring only moves with damage)
+  const ex = R * 0.34, ey = -R * 0.1, er = R * 0.2;
+  for (const s2 of [-1, 1]) {
+    const cx = s2 * ex, popped = pops && s2 === M.popEye;
+    if (D > 0.22 && s2 === M.blackEye && !popped) {
+      const a = Math.min(1, (D - 0.22) * 3) * 0.75;
+      const bg = ctx.createRadialGradient(cx, ey + 2, er * 0.6, cx, ey + 2, er * 1.6);
+      bg.addColorStop(0, `rgba(45,12,45,${a})`); bg.addColorStop(1, 'rgba(45,12,45,0)');
+      ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(cx, ey + 2, er * 1.6, 0, 6.283); ctx.fill();
+    }
+  }
+  // nose
+  if (!photo) {
+    ctx.strokeStyle = shade(sk, -60); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.moveTo(-2, -R * 0.02); ctx.quadraticCurveTo(-9, R * 0.14, -3, R * 0.18); ctx.stroke();
+    ctx.fillStyle = mixHex(shade(sk, -70), '#1e2410', D); ctx.beginPath(); ctx.ellipse(-5, R * 0.16, 2.5, 3.5, 0.3, 0, 6.283); ctx.ellipse(5, R * 0.16, 2.5, 3.5, -0.3, 0, 6.283); ctx.fill();
+  }
+  if (D > 0.28) { ctx.fillStyle = '#8a0c12'; const l = Math.min(1, (D - 0.28) * 3) * 16; ctx.fillRect(3.5, R * 0.18, 3.5, l); ctx.beginPath(); ctx.arc(5.25, R * 0.18 + l, 2.6, 0, 6.283); ctx.fill(); }
+}
+function headBase(h) {
+  const qD = Math.round(h.dmg * 50) / 50;
+  const key = h.i + '|' + qD + '|' + (hfaces[h.i] ? 1 : 0) + (zfaces[h.i] ? 1 : 0) + '|' + scale;
+  let c = headBaseCache[h.i];
+  if (c && c.key === key) return c.cv;
+  if (!c) { c = headBaseCache[h.i] = { cv: document.createElement('canvas') }; }
+  const S = SC * scale, px = Math.max(2, Math.ceil(HEAD_EXT * 2 * S));
+  c.cv.width = px; c.cv.height = px;
+  const g = c.cv.getContext('2d');
+  g.setTransform(S, 0, 0, S, HEAD_EXT * S, HEAD_EXT * S);
+  const old = ctx, od = h.dmg;
+  ctx = g; h.dmg = qD;
+  try { paintHeadBase(h); } finally { ctx = old; h.dmg = od; }
+  c.key = key;
+  return c.cv;
+}
+
+function drawHead(h) {
+  const i = h.i, R = HR, D = h.dmg, sk = h.sk, M = h.marks;
+  const x = h.x + h.ox, y = h.y + h.oy - h.lift;
+  if (h.glow > 0.02) lighter(() => glowAt(x, y, ZCOL[i], HRD * 2, h.glow * 0.8));
+  ctx.save(); ctx.translate(x, y); ctx.rotate(h.ang); ctx.scale(SC, SC);
+  const hp = hfaces[i], zp = zfaces[i], photo = !!(hp || zp);
+  const pops = D > (i === 1 ? 0.5 : 0.8), brain = i === 3 && D > 0.75;
+  const head = () => { ctx.beginPath(); ctx.ellipse(0, 0, R * 0.9, R, 0, 0, 6.283); };
+  if (i === 2 && !photo) { // messy hair behind (sways with time — stays live, under the cached base)
+    ctx.strokeStyle = HAIR[2]; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.globalAlpha = 1 - D * 0.4;
+    for (let k = -3; k <= 3; k++) { ctx.beginPath(); ctx.moveTo(k * 9, -R * 0.85); ctx.quadraticCurveTo(k * 14, -R * 1.25, k * 12 + Math.sin(time * 3 + k) * 4, -R * 1.2); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  ctx.drawImage(headBase(h), -HEAD_EXT, -HEAD_EXT, HEAD_EXT * 2, HEAD_EXT * 2);
+  if (photo && h.glow > 0.05) { ctx.save(); head(); ctx.clip(); ctx.fillStyle = ZCOL[i] + hexA(h.glow * 0.3); ctx.fillRect(-R, -R, R * 2, R * 2); ctx.restore(); }
+  if (h.hit > 0.25) { ctx.save(); head(); ctx.clip(); ctx.fillStyle = 'rgba(160,0,10,0.3)'; ctx.fillRect(-R, -R, R * 2, R * 2); ctx.restore(); }
+  // brows: calm when fresh, angry as they get beaten
+  if (!photo) {
+    ctx.strokeStyle = mixHex(HAIR[i], '#1a1a10', D); ctx.lineWidth = 4; ctx.lineCap = 'round';
+    const angry = h.laugh > 0 ? -0.15 : -0.05 + D * 0.3;
+    for (const s2 of [-1, 1]) { ctx.beginPath(); ctx.moveTo(s2 * R * 0.55, -R * 0.36 - angry * 12); ctx.lineTo(s2 * R * 0.15, -R * 0.3 + angry * 8); ctx.stroke(); }
+  }
+  // eyes
+  const ex = R * 0.34, ey = -R * 0.1, er = R * 0.2;
+  for (const s2 of [-1, 1]) {
+    const cx = s2 * ex, popped = pops && s2 === M.popEye;
+    if (popped) {
+      ctx.fillStyle = '#1a0505'; ctx.beginPath(); ctx.ellipse(cx, ey, er * 0.9, er * 0.8, 0, 0, 6.283); ctx.fill();
+      const sw = Math.sin(time * 3 + i) * 0.45 - h.ang * 0.5, ddx = Math.sin(sw) * R * 0.38, ddy = Math.cos(sw) * R * 0.38;
+      ctx.strokeStyle = '#8a1620'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, ey); ctx.quadraticCurveTo(cx + ddx * 0.2, ey + ddy * 0.7, cx + ddx, ey + ddy); ctx.stroke();
+      ctx.fillStyle = '#f3efcd'; ctx.beginPath(); ctx.arc(cx + ddx, ey + ddy, er * 0.8, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#3a2a10'; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = h.glow > 0.3 ? ZCOL[i] : IRIS[i]; ctx.beginPath(); ctx.arc(cx + ddx + h.lookX * 3, ey + ddy + h.lookY * 3, er * 0.36, 0, 6.283); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(cx + ddx + h.lookX * 3, ey + ddy + h.lookY * 3, er * 0.16, 0, 6.283); ctx.fill();
+      continue;
+    }
+    if (h.hit > 0) { ctx.strokeStyle = '#1a0505'; ctx.lineWidth = 4.5; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(cx - er * 0.7, ey - er * 0.7); ctx.lineTo(cx + er * 0.7, ey + er * 0.7); ctx.moveTo(cx + er * 0.7, ey - er * 0.7); ctx.lineTo(cx - er * 0.7, ey + er * 0.7); ctx.stroke(); continue; }
+    if (photo) { if (h.glow > 0.2) lighter(() => glowAt(cx, ey, ZCOL[i], er * 1.8, h.glow * 0.8)); continue; }
+    ctx.fillStyle = mixHex('#ffffff', '#efe6b8', D); ctx.beginPath(); ctx.ellipse(cx, ey, er, er * 0.85, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#2a2a10'; ctx.lineWidth = 2; ctx.stroke();
+    if (D > 0.3) { ctx.strokeStyle = `rgba(190,30,30,${Math.min(0.8, (D - 0.3) * 2)})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(cx - er, ey); ctx.lineTo(cx - er * 0.4, ey + 2); ctx.moveTo(cx + er, ey - 2); ctx.lineTo(cx + er * 0.5, ey); ctx.moveTo(cx - er * 0.6, ey - er * 0.6); ctx.lineTo(cx - er * 0.25, ey - er * 0.2); ctx.stroke(); }
+    if (h.glow > 0.2) lighter(() => glowAt(cx, ey, ZCOL[i], er * 2.2, h.glow));
+    const px = cx + h.lookX * er * 0.4, py = ey + h.lookY * er * 0.35;
+    ctx.fillStyle = h.glow > 0.3 ? ZCOL[i] : mixHex(IRIS[i], '#2a2a1a', D); ctx.beginPath(); ctx.arc(px, py, er * 0.42, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#0a0a0a'; ctx.beginPath(); ctx.arc(px, py, er * (0.18 + D * 0.08), 0, 6.283); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.8)'; ctx.beginPath(); ctx.arc(px - er * 0.15, py - er * 0.15, er * 0.08, 0, 6.283); ctx.fill();
+    if (h.blink < 0) { ctx.fillStyle = shade(sk, -10); ctx.beginPath(); ctx.ellipse(cx, ey, er * 1.05, er * 0.9, 0, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#1a1a10'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - er, ey); ctx.lineTo(cx + er, ey); ctx.stroke(); }
+  }
+  // mouth: closed lips when fresh; open shows teeth, which get knocked out as damage rises
+  const mo = clamp(h.mouth, 0, 1.2), mw = R * 0.48, my = R * 0.46;
+  const lost = Math.min(5, Math.floor(D * 5.5)), order = [0, 2, 4, 1, 3].map(k => (k + h.missing) % 5).slice(0, lost);
+  if (!photo && mo < 0.2) {
+    ctx.strokeStyle = mixHex('#8a3a3a', '#2a0606', D); ctx.lineWidth = 3.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-mw * 0.65, my); ctx.quadraticCurveTo(0, my + (D < 0.3 ? 7 : -5), mw * 0.65, my); ctx.stroke();
+  } else if (!photo || mo > 0.3) {
+    const mh = R * 0.07 + mo * R * 0.36;
+    ctx.fillStyle = '#2b0606'; ctx.beginPath(); ctx.ellipse(0, my, mw, mh, 0, 0, 6.283); ctx.fill();
+    ctx.strokeStyle = '#120202'; ctx.lineWidth = 2.5; ctx.stroke();
+    if (mo > 0.45) { ctx.fillStyle = '#9b2433'; ctx.beginPath(); ctx.ellipse(0, my + mh * 0.5, mw * 0.5, mh * 0.4, 0, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = mixHex('#fbfbf2', '#e3d48e', D);
+    for (let k = 0; k < 5; k++) { if (order.includes(k)) continue; const tx = -mw * 0.7 + k * mw * 0.35; ctx.fillRect(tx - 4, my - mh + 1, 8, Math.min(10, mh * 0.8 + 3)); }
+  }
+  if (D > 0.3) { // blood trickling from the mouth
+    ctx.fillStyle = '#8a0c12'; ctx.beginPath(); ctx.moveTo(mw * 0.7, my); ctx.quadraticCurveTo(mw * 0.8, my + 14 + Math.sin(time * 2 + i) * 3, mw * 0.72, my + 18 + Math.sin(time * 2 + i) * 3); ctx.lineTo(mw * 0.62, my + 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawHub() {
+  ctx.fillStyle = '#0b0d08'; ctx.beginPath(); ctx.arc(CX, CY, HUB, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#07090a'; ctx.lineWidth = 8; ctx.stroke();
+  ctx.strokeStyle = '#5f8a3c'; ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(CX, CY, HUB - 5, 0, 6.283); ctx.stroke();
+}
+function drawFighter() {
+  const r = 50, wob = arm ? Math.sin(arm.t * 60) * 2 : 0;
+  ctx.save(); ctx.translate(CX + wob, CY);
+  if (face) {
+    ctx.save(); ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.clip(); ctx.drawImage(face, -r, -r, r * 2, r * 2); ctx.restore();
+  } else {
+    const g = ctx.createRadialGradient(-12, -12, 3, 0, 0, r); g.addColorStop(0, '#ffd9b5'); g.addColorStop(1, '#c98e62');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.fill();
+    ctx.fillStyle = '#b3121b'; ctx.fillRect(-r, -r * 0.55, r * 2, 11);
+    ctx.strokeStyle = '#2a1a10'; ctx.lineWidth = 5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-26, -10); ctx.lineTo(-8, -4); ctx.moveTo(26, -10); ctx.lineTo(8, -4); ctx.stroke();
+    ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(-15, 4, 4.5, 0, 6.283); ctx.arc(15, 4, 4.5, 0, 6.283); ctx.fill();
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(0, 18, 13, 0.2, Math.PI - 0.2); ctx.stroke();
+  }
+  ctx.strokeStyle = '#e6f2d8'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r, 0, 6.283); ctx.stroke();
+  ctx.restore();
+}
+function drawGlove(gx, gy, a, s) {
+  ctx.save(); ctx.translate(gx, gy); ctx.rotate(a); ctx.scale(s, s);
+  const g = ctx.createRadialGradient(-4, -6, 2, 0, 0, 24); g.addColorStop(0, '#ff6b6b'); g.addColorStop(1, '#8e0f16');
+  ctx.fillStyle = '#f2f2f2'; ctx.fillRect(-26, -12, 10, 24);
+  ctx.fillStyle = g; ctx.beginPath(); ctx.ellipse(0, 0, 22, 20, 0, 0, 6.283); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-2, -16, 10, 7, -0.4, 0, 6.283); ctx.fill();
+  ctx.strokeStyle = '#5a070c'; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(0, 0, 22, 20, 0, 0, 6.283); ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(2, 0, 14, -1.2, -0.2); ctx.stroke();
+  ctx.restore();
+}
+function drawArms() {
+  for (const side of [-1, 1]) {
+    const sx = CX + side * 30, sy = CY + 40;
+    const rx = CX + side * 66, ry = CY + 38 + Math.sin(time * 4 + side) * 3;
+    let gx = rx, gy = ry;
+    const active = arm && ((heads[arm.i].x < CX ? -1 : 1) === side);
+    if (active) {
+      const ext = arm.t < 0.05 ? arm.t / 0.05 : Math.max(0, 1 - (arm.t - 0.05) / 0.17);
+      gx = rx + (arm.tx - rx) * ext; gy = ry + (arm.ty + 30 - ry) * ext;
+    }
+    ctx.strokeStyle = '#2b2f3a'; ctx.lineWidth = 26; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(gx, gy); ctx.stroke();
+    const a = active ? Math.atan2(gy - sy, gx - sx) : (side < 0 ? Math.PI + 0.6 : -0.6);
+    drawGlove(gx, gy, a, active ? 1.7 : 1.25);
+  }
+}
+
+function drawBurst(b) {
+  const k = b.t / 0.28, s = 1.35 + (1 - k) * 0.5;
+  ctx.save(); ctx.translate(b.x, b.y - 10); ctx.rotate(b.rot); ctx.scale(s, s); ctx.globalAlpha = Math.min(1, k * 2.5);
+  ctx.beginPath();
+  for (let n = 0; n < 24; n++) { const a = n / 24 * 6.283, r = n % 2 ? 40 : 66; ctx.lineTo(Math.cos(a) * r * 1.3, Math.sin(a) * r * 0.85); }
+  ctx.closePath(); ctx.fillStyle = '#fff4b0'; ctx.fill(); ctx.strokeStyle = '#1a0a05'; ctx.lineWidth = 4; ctx.stroke();
+  text(b.word, 0, 2, 30, '#c0121c', 'center', SPOOKY, false);
+  ctx.restore(); ctx.globalAlpha = 1;
+}
+
+function draw() {
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  const sx = shake ? rnd(-shake, shake) * 0.5 : 0, sy = shake ? rnd(-shake, shake) * 0.5 : 0;
+  ctx.translate(sx, sy);
+  ctx.drawImage(bg, 0, 0, W, H);
+
+  for (const h of heads) drawTile(h, sx, sy);
+  ctx.drawImage(decal, 0, 0, W, H);
+  for (const h of heads) drawNeck(h);
+  for (const h of heads) if (h.phase === 'rest') drawHead(h);
+  drawHub(); drawFighter();
+  for (const h of heads) if (h.phase !== 'rest') drawHead(h);
+  lighter(() => { for (const h of heads) if (h.glow > 0.01) { glowAt(h.x, h.y, ZCOL[h.i], 400, h.glow * 0.42); glowAt(h.x, h.y, '#ffffff', 160, h.glow * 0.12); } });
+
+  for (const p of poofs) { ctx.fillStyle = `rgba(200,200,190,${p.t * 1.5})`; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill(); }
+  for (const c of chunks) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.rot); ctx.globalAlpha = Math.min(1, c.life * 2);
+    if (c.type === 'tooth') { ctx.fillStyle = '#e3d48e'; ctx.fillRect(-4, -5, 8, 10); ctx.fillStyle = '#8a0c12'; ctx.fillRect(-4, 3, 8, 2); }
+    else { ctx.fillStyle = '#f3efcd'; ctx.beginPath(); ctx.arc(0, 0, 7, 0, 6.283); ctx.fill(); ctx.fillStyle = '#2a6a2a'; ctx.beginPath(); ctx.arc(3, 0, 3.2, 0, 6.283); ctx.fill(); ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(3.5, 0, 1.5, 0, 6.283); ctx.fill(); ctx.strokeStyle = '#8a0c12'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(-14, 3); ctx.stroke(); }
+    ctx.restore(); ctx.globalAlpha = 1;
+  }
+  for (const d of drops) { ctx.fillStyle = '#9a0b14'; ctx.beginPath(); ctx.ellipse(d.x, d.y, d.r, d.r * (1 + Math.min(1.5, Math.abs(d.vy) / 600)), Math.atan2(d.vy, d.vx) - 1.57, 0, 6.283); ctx.fill(); }
+  for (const b of bursts) drawBurst(b);
+  for (const f of floaters) { ctx.globalAlpha = Math.min(1, f.t * 2); text(f.text, f.x, f.y, 30, f.col); ctx.globalAlpha = 1; }
+
+  drawArms();
+
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  for (const s of screenSplats) {
+    const a = Math.min(0.8, s.t * 1.2), age = 1.3 - s.t;
+    ctx.fillStyle = `rgba(120,6,12,${a})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, 6.283); ctx.fill();
+    for (const b of s.blobs) { ctx.beginPath(); ctx.arc(s.x + Math.cos(b.a) * b.d, s.y + Math.sin(b.a) * b.d, b.r, 0, 6.283); ctx.fill(); }
+    for (const d of s.drips) { const len = d.sp * age; ctx.fillRect(s.x + d.x - d.w / 2, s.y, d.w, len); ctx.beginPath(); ctx.arc(s.x + d.x, s.y + len, d.w * 0.7, 0, 6.283); ctx.fill(); }
+    ctx.fillStyle = `rgba(255,200,200,${a * 0.25})`; ctx.beginPath(); ctx.arc(s.x - s.r * 0.3, s.y - s.r * 0.3, s.r * 0.25, 0, 6.283); ctx.fill();
+  }
+  if (redFlash > 0) { ctx.fillStyle = `rgba(200,0,20,${redFlash * 0.4})`; ctx.fillRect(0, 0, W, H); }
+  drawHUD();
+  if (state === 'title') drawTitle();
+  if (state === 'over') drawOver();
+}
+
+function drawBrain(x, y, s, on) {
+  ctx.fillStyle = on ? '#f29bb2' : 'rgba(255,255,255,0.12)';
+  ctx.beginPath(); ctx.ellipse(x - 5 * s, y, 8 * s, 7 * s, 0, 0, 6.283); ctx.ellipse(x + 5 * s, y, 8 * s, 7 * s, 0, 0, 6.283); ctx.fill();
+  if (on) { ctx.strokeStyle = '#b4566e'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - 6 * s); ctx.lineTo(x, y + 6 * s); ctx.moveTo(x - 9 * s, y - 2); ctx.quadraticCurveTo(x - 5 * s, y + 3, x - 2, y - 2); ctx.moveTo(x + 9 * s, y - 2); ctx.quadraticCurveTo(x + 5 * s, y + 3, x + 2, y - 2); ctx.stroke(); }
+}
+
+function drawHUD() {
+  if (state === 'title') return;
+  for (let k = 0; k < 3; k++) drawBrain(30 + k * 32, 25, 1.15, k < lives);
+  text('LV ' + level + '   ' + score.toLocaleString(), W - 18, 25, 24, '#b8f28a', 'right');
+  let status = 'ZOMBIE SMACK SAYS', col = '#9aa88a';
+  if (state === 'show') { status = 'WATCH & LISTEN...'; col = '#facc15'; }
+  else if (state === 'input') { status = 'YOUR TURN — PUNCH ' + (idx + 1) + ' OF ' + seq.length; col = '#4ade80'; }
+  else if (state === 'good') { status = 'BRAINS!'; col = '#4ade80'; }
+  else if (state === 'oops') { status = 'WRONG HEAD! WATCH AGAIN'; col = '#f87171'; }
+  if (statusFlash > 0 && state === 'show') { status = 'WAIT FOR IT...'; col = '#f87171'; }
+  text(status, CX, 25, 28, col);
+  if (state === 'input' || state === 'good') {
+    const n = seq.length, w = Math.min(20, 520 / n), x0 = CX - (n - 1) * w / 2;
+    for (let k = 0; k < n; k++) {
+      ctx.beginPath(); ctx.arc(x0 + k * w, 629, Math.min(6, w * 0.32), 0, 6.283);
+      if (k < idx) { ctx.fillStyle = ZCOL[seq[k]]; ctx.fill(); } else { ctx.strokeStyle = 'rgba(230,242,216,0.45)'; ctx.lineWidth = 2; ctx.stroke(); }
+    }
+  }
+  if (bannerT > 0 && state === 'show') { ctx.globalAlpha = Math.min(1, bannerT * 2); text(bannerText, CX, CY - HUB - 34, 54, '#b8f28a'); ctx.globalAlpha = 1; }
+}
+
+function drawTitle() {
+  ctx.fillStyle = 'rgba(4,6,10,0.72)'; ctx.fillRect(0, 0, W, H);
+  const wob = Math.sin(time * 2) * 3;
+  text('ZOMBIE', W / 2, 92 + wob, 86, '#8fd16a');
+  text('SMACK SAYS', W / 2, 168 - wob, 70, '#d8363f');
+  text('The zombies groan a pattern. Punch them back in the same order.', W / 2, 232, 18, '#e6f2d8', 'center', PLAIN);
+  text('Click or tap a head   •   Keys 1 2 3 4  (or Q W A S)   •   M = sound', W / 2, 262, 15, '#b7c4a8', 'center', PLAIN);
+  text('Miss the pattern and you lose a brain. Lose all 3 and it\'s game over.', W / 2, 288, 15, '#b7c4a8', 'center', PLAIN);
+  text('They start out human. Every round you beat them up more. Add photos below to use real faces.', W / 2, 314, 15, '#8fd16a', 'center', PLAIN);
+  text('build 3', W - 14, H - 10, 11, 'rgba(230,242,216,0.4)', 'right', PLAIN, false);
+  if (Math.floor(time * 2) % 2 === 0) text('CLICK, TAP OR PRESS ENTER TO START', W / 2, 400, 30, '#facc15');
+  if (best) text('BEST: LEVEL ' + best, W / 2, 436, 20, '#9aa88a');
+}
+
+function drawOver() {
+  ctx.fillStyle = 'rgba(30,0,4,0.62)'; ctx.fillRect(0, 0, W, H);
+  text('YOUR BRAINS', W / 2, 150, 70, '#f29bb2');
+  text('GOT EATEN', W / 2, 225, 70, '#d8363f');
+  text('You reached level ' + level + '  •  Score ' + score.toLocaleString(), W / 2, 290, 22, '#e6f2d8', 'center', PLAIN);
+  if (newBest && Math.floor(time * 4) % 2) text('NEW BEST!', W / 2, 335, 36, '#facc15');
+  if (stateT > 1.2) text('CLICK, TAP OR PRESS ENTER TO PLAY AGAIN', W / 2, 400, 26, '#b8f28a');
+}
+
+// ================= LOOP =================
+let last = performance.now(), shown = null;
+function loop(now) {
+  const dt = clamp((now - last) / 1000, 0, 0.033); last = now;
+  if (!(window.__apHold && window.__apHold())) update(dt);
+  try { draw(); } catch (err) { console.error(err); }
+  const showUI = state === 'title' || state === 'over';
+  if (showUI !== shown) { shown = showUI; $('ui').style.display = showUI ? 'flex' : 'none'; }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+<style>
+  .ap-overlay{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(ellipse at 50% 35%,#101b0a 0%,#05060c 70%);color:#e6f2d8;text-align:center;
+    font-family:system-ui,sans-serif;padding:20px;box-sizing:border-box}
+  .ap-overlay.on{display:flex}
+  .ap-prod{font-family:'Creepster',system-ui,sans-serif;font-size:min(11vw,64px);letter-spacing:3px;color:#e6f2d8;line-height:1.05;
+    text-shadow:0 0 24px rgba(143,209,106,.45),0 4px 0 #2a4416}
+  .ap-prod .ap-a{color:#8fd16a}
+  .ap-presents{margin-top:14px;font-size:15px;letter-spacing:6px;color:#9aa88a}
+  .ap-tap{margin-top:44px;font-size:13px;letter-spacing:2px;color:#5f7050;animation:apblink 1.2s steps(2) infinite}
+  @keyframes apblink{50%{opacity:.25}}
+  .ap-loading{font-size:14px;letter-spacing:5px;color:#facc15}
+  .ap-title{font-family:'Creepster',system-ui,sans-serif;font-size:min(10vw,52px);color:#d8363f;letter-spacing:2px;margin:10px 0 4px;
+    text-shadow:0 0 18px rgba(216,54,63,.4)}
+  .ap-sub{color:#9aa88a;font-size:14px;margin-bottom:26px}
+  .ap-btn{display:block;width:min(320px,84vw);margin:8px auto;padding:16px 10px;background:#1c2a14;color:#e6f2d8;
+    border:2px solid #5f8a3c;border-radius:14px;font:700 19px system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}
+  .ap-btn:hover,.ap-btn:active{background:#2a3d1d}
+  .ap-btn small{display:block;font:600 12px system-ui,sans-serif;color:#9aa88a;margin-top:3px;letter-spacing:1px}
+  .ap-btn.red{border-color:#b3121b;background:#2a0d10}.ap-btn.red:hover{background:#3d1216}
+  #apPauseBtn{position:fixed;top:10px;right:10px;z-index:55;width:46px;height:46px;border-radius:50%;display:none;
+    background:rgba(12,14,10,.88);border:2px solid #5f8a3c;color:#e6f2d8;font-size:19px;cursor:pointer;line-height:1}
+  body.ap-phone #ui button,body.ap-phone #ui .btn{padding:12px 16px;font-size:16px}
+  body.ap-phone #apPauseBtn{width:56px;height:56px;font-size:23px}
+  body.ap-phone .ap-btn{padding:20px 10px}
+</style>
+<div id="apIntro" class="ap-overlay">
+  <div class="ap-prod"><span class="ap-a">ANGELES</span> PRODUCTIONS</div>
+  <div class="ap-presents">P R E S E N T S</div>
+  <div class="ap-tap">TAP TO CONTINUE</div>
+</div>
+<div id="apChooser" class="ap-overlay">
+  <div class="ap-loading">— NOW LOADING —</div>
+  <div class="ap-title">ZOMBIE SMACK SAYS</div>
+  <div class="ap-sub">How are you playing?</div>
+  <button class="ap-btn" id="apPcBtn">🖥️ COMPUTER<small>MOUSE + KEYS 1 2 3 4</small></button>
+  <button class="ap-btn" id="apPhoneBtn">📱 PHONE<small>TAP THE HEADS</small></button>
+</div>
+<div id="apPause" class="ap-overlay">
+  <div class="ap-title">PAUSED</div>
+  <div class="ap-sub">The zombies wait. They are patient. They are dead.</div>
+  <button class="ap-btn" id="apResumeBtn">▶ RESUME</button>
+  <button class="ap-btn" id="apRestartBtn">↻ RESTART GAME</button>
+  <button class="ap-btn" id="apModeBtn">📱 PHONE MODE</button>
+  <a class="ap-btn red" href="https://angeles-productions-arcade.onrender.com/">🕹 BACK TO ARCADE</a>
+</div>
+<button id="apPauseBtn" title="Pause">⏸</button>
+<script>
+// ===== Angeles Productions house front-end (added by Pip; game code untouched apart from __apHold hooks) =====
+(function () {
+  var store = {
+    get: function (k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  };
+  var $ = function (id) { return document.getElementById(id); };
+  var intro = $('apIntro'), chooser = $('apChooser'), pauseOv = $('apPause'), pauseBtn = $('apPauseBtn');
+  var mode = null, paused = false;
+
+  function anyOverlay() { return intro.classList.contains('on') || chooser.classList.contains('on') || pauseOv.classList.contains('on'); }
+  window.__apHold = function () { return anyOverlay(); };
+
+  function applyMode(m) {
+    mode = m;
+    document.body.classList.toggle('ap-phone', m === 'mobile');
+    $('apModeBtn').innerHTML = (m === 'mobile') ? '🖥️ COMPUTER MODE' : '📱 PHONE MODE';
+  }
+  function choose(m) {
+    applyMode(m); store.set('zsmash-mode', m);
+    intro.classList.remove('on'); chooser.classList.remove('on');
+  }
+
+  var q = new URLSearchParams(location.search).get('mode');
+  var preset = (q === 'pc' || q === 'computer') ? 'pc' : (q === 'mobile' || q === 'phone') ? 'mobile' : store.get('zsmash-mode');
+  if (preset === 'pc' || preset === 'mobile') { applyMode(preset); }
+  else {
+    intro.classList.add('on');
+    var advanced = false;
+    var advance = function () { if (advanced) return; advanced = true; intro.classList.remove('on'); chooser.classList.add('on'); };
+    intro.addEventListener('click', advance);
+    setTimeout(advance, 2100);
+  }
+  $('apPcBtn').addEventListener('click', function () { choose('pc'); });
+  $('apPhoneBtn').addEventListener('click', function () { choose('mobile'); });
+
+  function setPaused(p) {
+    paused = p;
+    pauseOv.classList.toggle('on', p);
+    if (p) { try { speechSynthesis.cancel(); } catch (e) {} }
+  }
+  pauseBtn.addEventListener('click', function () { setPaused(true); });
+  $('apResumeBtn').addEventListener('click', function () { setPaused(false); });
+  $('apRestartBtn').addEventListener('click', function () { setPaused(false); try { startGame(); } catch (e) {} });
+  $('apModeBtn').addEventListener('click', function () { choose(mode === 'mobile' ? 'pc' : 'mobile'); setPaused(true); });
+  addEventListener('keydown', function (e) {
+    if (e.code === 'Escape' || e.code === 'KeyP') {
+      if (pauseOv.classList.contains('on')) setPaused(false);
+      else if (!anyOverlay() && typeof state !== 'undefined' && state !== 'title' && state !== 'over') setPaused(true);
+    }
+  });
+  setInterval(function () {
+    var playing = false;
+    try { playing = (typeof state !== 'undefined') && state !== 'title' && state !== 'over'; } catch (e) {}
+    pauseBtn.style.display = (playing && !anyOverlay()) ? 'block' : 'none';
+  }, 200);
+})();
+</script>
+</body>
+</html>
